@@ -41,12 +41,15 @@ fun FileBrowserScreen(
     repo: Repo,
     path: String,
     loadDir: suspend (String) -> List<FileEntry>,
+    loadBranches: suspend () -> List<com.k1.gitreader.git.BranchInfo>,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
+    onSwitchBranch: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
+    var showBranchSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(repo.id, path) {
         error = null
@@ -60,7 +63,11 @@ fun FileBrowserScreen(
                 title = {
                     Column {
                         Text(repo.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(repo.branch, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = "${repo.branch} ▾",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.clickable { showBranchSheet = true },
+                        )
                     }
                 },
                 navigationIcon = {
@@ -100,6 +107,18 @@ fun FileBrowserScreen(
                 }
             }
         }
+    }
+
+    if (showBranchSheet) {
+        BranchSheet(
+            currentBranch = repo.branch,
+            loadBranches = loadBranches,
+            onDismiss = { showBranchSheet = false },
+            onSelect = { name ->
+                showBranchSheet = false
+                onSwitchBranch(name)
+            },
+        )
     }
 }
 

@@ -12,6 +12,7 @@ import com.k1.gitreader.data.FileEntry
 import com.k1.gitreader.data.NewRepo
 import com.k1.gitreader.data.RepoRepository
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.git.BranchInfo
 import java.io.File
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +61,22 @@ class RepoListViewModel(
 
     fun delete(repo: Repo) {
         viewModelScope.launch { runCatching { repository.delete(repo) } }
+    }
+
+    /** 直近順のリモートブランチ一覧。 */
+    suspend fun listBranches(repo: Repo): List<BranchInfo> = repository.listBranches(repo)
+
+    /** ブランチを切り替え（= 指定ブランチで同期）。成功時に更新後 Repo を返す。 */
+    fun switchBranch(repo: Repo, branch: String, onDone: (Repo) -> Unit) {
+        viewModelScope.launch {
+            _status.value = UiStatus(busy = true, message = "$branch に切替中...")
+            val r = runCatching { repository.sync(repo, branch) }
+            _status.value = UiStatus(
+                busy = false,
+                message = r.exceptionOrNull()?.let { "切替失敗: ${it.message}" },
+            )
+            r.getOrNull()?.let(onDone)
+        }
     }
 
     // --- ファイルブラウザ / 閲覧 ---

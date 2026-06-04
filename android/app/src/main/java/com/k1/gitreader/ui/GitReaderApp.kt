@@ -50,8 +50,18 @@ fun GitReaderApp() {
                 repo = current.repo,
                 path = current.path,
                 loadDir = { vm.listDir(current.repo, it) },
+                loadBranches = { vm.listBranches(current.repo) },
                 onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
                 onOpenFile = { navigate(Screen.View(current.repo, it)) },
+                onSwitchBranch = { branch ->
+                    vm.switchBranch(current.repo, branch) { updated ->
+                        val i = backStack.indexOfLast { it is Screen.Browse }
+                        if (i >= 0) {
+                            while (backStack.lastIndex > i) backStack.removeAt(backStack.lastIndex)
+                            backStack[i] = Screen.Browse(updated, "")
+                        }
+                    }
+                },
                 onBack = { pop() },
             )
         }
