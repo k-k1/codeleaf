@@ -75,6 +75,7 @@ fun GitReaderApp() {
                 workDir = vm.workDirOf(current.repo),
                 loadText = { vm.readFile(current.repo, current.filePath) },
                 onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
+                onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },
                 onBack = { pop() },
             )
         }

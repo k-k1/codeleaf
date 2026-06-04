@@ -54,6 +54,7 @@ fun FileViewerScreen(
     workDir: File,
     loadText: suspend () -> String,
     onHistory: () -> Unit,
+    onNavigateToFile: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
@@ -128,8 +129,10 @@ fun FileViewerScreen(
                             is MdBlock.Text -> MarkdownView(
                                 markdown = block.markdown,
                                 baseDir = baseDir,
+                                workDir = workDir,
                                 textColor = textColor,
                                 dark = dark,
+                                onNavigateToFile = onNavigateToFile,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             is MdBlock.Mermaid -> MermaidWebView(

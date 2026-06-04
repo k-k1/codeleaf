@@ -2,14 +2,21 @@ package com.k1.gitreader.render
 
 import android.content.Context
 import android.graphics.Typeface
+import android.view.View
 import android.widget.TextView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.vdurmont.emoji.EmojiParser
+import io.noties.markwon.AbstractMarkwonPlugin
+import io.noties.markwon.LinkResolver
+import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
+import io.noties.markwon.MarkwonConfiguration
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tasklist.TaskListPlugin
@@ -41,8 +48,11 @@ sealed interface MdBlock {
  */
 object MarkdownRenderer {
 
-    /** dark = true のときダーク配色テーマでコードフェンスをハイライトする。 */
-    fun create(context: Context, dark: Boolean): Markwon =
+    /**
+     * dark = true のときダーク配色テーマでコードフェンスをハイライトする。
+     * linkResolver を渡すと相対リンクのアプリ内遷移など独自のリンク処理に差し替える。
+     */
+    fun create(context: Context, dark: Boolean, linkResolver: LinkResolver? = null): Markwon =
         Markwon.builder(context)
             .usePlugin(TablePlugin.create(context))
             .usePlugin(StrikethroughPlugin.create())
@@ -56,6 +66,15 @@ object MarkdownRenderer {
                     plugin.addSchemeHandler(NetworkSchemeHandler.create())
                 },
             )
+            .apply {
+                if (linkResolver != null) {
+                    usePlugin(object : AbstractMarkwonPlugin() {
+                        override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+                            builder.linkResolver(linkResolver)
+                        }
+                    })
+                }
+            }
             .build()
 
     private val mermaidFence =
@@ -96,10 +115,58 @@ object MarkdownRenderer {
             }
         }
 
-    private fun isRelative(dest: String): Boolean {
+    /** スキーム/絶対パス/アンカーでない(=リポ内ファイルを指しうる)相対参照か。 */
+    internal fun isRelative(dest: String): Boolean {
         if (dest.startsWith("#") || dest.startsWith("/")) return false
         if (dest.startsWith("data:")) return false
         return !Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(dest)
+    }
+}
+
+/**
+ * Markdown 内のリンクタップを処理する LinkResolver。
+ * 相対リンクがリポジトリ内のファイルを指す場合はアプリ内遷移(onFile に repo ルート相対パスを渡す)、
+ * それ以外(http(s)/mailto 等)は既定動作(ブラウザ等で開く)に委譲する。
+ *
+ * @param baseDir 表示中ファイルのあるディレクトリ(相対解決の基点)
+ * @param workDir リポジトリのルート(=遷移パスの基点)
+ */
+class RepoLinkResolver(
+    private val baseDir: File,
+    private val workDir: File,
+    private val onFile: (String) -> Unit,
+) : LinkResolver {
+
+    private val fallback = LinkResolverDef()
+
+    override fun resolve(view: View, link: String) {
+        // 同一ドキュメント内アンカーは未対応(何もしない)
+        if (link.startsWith("#")) return
+        if (!MarkdownRenderer.isRelative(link)) {
+            // http(s)/mailto/絶対パス等は既定動作に委譲
+            fallback.resolve(view, link)
+            return
+        }
+        val path = resolveRepoRelativePath(baseDir, workDir, link)
+        // リポ外/存在しない相対リンクは黙って無視(外部 intent でクラッシュさせない)
+        if (path != null) onFile(path)
+    }
+
+    companion object {
+        /**
+         * 相対リンクをリポ内ファイルへ解決し、repo ルート相対パス(区切りは '/')を返す。
+         * 解決できない(スキーム付き/リポ外/存在しない/ディレクトリ)場合は null。
+         */
+        fun resolveRepoRelativePath(baseDir: File, workDir: File, link: String): String? {
+            if (!MarkdownRenderer.isRelative(link)) return null
+            val clean = link.substringBefore('#').substringBefore('?')
+            if (clean.isEmpty()) return null
+            val target = File(baseDir, clean).normalize()
+            val rel = target.relativeToOrNull(workDir.normalize()) ?: return null
+            if (rel.path.startsWith("..")) return null
+            if (!target.isFile) return null
+            return rel.path.replace('\\', '/')
+        }
     }
 }
 
@@ -149,17 +216,26 @@ object CodeHighlight {
  * Compose から Markdown テキストブロックを表示する。baseDir は対象 .md があるディレクトリ。
  * textColor は現在テーマの onSurface 色（AndroidView の TextView は Compose テーマを継承しないため明示指定）。
  * dark はコードフェンスのハイライト配色(ダーク/ライト)を選ぶ。
+ * workDir はリポジトリのルート。相対リンクがリポ内ファイルを指す場合は
+ * onNavigateToFile(repo ルート相対パス)でアプリ内遷移する。
  */
 @Composable
 fun MarkdownView(
     markdown: String,
     baseDir: File,
+    workDir: File,
     textColor: Int,
     dark: Boolean,
+    onNavigateToFile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val markwon = remember(context, dark) { MarkdownRenderer.create(context, dark) }
+    // コールバックの最新参照を保持(Markwon は再生成せず、resolver から間接参照する)
+    val latestNavigate by rememberUpdatedState(onNavigateToFile)
+    val markwon = remember(context, dark, baseDir.path, workDir.path) {
+        val resolver = RepoLinkResolver(baseDir, workDir) { latestNavigate(it) }
+        MarkdownRenderer.create(context, dark, resolver)
+    }
     val rendered = remember(markdown, baseDir.path) {
         MarkdownRenderer.preprocess(markdown, baseDir)
     }

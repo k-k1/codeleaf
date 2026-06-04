@@ -113,6 +113,9 @@ dependencies {
     implementation(libs.jgit)
     implementation(libs.slf4j.simple)
 
+    // local unit test (純粋ロジックの JVM 検証)
+    testImplementation(libs.junit)
+
     // instrumented test (ランタイムART検証)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
