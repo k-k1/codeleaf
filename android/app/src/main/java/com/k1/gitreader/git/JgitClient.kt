@@ -5,6 +5,7 @@ import org.eclipse.jgit.api.ResetCommand.ResetType
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevSort
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.RefSpec
@@ -29,6 +30,16 @@ data class CommitInfo(
     val shortMessage: String,
     val author: String,
     val committedAt: Instant,
+)
+
+/** コミットグラフ1ノード。parents は親コミットの sha（マージは複数）、refs は指しているブランチ/タグ名。 */
+data class GraphCommit(
+    val sha: String,
+    val parents: List<String>,
+    val shortMessage: String,
+    val author: String,
+    val committedAt: Instant,
+    val refs: List<String>,
 )
 
 /**
@@ -126,6 +137,49 @@ class JgitClient {
                     }
                     return out.toString(Charsets.UTF_8.name())
                 }
+            }
+        }
+    }
+
+    /**
+     * 全 ref(ローカル/リモートブランチ・タグ)を起点に DAG を辿り、コミットグラフを返す。
+     * TOPO かつ committer date 降順。各コミットに紐づくブランチ/タグ名も付与する。
+     */
+    fun commitGraph(dir: File, limit: Int = 300): List<GraphCommit> {
+        Git.open(dir).use { git ->
+            val repo = git.repository
+            val allRefs = repo.refDatabase.refs.filter { it.name != "HEAD" }
+
+            // sha -> その位置を指す ref 短縮名
+            val refNames = HashMap<String, MutableList<String>>()
+            for (ref in allRefs) {
+                val id = repo.refDatabase.peel(ref).peeledObjectId ?: ref.objectId ?: continue
+                refNames.getOrPut(id.name) { ArrayList() }.add(Repository.shortenRefName(ref.name))
+            }
+
+            RevWalk(repo).use { rw ->
+                rw.sort(RevSort.TOPO, true)
+                rw.sort(RevSort.COMMIT_TIME_DESC, true)
+                for (ref in allRefs) {
+                    val id = repo.refDatabase.peel(ref).peeledObjectId ?: ref.objectId ?: continue
+                    val commit = runCatching { rw.parseCommit(id) }.getOrNull() ?: continue
+                    rw.markStart(commit)
+                }
+                val out = ArrayList<GraphCommit>()
+                for (c in rw) {
+                    if (out.size >= limit) break
+                    out.add(
+                        GraphCommit(
+                            sha = c.name,
+                            parents = c.parents.map { it.name },
+                            shortMessage = c.shortMessage,
+                            author = c.authorIdent.name,
+                            committedAt = c.committerIdent.whenAsInstant,
+                            refs = refNames[c.name].orEmpty().sorted(),
+                        ),
+                    )
+                }
+                return out
             }
         }
     }

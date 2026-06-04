@@ -15,6 +15,7 @@ private sealed interface Screen {
     data object Settings : Screen
     data class Browse(val repo: Repo, val path: String) : Screen
     data class Search(val repo: Repo) : Screen
+    data class Graph(val repo: Repo) : Screen
     data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
     data class History(val repo: Repo, val filePath: String) : Screen
     data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
@@ -70,6 +71,7 @@ fun GitReaderApp() {
                 loadBranches = { vm.listBranches(current.repo) },
                 onSync = { vm.syncNow(current.repo) },
                 onSearch = { navigate(Screen.Search(current.repo)) },
+                onGraph = { navigate(Screen.Graph(current.repo)) },
                 onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
                 onOpenFile = { navigate(Screen.View(current.repo, it)) },
                 onSwitchBranch = { branch ->
@@ -90,6 +92,14 @@ fun GitReaderApp() {
                 repoName = current.repo.name,
                 loadCorpus = { vm.loadSearchCorpus(current.repo) },
                 onOpenFile = { path, line -> navigate(Screen.View(current.repo, path, line)) },
+                onBack = { pop() },
+            )
+        }
+
+        is Screen.Graph -> GitReaderTheme(current.repo.themeMode) {
+            CommitGraphScreen(
+                repoName = current.repo.name,
+                loadGraph = { vm.commitGraph(current.repo) },
                 onBack = { pop() },
             )
         }

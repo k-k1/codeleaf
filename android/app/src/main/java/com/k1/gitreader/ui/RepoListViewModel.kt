@@ -111,6 +111,9 @@ class RepoListViewModel(
     suspend fun fileDiff(repo: Repo, relPath: String, sha: String): String =
         repository.fileDiff(repo, relPath, sha)
 
+    suspend fun commitGraph(repo: Repo): List<com.k1.gitreader.git.GraphCommit> =
+        repository.commitGraph(repo)
+
     fun clearMessage() {
         _status.value = _status.value.copy(message = null)
     }

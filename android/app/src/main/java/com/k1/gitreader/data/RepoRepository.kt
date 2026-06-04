@@ -7,6 +7,7 @@ import com.k1.gitreader.data.db.RepoDao
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.BranchInfo
 import com.k1.gitreader.git.CommitInfo
+import com.k1.gitreader.git.GraphCommit
 import com.k1.gitreader.git.JgitClient
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -198,6 +199,10 @@ class RepoRepository(
     /** 指定コミットでのファイル unified diff。 */
     suspend fun fileDiff(repo: Repo, relPath: String, sha: String): String =
         withContext(ioDispatcher) { jgit.diff(workDir(repo), relPath, sha) }
+
+    /** リポジトリ全体のコミットグラフ(全 ref から DAG)。 */
+    suspend fun commitGraph(repo: Repo): List<GraphCommit> =
+        withContext(ioDispatcher) { jgit.commitGraph(workDir(repo)) }
 
     private fun joinRel(parent: String, child: String): String =
         if (parent.isEmpty()) child else "$parent/$child"

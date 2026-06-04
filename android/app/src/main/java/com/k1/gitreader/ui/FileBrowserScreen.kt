@@ -12,7 +12,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -50,6 +53,7 @@ fun FileBrowserScreen(
     loadBranches: suspend () -> List<com.k1.gitreader.git.BranchInfo>,
     onSync: suspend () -> Unit,
     onSearch: () -> Unit,
+    onGraph: () -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
@@ -58,6 +62,7 @@ fun FileBrowserScreen(
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
     var showBranchSheet by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -89,6 +94,15 @@ fun FileBrowserScreen(
                 actions = {
                     IconButton(onClick = onSearch) {
                         Icon(Icons.Default.Search, contentDescription = "検索")
+                    }
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("コミットグラフ") },
+                            onClick = { menuExpanded = false; onGraph() },
+                        )
                     }
                 },
             )
