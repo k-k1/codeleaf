@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -100,12 +101,16 @@ class AppE2EInstrumentedTest {
             compose.onAllNodesWithText("README.md").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // README.md を開く → Markdown ビューア(下部に整形/Raw トグル)
+        // README.md を開く → Markdown ビューア到達を ⋮ メニュー(履歴/Raw で表示)で確認
         compose.onNodeWithText("README.md").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("整形").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("メニュー").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("整形").assertIsDisplayed()
-        compose.onNodeWithText("Raw").assertIsDisplayed()
+        compose.onNodeWithContentDescription("メニュー").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("履歴").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("履歴").assertIsDisplayed()
+        compose.onNodeWithText("Raw で表示").assertIsDisplayed()
     }
 }

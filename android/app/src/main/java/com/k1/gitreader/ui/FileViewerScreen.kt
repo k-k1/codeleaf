@@ -34,9 +34,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
@@ -173,6 +171,12 @@ fun FileViewerScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        if (isMarkdown) {
+                            DropdownMenuItem(
+                                text = { Text(if (raw) "整形で表示" else "Raw で表示") },
+                                onClick = { menuExpanded = false; raw = !raw },
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text("履歴") },
                             onClick = { menuExpanded = false; onHistory() },
@@ -191,28 +195,12 @@ fun FileViewerScreen(
                     ) { Text("☰ 目次") }
                 }
                 Spacer(Modifier.weight(1f))
-                // 右: 折り返し(コード/Raw時) + 整形/Raw トグル
+                // 右: 折り返し(コード/Raw時のみ)。整形/Raw 切替は右上 ⋮ メニューへ移動。
                 if (!isMarkdown || raw) {
                     TextButton(
                         onClick = { wrap = !wrap },
-                        modifier = Modifier.padding(end = 4.dp),
+                        modifier = Modifier.padding(end = 8.dp),
                     ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
-                }
-                if (isMarkdown) {
-                    SingleChoiceSegmentedButtonRow(Modifier.height(32.dp).padding(end = 12.dp)) {
-                        SegmentedButton(
-                            selected = !raw,
-                            onClick = { raw = false },
-                            shape = SegmentedButtonDefaults.itemShape(0, 2),
-                            icon = {},
-                        ) { Text("整形", style = MaterialTheme.typography.labelSmall) }
-                        SegmentedButton(
-                            selected = raw,
-                            onClick = { raw = true },
-                            shape = SegmentedButtonDefaults.itemShape(1, 2),
-                            icon = {},
-                        ) { Text("Raw", style = MaterialTheme.typography.labelSmall) }
-                    }
                 }
             }
         },
@@ -367,23 +355,29 @@ fun FileViewerScreen(
 private data class TocEntry(val sectionIndex: Int, val heading: Heading)
 
 /**
- * 現在のスクロール位置で「上に通り過ぎた」見出しの祖先パス(h1>h2>h3...)を返す。
- * 各見出しセクションを順に走査し、level >= の見出しを pop しながらスタックを作る。
- * top < scrollY(=画面上端より上に出た見出し)だけを対象にするので、インライン表示中の見出しと重複しない。
+ * スティッキー見出しの祖先パス(h1>h2>h3...)を返す。
+ * 「見出しがスティッキーバーの下端に達したら昇格」を、実測高さに依存せず1パスで自己完結計算する
+ * (rowHeightPx は各見出し行の推定高さ px)。スタックに積むごとにバー高さを足してしきい値を更新するため、
+ * 実測高さのフィードバックループ(=境界での点滅)が起きない。
  */
-internal fun computeHeadingStack(
+internal fun stickyHeadingStack(
     sections: List<MdSection>,
     tops: Map<Int, Int>,
     scrollY: Int,
+    rowHeightPx: (Heading) -> Int,
 ): List<Pair<Int, Heading>> {
     val stack = ArrayList<Pair<Int, Heading>>()
-    sections.forEachIndexed { idx, section ->
-        val h = section.heading ?: return@forEachIndexed
-        val top = tops[idx] ?: return@forEachIndexed
-        if (top < scrollY) {
-            while (stack.isNotEmpty() && stack.last().second.level >= h.level) stack.removeAt(stack.lastIndex)
-            stack.add(idx to h)
+    var barHeight = 0
+    for (idx in sections.indices) {
+        val h = sections[idx].heading ?: continue
+        val top = tops[idx] ?: continue
+        if (top >= scrollY + barHeight) break // 以降の見出しは top がより大きいので対象外
+        while (stack.isNotEmpty() && stack.last().second.level >= h.level) {
+            barHeight -= rowHeightPx(stack.last().second)
+            stack.removeAt(stack.lastIndex)
         }
+        stack.add(idx to h)
+        barHeight += rowHeightPx(h)
     }
     return stack
 }
@@ -402,7 +396,12 @@ private fun StickyHeadingsOverlay(
     onHeight: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val stack = computeHeadingStack(sections, sectionTops, scrollY)
+    // 行高さは推定(font サイズ + 縦パディング)。実測に依存させないことで境界での点滅を防ぐ。
+    val density = LocalDensity.current
+    val rowHeightPx: (Heading) -> Int = { h ->
+        with(density) { (headingSp(h.level, fontScale).sp.toPx() + 8.dp.toPx()).roundToInt() }
+    }
+    val stack = stickyHeadingStack(sections, sectionTops, scrollY, rowHeightPx)
     if (stack.isEmpty()) {
         onHeight(0)
         return
