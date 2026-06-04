@@ -13,8 +13,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /** ファイルブラウザ1エントリ。relPath はリポジトリルートからの相対パス（'/'区切り）。 */
 data class FileEntry(
@@ -110,6 +113,10 @@ class RepoRepository(
 ) {
     fun observeRepos(): Flow<List<Repo>> = dao.observeAll()
 
+    // リポ毎に書き込み系 git 操作(sync)を直列化し、作業ツリー/index の競合を防ぐ。
+    private val syncLocks = ConcurrentHashMap<Long, Mutex>()
+    private fun syncLock(id: Long): Mutex = syncLocks.getOrPut(id) { Mutex() }
+
     fun workDir(repo: Repo): File = File(reposRoot, repo.id.toString())
 
     /** 登録 → clone → 既定ブランチ確定。失敗時は行と暗号化トークンを巻き戻す。 */
@@ -142,14 +149,16 @@ class RepoRepository(
         }
     }
 
-    /** 指定ブランチで最新化（ローカル変更は破棄）。 */
+    /** 指定ブランチで最新化（ローカル変更は破棄）。同一リポの同期は直列化される。 */
     suspend fun sync(repo: Repo, branch: String = repo.branch): Repo = withContext(ioDispatcher) {
-        val token = tokenStore.getToken(repo.id)
-        val cp = jgit.credentials(repo.username, token)
-        jgit.sync(workDir(repo), branch, cp)
-        val saved = repo.copy(branch = branch, lastSyncedAt = nowMillis())
-        dao.update(saved)
-        saved
+        syncLock(repo.id).withLock {
+            val token = tokenStore.getToken(repo.id)
+            val cp = jgit.credentials(repo.username, token)
+            jgit.sync(workDir(repo), branch, cp)
+            val saved = repo.copy(branch = branch, lastSyncedAt = nowMillis())
+            dao.update(saved)
+            saved
+        }
     }
 
     suspend fun listBranches(repo: Repo): List<BranchInfo> = withContext(ioDispatcher) {

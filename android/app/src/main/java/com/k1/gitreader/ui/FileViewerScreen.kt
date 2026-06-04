@@ -143,8 +143,23 @@ fun FileViewerScreen(
         },
         bottomBar = {
             BottomAppBar {
+                // 左: 目次
+                if (isMarkdown && !raw && tocEntries.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showToc = true },
+                        modifier = Modifier.padding(start = 4.dp),
+                    ) { Text("☰ 目次") }
+                }
+                Spacer(Modifier.weight(1f))
+                // 右: 折り返し(コード/Raw時) + 整形/Raw トグル
+                if (!isMarkdown || raw) {
+                    TextButton(
+                        onClick = { wrap = !wrap },
+                        modifier = Modifier.padding(end = 4.dp),
+                    ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
+                }
                 if (isMarkdown) {
-                    SingleChoiceSegmentedButtonRow(Modifier.padding(horizontal = 12.dp)) {
+                    SingleChoiceSegmentedButtonRow(Modifier.padding(end = 12.dp)) {
                         SegmentedButton(
                             selected = !raw,
                             onClick = { raw = false },
@@ -156,20 +171,6 @@ fun FileViewerScreen(
                             shape = SegmentedButtonDefaults.itemShape(1, 2),
                         ) { Text("Raw") }
                     }
-                }
-                Spacer(Modifier.weight(1f))
-                // コード/Raw 表示中のみ折り返しトグルを出す
-                if (!isMarkdown || raw) {
-                    TextButton(
-                        onClick = { wrap = !wrap },
-                        modifier = Modifier.padding(end = 4.dp),
-                    ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
-                }
-                if (isMarkdown && !raw && tocEntries.isNotEmpty()) {
-                    TextButton(
-                        onClick = { showToc = true },
-                        modifier = Modifier.padding(end = 8.dp),
-                    ) { Text("☰ 目次") }
                 }
             }
         },

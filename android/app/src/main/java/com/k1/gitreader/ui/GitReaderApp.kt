@@ -67,6 +67,7 @@ fun GitReaderApp() {
             FileBrowserScreen(
                 repo = current.repo,
                 path = current.path,
+                busy = status.busy,
                 loadDir = { vm.listDir(current.repo, it) },
                 loadBranches = { vm.listBranches(current.repo) },
                 onSync = { vm.syncNow(current.repo) },

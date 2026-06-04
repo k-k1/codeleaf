@@ -80,10 +80,11 @@ class AppE2EInstrumentedTest {
         // List 画面 → 追加 FAB
         compose.onNodeWithContentDescription("リポジトリを追加").performClick()
 
-        // フォーム入力(URL=ローカルパス, 表示名=一意, token=ダミー: file clone では未使用だが UI 必須)
-        setField("URL", srcRepo.absolutePath)
-        setField("表示名", "e2e-fixture")
+        // フォーム入力(URL=ローカルパス, token=ダミー: file clone では未使用だが UI 必須)。
+        // 表示名は URL から自動補完される(末尾セグメント = "e2e-src")。
+        setField("https", srcRepo.absolutePath) // URL 欄(ラベル "URL (https://...)")を一意に特定
         setField("トークン", "x")
+        compose.waitForIdle()
 
         compose.onNodeWithText("保存・clone").performScrollTo().performClick()
 
@@ -91,10 +92,10 @@ class AppE2EInstrumentedTest {
         compose.waitUntil(timeoutMillis = 30_000) {
             compose.onAllNodesWithText("git-reader").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("e2e-fixture").assertIsDisplayed()
+        compose.onNodeWithText("e2e-src").assertIsDisplayed()
 
         // カードを開く → ブラウザに README.md が並ぶ
-        compose.onNodeWithText("e2e-fixture").performClick()
+        compose.onNodeWithText("e2e-src").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("README.md").fetchSemanticsNodes().isNotEmpty()
         }

@@ -1,7 +1,9 @@
 package com.k1.gitreader.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -37,8 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.FileEntry
@@ -50,6 +57,7 @@ import com.k1.gitreader.data.db.ThemeMode
 fun FileBrowserScreen(
     repo: Repo,
     path: String,
+    busy: Boolean,
     loadDir: suspend (String) -> List<FileEntry>,
     loadBranches: suspend () -> List<com.k1.gitreader.git.BranchInfo>,
     onSync: suspend () -> Unit,
@@ -68,6 +76,8 @@ fun FileBrowserScreen(
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    // ブランチ切替(busy)や同期(refreshing)中は、同一作業ツリーへの並行操作を防ぐためロックする。
+    val locked = busy || refreshing
 
     LaunchedEffect(repo.id, path) {
         error = null
@@ -84,7 +94,7 @@ fun FileBrowserScreen(
                         Text(
                             text = "${repo.branch} ▾",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.clickable { showBranchSheet = true },
+                            modifier = Modifier.clickable(enabled = !locked) { showBranchSheet = true },
                         )
                     }
                 },
@@ -142,32 +152,55 @@ fun FileBrowserScreen(
             }
         },
     ) { padding ->
-        PullToRefreshBox(
-            isRefreshing = refreshing,
-            onRefresh = {
-                scope.launch {
-                    refreshing = true
-                    val result = runCatching { onSync() }
-                    // 同期後はツリーが変わりうるので再読込
-                    entries = runCatching { loadDir(path) }.getOrElse { error = it.message; emptyList() }
-                    refreshing = false
-                    snackbar.showSnackbar(
-                        result.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
-                    )
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = {
+                    if (busy) return@PullToRefreshBox // 切替中は同期させない
+                    scope.launch {
+                        refreshing = true
+                        val result = runCatching { onSync() }
+                        // 同期後はツリーが変わりうるので再読込
+                        entries = runCatching { loadDir(path) }.getOrElse { error = it.message; emptyList() }
+                        refreshing = false
+                        snackbar.showSnackbar(
+                            result.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    entries == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                    error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
+                    entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
+                    else -> LazyColumn(Modifier.fillMaxSize()) {
+                        items(entries!!, key = { it.relPath }) { e ->
+                            EntryRow(e, onClick = {
+                                // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
+                                if (!locked) {
+                                    if (e.isDir) onOpenDir(e.relPath) else onOpenFile(e.relPath)
+                                }
+                            })
+                            HorizontalDivider()
+                        }
+                    }
                 }
-            },
-            modifier = Modifier.fillMaxSize().padding(padding),
-        ) {
-            when {
-                entries == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
-                entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
-                else -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(entries!!, key = { it.relPath }) { e ->
-                        EntryRow(e, onClick = {
-                            if (e.isDir) onOpenDir(e.relPath) else onOpenFile(e.relPath)
-                        })
-                        HorizontalDivider()
+            }
+
+            // ブランチ切替中は全面ブロック(タッチを消費)してプログレス表示
+            if (busy) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(Modifier.height(12.dp))
+                        Text("ブランチ切替中…", color = Color.White)
                     }
                 }
             }
