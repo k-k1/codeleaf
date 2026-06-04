@@ -12,6 +12,7 @@ coroutines = "1.9.0"
 markwon = "4.6.2"
 prism4j = "2.0.0"
 emojiJava = "5.1.1"
+coil = "2.7.0"
 jgit = "7.6.0.202603022253-r"
 slf4j = "2.0.17"
 androidxTestJunit = "1.2.1"
@@ -45,6 +46,8 @@ markwon-syntax-highlight = { group = "io.noties.markwon", name = "syntax-highlig
 prism4j = { group = "io.noties", name = "prism4j", version.ref = "prism4j" }
 prism4j-bundler = { group = "io.noties", name = "prism4j-bundler", version.ref = "prism4j" }
 emoji-java = { group = "com.vdurmont", name = "emoji-java", version.ref = "emojiJava" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
 jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
 slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }

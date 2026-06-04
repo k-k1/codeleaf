@@ -110,6 +110,10 @@ dependencies {
     kapt(libs.prism4j.bundler)
     implementation(libs.emoji.java)
 
+    // file icons (Devicon SVG をアセットから描画)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+
     // git
     implementation(libs.jgit)
     implementation(libs.slf4j.simple)

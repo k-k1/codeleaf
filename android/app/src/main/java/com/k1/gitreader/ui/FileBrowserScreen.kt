@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -45,9 +46,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
+import com.k1.gitreader.R
 import com.k1.gitreader.data.FileEntry
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
@@ -223,11 +232,62 @@ fun FileBrowserScreen(
 @Composable
 private fun EntryRow(entry: FileEntry, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(if (entry.isDir) "📁" else "📄")
+        FileEntryIcon(entry)
         Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+private val ICON_SIZE = 24.dp
+
+@Composable
+private fun FileEntryIcon(entry: FileEntry) {
+    val tint = MaterialTheme.colorScheme.onSurfaceVariant
+    when {
+        entry.isDir -> Icon(
+            painterResource(R.drawable.ic_folder),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(ICON_SIZE),
+        )
+        else -> {
+            val icon = FileIcons.forFile(entry.name)
+            if (icon != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(FileIcons.assetUri(icon))
+                        .build(),
+                    imageLoader = rememberDeviconLoader(),
+                    contentDescription = null,
+                    // 塗り色を持たない黒ロゴはテーマ色にティントして両テーマで視認させる
+                    colorFilter = if (icon.monochrome) ColorFilter.tint(tint) else null,
+                    modifier = Modifier.size(ICON_SIZE),
+                )
+            } else {
+                Icon(
+                    painterResource(R.drawable.ic_file_generic),
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(ICON_SIZE),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * SVG をデコードできる Coil ImageLoader。Devicon のアセットは数十KB と小さいため
+ * Application 単位で 1 つあれば十分。Activity の context から remember する。
+ */
+@Composable
+private fun rememberDeviconLoader(): ImageLoader {
+    val context = LocalContext.current
+    return remember(context.applicationContext) {
+        ImageLoader.Builder(context.applicationContext)
+            .components { add(SvgDecoder.Factory()) }
+            .build()
     }
 }
