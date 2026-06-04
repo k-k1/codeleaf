@@ -142,6 +142,8 @@ fun FileViewerScreen(
     var showToc by remember(filePath) { mutableStateOf(false) }
     // スクロールビューポート上端(root座標, px)。テーブルのヘッダ固定の基準。
     var viewportTopPx by remember(filePath) { mutableFloatStateOf(0f) }
+    // スティッキー見出しオーバーレイの高さ(px)。テーブルヘッダはこの分だけ下に固定する。
+    var stickyHeadingsHeightPx by remember(filePath) { mutableIntStateOf(0) }
 
     // フロントマター抽出 + 見出しセクション分割(整形 Markdown のときのみ)。
     val mdModel = remember(text, isMarkdown) {
@@ -265,7 +267,9 @@ fun FileViewerScreen(
                                             header = block.header,
                                             rows = block.rows,
                                             fontScale = fontScale,
-                                            viewportTopPx = viewportTopPx,
+                                            // 見出しオーバーレイの下端にヘッダを固定する
+                                            viewportTopPx = viewportTopPx +
+                                                (if (stickyHeadings) stickyHeadingsHeightPx else 0),
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                     }
@@ -281,6 +285,7 @@ fun FileViewerScreen(
                             scrollY = scrollState.value,
                             fontScale = fontScale,
                             onJump = { idx -> scope.launch { scrollState.animateScrollTo(sectionTops[idx] ?: 0) } },
+                            onHeight = { stickyHeadingsHeightPx = it },
                             modifier = Modifier.align(Alignment.TopStart),
                         )
                     }
@@ -394,11 +399,20 @@ private fun StickyHeadingsOverlay(
     scrollY: Int,
     fontScale: Float,
     onJump: (Int) -> Unit,
+    onHeight: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val stack = computeHeadingStack(sections, sectionTops, scrollY)
-    if (stack.isEmpty()) return
-    Column(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+    if (stack.isEmpty()) {
+        onHeight(0)
+        return
+    }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .onGloballyPositioned { onHeight(it.size.height) },
+    ) {
         stack.forEach { (idx, h) ->
             Text(
                 text = h.text,
