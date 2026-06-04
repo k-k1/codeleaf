@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RepoDao {
-    @Query("SELECT * FROM repos ORDER BY name COLLATE NOCASE")
+    @Query("SELECT * FROM repos ORDER BY sortOrder, name COLLATE NOCASE")
     fun observeAll(): Flow<List<Repo>>
 
     @Query("SELECT * FROM repos WHERE id = :id")

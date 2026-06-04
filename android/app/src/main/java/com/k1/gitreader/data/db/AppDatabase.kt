@@ -4,15 +4,27 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 class Converters {
     @TypeConverter fun hostToString(h: GitHost): String = h.name
     @TypeConverter fun stringToHost(s: String): GitHost = GitHost.valueOf(s)
     @TypeConverter fun themeToString(t: ThemeMode): String = t.name
     @TypeConverter fun stringToTheme(s: String): ThemeMode = ThemeMode.valueOf(s)
+    @TypeConverter fun colorToString(c: RepoColor): String = c.name
+    @TypeConverter fun stringToColor(s: String): RepoColor = RepoColor.valueOf(s)
 }
 
-@Database(entities = [Repo::class], version = 1, exportSchema = false)
+/** v1→v2: 並べ替え順(sortOrder)とカード色(colorTag)を追加。 */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE repos ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE repos ADD COLUMN colorTag TEXT NOT NULL DEFAULT 'NONE'")
+    }
+}
+
+@Database(entities = [Repo::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun repoDao(): RepoDao

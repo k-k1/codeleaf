@@ -9,6 +9,9 @@ enum class GitHost { GITHUB, BITBUCKET }
 /** リポジトリ毎の表示テーマ。 */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** リポジトリ一覧カードのアクセント色(プリセット)。NONE は色なし。 */
+enum class RepoColor { NONE, BLUE, GREEN, RED, PURPLE, ORANGE, TEAL }
+
 /**
  * 登録リポジトリ。token はここには持たず、TokenStore (Keystore暗号化) に id 紐付けで保存する。
  */
@@ -22,4 +25,6 @@ data class Repo(
     val branch: String,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val lastSyncedAt: Long? = null,
+    val sortOrder: Int = 0,
+    val colorTag: RepoColor = RepoColor.NONE,
 )

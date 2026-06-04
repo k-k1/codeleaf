@@ -3,6 +3,7 @@ package com.k1.gitreader.data
 import com.k1.gitreader.data.crypto.TokenStore
 import com.k1.gitreader.data.db.GitHost
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.data.db.RepoColor
 import com.k1.gitreader.data.db.RepoDao
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.BranchInfo
@@ -218,6 +219,18 @@ class RepoRepository(
         val updated = repo.copy(themeMode = mode)
         dao.update(updated)
         updated
+    }
+
+    /** カード色(プリセット)を変更して保存する。 */
+    suspend fun setColor(repo: Repo, color: RepoColor) = withContext(ioDispatcher) {
+        dao.update(repo.copy(colorTag = color))
+    }
+
+    /** 並べ替え結果を保存する(リストの並び順を sortOrder=index で書き込む)。 */
+    suspend fun saveOrder(orderedRepos: List<Repo>) = withContext(ioDispatcher) {
+        orderedRepos.forEachIndexed { index, repo ->
+            if (repo.sortOrder != index) dao.update(repo.copy(sortOrder = index))
+        }
     }
 
     private fun joinRel(parent: String, child: String): String =

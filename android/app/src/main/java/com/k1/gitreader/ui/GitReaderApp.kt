@@ -13,6 +13,7 @@ private sealed interface Screen {
     data object List : Screen
     data object Add : Screen
     data object Settings : Screen
+    data object RepoEdit : Screen
     data class Browse(val repo: Repo, val path: String) : Screen
     data class Search(val repo: Repo) : Screen
     data class Graph(val repo: Repo) : Screen
@@ -40,9 +41,9 @@ fun GitReaderApp() {
             status = status,
             onAddClick = { navigate(Screen.Add) },
             onSettings = { navigate(Screen.Settings) },
+            onEdit = { navigate(Screen.RepoEdit) },
             onOpen = { navigate(Screen.Browse(it, "")) },
             onSync = vm::sync,
-            onDelete = vm::delete,
             onMessageShown = vm::clearMessage,
         )
 
@@ -51,6 +52,14 @@ fun GitReaderApp() {
             defaultTheme = settings.defaultTheme,
             onBack = { pop() },
             onSubmit = { input -> vm.addRepo(input) { ok -> if (ok) pop() } },
+        )
+
+        Screen.RepoEdit -> RepoEditScreen(
+            repos = repos,
+            onReorder = vm::saveRepoOrder,
+            onSetColor = vm::setRepoColor,
+            onDelete = vm::delete,
+            onBack = { pop() },
         )
 
         Screen.Settings -> SettingsScreen(

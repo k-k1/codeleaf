@@ -78,6 +78,14 @@ class RepoListViewModel(
         viewModelScope.launch { runCatching { repository.delete(repo) } }
     }
 
+    fun setRepoColor(repo: Repo, color: com.k1.gitreader.data.db.RepoColor) {
+        viewModelScope.launch { runCatching { repository.setColor(repo, color) } }
+    }
+
+    fun saveRepoOrder(ordered: List<Repo>) {
+        viewModelScope.launch { runCatching { repository.saveOrder(ordered) } }
+    }
+
     /** 直近順のリモートブランチ一覧。 */
     suspend fun listBranches(repo: Repo): List<BranchInfo> = repository.listBranches(repo)
 

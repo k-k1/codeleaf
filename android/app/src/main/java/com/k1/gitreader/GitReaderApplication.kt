@@ -6,6 +6,7 @@ import com.k1.gitreader.data.RepoRepository
 import com.k1.gitreader.data.SettingsStore
 import com.k1.gitreader.data.crypto.TokenStore
 import com.k1.gitreader.data.db.AppDatabase
+import com.k1.gitreader.data.db.MIGRATION_1_2
 import com.k1.gitreader.git.JgitClient
 import java.io.File
 
@@ -13,7 +14,7 @@ import java.io.File
 class AppContainer(app: Application) {
     private val db: AppDatabase = Room.databaseBuilder(
         app, AppDatabase::class.java, "gitreader.db",
-    ).build()
+    ).addMigrations(MIGRATION_1_2).build()
 
     private val reposRoot: File = File(app.filesDir, "repos").apply { mkdirs() }
 
