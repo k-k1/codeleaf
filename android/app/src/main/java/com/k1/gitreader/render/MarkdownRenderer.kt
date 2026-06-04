@@ -8,8 +8,10 @@ import android.view.View
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -446,6 +449,7 @@ fun CodeView(
     fontScale: Float,
     highlightLine: Int? = null,
     wrap: Boolean = true,
+    showLineNumbers: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val theme = remember(dark) { CodeHighlight.theme(dark) }
@@ -461,25 +465,57 @@ fun CodeView(
         }
     }
     val baseColor = Color(theme.textColor())
+    val gutterColor = baseColor.copy(alpha = 0.5f)
     val highlightBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
+    val fontSize = (CODE_BASE_SP * fontScale).sp
+    // 行番号ガター幅は最大桁数から算出。
+    val gutterWidth = ((lines.size.toString().length) * 9 + 12).dp
     val hScroll = rememberScrollState()
     val listModifier = modifier
         .background(Color(theme.background()))
         .let { if (wrap) it else it.horizontalScroll(hScroll) }
     LazyColumn(state = listState, modifier = listModifier) {
         itemsIndexed(lines) { idx, line ->
-            Text(
-                text = line,
-                color = baseColor,
-                fontFamily = FontFamily.Monospace,
-                fontSize = (CODE_BASE_SP * fontScale).sp,
-                softWrap = wrap,
-                maxLines = if (wrap) Int.MAX_VALUE else 1,
-                modifier = Modifier
-                    .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
-                    .then(if (idx == highlightLine) Modifier.background(highlightBg) else Modifier)
-                    .padding(horizontal = 12.dp, vertical = 1.dp),
-            )
+            val rowBg = if (idx == highlightLine) Modifier.background(highlightBg) else Modifier
+            if (showLineNumbers) {
+                Row(
+                    Modifier
+                        .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
+                        .then(rowBg)
+                        .padding(horizontal = 12.dp, vertical = 1.dp),
+                ) {
+                    Text(
+                        text = "${idx + 1}",
+                        color = gutterColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = fontSize,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(gutterWidth).padding(end = 8.dp),
+                    )
+                    Text(
+                        text = line,
+                        color = baseColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = fontSize,
+                        softWrap = wrap,
+                        maxLines = if (wrap) Int.MAX_VALUE else 1,
+                        modifier = if (wrap) Modifier.weight(1f) else Modifier,
+                    )
+                }
+            } else {
+                Text(
+                    text = line,
+                    color = baseColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = fontSize,
+                    softWrap = wrap,
+                    maxLines = if (wrap) Int.MAX_VALUE else 1,
+                    modifier = Modifier
+                        .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
+                        .then(rowBg)
+                        .padding(horizontal = 12.dp, vertical = 1.dp),
+                )
+            }
         }
     }
 }

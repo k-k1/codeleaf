@@ -17,6 +17,7 @@ data class AppSettings(
     val fontScale: FontScale = FontScale.MEDIUM,
     val wrapByDefault: Boolean = true,
     val linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
+    val showLineNumbers: Boolean = false,
 )
 
 /**
@@ -35,6 +36,7 @@ class SettingsStore(context: Context) {
         fontScale = enumOrDefault(prefs.getString(KEY_FONT, null), FontScale.MEDIUM),
         wrapByDefault = prefs.getBoolean(KEY_WRAP, true),
         linkOpenMode = enumOrDefault(prefs.getString(KEY_LINK, null), LinkOpenMode.IN_APP),
+        showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {
@@ -57,11 +59,17 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(linkOpenMode = mode)
     }
 
+    fun setShowLineNumbers(show: Boolean) {
+        prefs.edit().putBoolean(KEY_LINENUM, show).apply()
+        _settings.value = _settings.value.copy(showLineNumbers = show)
+    }
+
     private companion object {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
         const val KEY_WRAP = "wrap_by_default"
         const val KEY_LINK = "link_open_mode"
+        const val KEY_LINENUM = "show_line_numbers"
 
         inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default

@@ -135,6 +135,8 @@ class RepoListViewModel(
 
     fun setLinkOpenMode(mode: com.k1.gitreader.data.LinkOpenMode) = settingsStore.setLinkOpenMode(mode)
 
+    fun setShowLineNumbers(show: Boolean) = settingsStore.setShowLineNumbers(show)
+
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {

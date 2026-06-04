@@ -56,6 +56,7 @@ fun SettingsScreen(
     onSetFontScale: (FontScale) -> Unit,
     onSetWrapByDefault: (Boolean) -> Unit,
     onSetLinkOpenMode: (LinkOpenMode) -> Unit,
+    onSetShowLineNumbers: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -138,6 +139,17 @@ fun SettingsScreen(
                     )
                 }
                 Switch(checked = settings.wrapByDefault, onCheckedChange = onSetWrapByDefault)
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("行番号を表示", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "コード/テキスト/Raw 表示で各行に行番号を付ける。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = settings.showLineNumbers, onCheckedChange = onSetShowLineNumbers)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

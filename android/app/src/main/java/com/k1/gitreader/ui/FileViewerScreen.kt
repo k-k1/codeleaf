@@ -80,6 +80,7 @@ fun FileViewerScreen(
     fontScale: Float,
     defaultWrap: Boolean = true,
     linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
+    showLineNumbers: Boolean = false,
     targetLine: Int? = null,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
@@ -252,6 +253,7 @@ fun FileViewerScreen(
                     fontScale = fontScale,
                     highlightLine = targetLine?.let { it - 1 },
                     wrap = wrap,
+                    showLineNumbers = showLineNumbers,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
@@ -264,6 +266,7 @@ fun FileViewerScreen(
                         fontScale = fontScale,
                         highlightLine = targetLine?.let { it - 1 },
                         wrap = wrap,
+                        showLineNumbers = showLineNumbers,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

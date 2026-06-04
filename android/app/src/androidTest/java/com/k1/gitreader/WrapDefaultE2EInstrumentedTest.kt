@@ -71,7 +71,8 @@ class WrapDefaultE2EInstrumentedTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("コードの折り返し（既定）").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNode(isToggleable()).performClick()
+        // 設定画面の最初のスイッチ=「コードの折り返し（既定）」(2番目は行番号表示)
+        compose.onAllNodes(isToggleable())[0].performClick()
         compose.waitForIdle()
         assertEquals(false, app.container.settingsStore.settings.value.wrapByDefault)
 
