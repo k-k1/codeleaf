@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.render.CodeHighlight
+import com.k1.gitreader.render.CodeView
 import com.k1.gitreader.render.MarkdownRenderer
 import com.k1.gitreader.render.MarkdownView
 import com.k1.gitreader.render.MdBlock
@@ -127,6 +129,7 @@ fun FileViewerScreen(
                                 markdown = block.markdown,
                                 baseDir = baseDir,
                                 textColor = textColor,
+                                dark = dark,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             is MdBlock.Mermaid -> MermaidWebView(
@@ -138,12 +141,27 @@ fun FileViewerScreen(
                         Spacer(Modifier.height(8.dp))
                     }
                 }
-                else -> Text(
+                // Raw 表示(Markdown のソース)は装飾せずそのまま見せる
+                isMarkdown && raw -> Text(
                     text = body,
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 )
+                // 非 Markdown ファイルはコードとして拡張子からハイライト
+                else -> {
+                    val language = remember(filePath) { CodeHighlight.languageForFile(fileName) }
+                    Column(
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                    ) {
+                        CodeView(
+                            code = body,
+                            language = language,
+                            dark = dark,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
     }

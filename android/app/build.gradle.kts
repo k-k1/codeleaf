@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    // kapt は Kotlin プラグイン経由でクラスパス上にあるため version 指定なしで適用する
+    kotlin("kapt")
 }
 
 android {
@@ -68,6 +70,12 @@ android {
     }
 }
 
+// prism4j / markwon-syntax-highlight が引き込む旧 annotations-java5 は、Kotlin の
+// org.jetbrains:annotations と同一クラスを含み dex 重複になるため全体から除外する。
+configurations.all {
+    exclude(group = "org.jetbrains", module = "annotations-java5")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -96,6 +104,9 @@ dependencies {
     implementation(libs.markwon.html)
     implementation(libs.markwon.linkify)
     implementation(libs.markwon.image)
+    implementation(libs.markwon.syntax.highlight)
+    implementation(libs.prism4j)
+    kapt(libs.prism4j.bundler)
     implementation(libs.emoji.java)
 
     // git
