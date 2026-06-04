@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.Typeface
 import android.view.View
 import android.widget.TextView
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.vdurmont.emoji.EmojiParser
@@ -17,6 +19,7 @@ import io.noties.markwon.LinkResolver
 import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonConfiguration
+import io.noties.markwon.core.MarkwonTheme
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tasklist.TaskListPlugin
@@ -40,6 +43,19 @@ sealed interface MdBlock {
 }
 
 /**
+ * Markwon の配色をリポ毎テーマに連動させるための色(ARGB int)。
+ * コードフェンスの背景は Prism4j 側テーマが受け持つため、ここではインラインコード・
+ * リンク・引用バー・区切り線など Prism 管轄外の要素を扱う。
+ */
+data class MarkdownColors(
+    val link: Int,
+    val inlineCodeBg: Int,
+    val inlineCodeText: Int,
+    val blockQuoteBar: Int,
+    val divider: Int,
+)
+
+/**
  * Markwon ベースの Markdown レンダラ。
  * GFM(テーブル/打消し/タスクリスト)・HTML・リンク自動化・画像表示・絵文字(:smile:)に対応。
  * リポジトリ内の相対画像は file:// 絶対パスへ解決する。
@@ -51,8 +67,14 @@ object MarkdownRenderer {
     /**
      * dark = true のときダーク配色テーマでコードフェンスをハイライトする。
      * linkResolver を渡すと相対リンクのアプリ内遷移など独自のリンク処理に差し替える。
+     * colors を渡すとリンク色・インラインコード・引用・区切り線をテーマ連動させる。
      */
-    fun create(context: Context, dark: Boolean, linkResolver: LinkResolver? = null): Markwon =
+    fun create(
+        context: Context,
+        dark: Boolean,
+        linkResolver: LinkResolver? = null,
+        colors: MarkdownColors? = null,
+    ): Markwon =
         Markwon.builder(context)
             .usePlugin(TablePlugin.create(context))
             .usePlugin(StrikethroughPlugin.create())
@@ -71,6 +93,19 @@ object MarkdownRenderer {
                     usePlugin(object : AbstractMarkwonPlugin() {
                         override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
                             builder.linkResolver(linkResolver)
+                        }
+                    })
+                }
+                if (colors != null) {
+                    usePlugin(object : AbstractMarkwonPlugin() {
+                        override fun configureTheme(builder: MarkwonTheme.Builder) {
+                            builder
+                                .linkColor(colors.link)
+                                .codeBackgroundColor(colors.inlineCodeBg)
+                                .codeTextColor(colors.inlineCodeText)
+                                .blockQuoteColor(colors.blockQuoteBar)
+                                .thematicBreakColor(colors.divider)
+                                .headingBreakColor(colors.divider)
                         }
                     })
                 }
@@ -232,9 +267,17 @@ fun MarkdownView(
     val context = LocalContext.current
     // コールバックの最新参照を保持(Markwon は再生成せず、resolver から間接参照する)
     val latestNavigate by rememberUpdatedState(onNavigateToFile)
-    val markwon = remember(context, dark, baseDir.path, workDir.path) {
+    val scheme = MaterialTheme.colorScheme
+    val colors = MarkdownColors(
+        link = scheme.primary.toArgb(),
+        inlineCodeBg = scheme.surfaceVariant.toArgb(),
+        inlineCodeText = scheme.onSurfaceVariant.toArgb(),
+        blockQuoteBar = scheme.outline.toArgb(),
+        divider = scheme.outlineVariant.toArgb(),
+    )
+    val markwon = remember(context, dark, baseDir.path, workDir.path, colors) {
         val resolver = RepoLinkResolver(baseDir, workDir) { latestNavigate(it) }
-        MarkdownRenderer.create(context, dark, resolver)
+        MarkdownRenderer.create(context, dark, resolver, colors)
     }
     val rendered = remember(markdown, baseDir.path) {
         MarkdownRenderer.preprocess(markdown, baseDir)
