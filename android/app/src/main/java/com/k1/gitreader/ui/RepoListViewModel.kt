@@ -137,6 +137,8 @@ class RepoListViewModel(
 
     fun setShowLineNumbers(show: Boolean) = settingsStore.setShowLineNumbers(show)
 
+    fun setTableMode(mode: com.k1.gitreader.data.TableMode) = settingsStore.setTableMode(mode)
+
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {

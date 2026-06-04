@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +26,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,7 +59,9 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.k1.gitreader.data.LinkOpenMode
+import com.k1.gitreader.data.TableMode
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.render.CodeHighlight
 import com.k1.gitreader.render.CodeView
@@ -81,6 +87,7 @@ fun FileViewerScreen(
     defaultWrap: Boolean = true,
     linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     showLineNumbers: Boolean = false,
+    tableMode: TableMode = TableMode.INLINE,
     targetLine: Int? = null,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
@@ -220,7 +227,11 @@ fun FileViewerScreen(
                                     sectionTops[index] = it.positionInParent().y.roundToInt()
                                 },
                             ) {
-                                MarkdownRenderer.splitBlocks(section.markdown).forEach { block ->
+                                val blocks = MarkdownRenderer.splitBlocks(
+                                    section.markdown,
+                                    extractTables = tableMode == TableMode.SCROLLABLE,
+                                )
+                                blocks.forEach { block ->
                                     when (block) {
                                         is MdBlock.Text -> MarkdownView(
                                             markdown = block.markdown,
@@ -236,6 +247,12 @@ fun FileViewerScreen(
                                         is MdBlock.Mermaid -> MermaidWebView(
                                             code = block.code,
                                             dark = dark,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                        is MdBlock.Table -> MarkdownTableView(
+                                            header = block.header,
+                                            rows = block.rows,
+                                            fontScale = fontScale,
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                     }
@@ -333,6 +350,50 @@ internal fun activeTocIndex(sectionIndices: List<Int>, tops: Map<Int, Int>, scro
         if (top <= scrollY + 1) active = idx else break
     }
     return active
+}
+
+/**
+ * GFM テーブルを横スクロール＋ヘッダ固定で表示する(設定 SCROLLABLE 時)。
+ * ヘッダ行はスクロール外に置き、本文のみ縦スクロール(高さ上限)。両者を横スクロールで共有しカラム整列。
+ */
+@Composable
+private fun MarkdownTableView(
+    header: List<String>,
+    rows: List<List<String>>,
+    fontScale: Float,
+    modifier: Modifier = Modifier,
+) {
+    val colCount = maxOf(header.size, rows.maxOfOrNull { it.size } ?: 0)
+    val cellWidth = 140.dp
+    val hScroll = rememberScrollState()
+    val vScroll = rememberScrollState()
+    val headerBg = MaterialTheme.colorScheme.surfaceVariant
+    val fontSize = (14f * fontScale).sp
+
+    @Composable
+    fun cell(text: String, header: Boolean) {
+        Text(
+            text = text,
+            modifier = Modifier.width(cellWidth).padding(horizontal = 8.dp, vertical = 6.dp),
+            fontSize = fontSize,
+            fontWeight = if (header) FontWeight.Bold else null,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+
+    Column(modifier.horizontalScroll(hScroll)) {
+        Row(Modifier.background(headerBg)) {
+            for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true)
+        }
+        HorizontalDivider()
+        Column(Modifier.heightIn(max = 360.dp).verticalScroll(vScroll)) {
+            rows.forEach { row ->
+                Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false) }
+                HorizontalDivider()
+            }
+        }
+    }
 }
 
 /** YAML フロントマターをメタ情報カードとして表示する。 */

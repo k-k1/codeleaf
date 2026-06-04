@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.AppSettings
 import com.k1.gitreader.data.FontScale
 import com.k1.gitreader.data.LinkOpenMode
+import com.k1.gitreader.data.TableMode
 import com.k1.gitreader.data.db.ThemeMode
 
 private fun themeLabel(m: ThemeMode) = when (m) {
@@ -57,6 +58,7 @@ fun SettingsScreen(
     onSetWrapByDefault: (Boolean) -> Unit,
     onSetLinkOpenMode: (LinkOpenMode) -> Unit,
     onSetShowLineNumbers: (Boolean) -> Unit,
+    onSetTableMode: (TableMode) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -150,6 +152,24 @@ fun SettingsScreen(
                     )
                 }
                 Switch(checked = settings.showLineNumbers, onCheckedChange = onSetShowLineNumbers)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Markdown テーブルの表示", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "インライン=本文に折り返し埋込（既定）。横スクロール=ヘッダ固定＋横スクロールの表。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val items = listOf(TableMode.INLINE to "インライン", TableMode.SCROLLABLE to "横スクロール")
+                    items.forEachIndexed { i, (mode, label) ->
+                        SegmentedButton(
+                            selected = settings.tableMode == mode,
+                            onClick = { onSetTableMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(i, items.size),
+                        ) { Text(label) }
+                    }
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

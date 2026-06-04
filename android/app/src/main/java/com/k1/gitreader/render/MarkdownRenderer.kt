@@ -57,10 +57,11 @@ import io.noties.markwon.syntax.SyntaxHighlightPlugin
 import io.noties.prism4j.Prism4j
 import java.io.File
 
-/** Markdown を構成するブロック（Mermaid だけは WebView で別描画する）。 */
+/** Markdown を構成するブロック（Mermaid/テーブルは専用描画する）。 */
 sealed interface MdBlock {
     data class Text(val markdown: String) : MdBlock
     data class Mermaid(val code: String) : MdBlock
+    data class Table(val header: List<String>, val rows: List<List<String>>) : MdBlock
 }
 
 /** YAML フロントマターの 1 項目（表示用に key と整形済み value を保持）。 */
@@ -147,20 +148,70 @@ object MarkdownRenderer {
 
     private val imageRegex = Regex("""!\[([^\]]*)]\(\s*([^)\s]+)([^)]*)\)""")
 
-    /** Mermaid フェンスでドキュメントをブロック列に分割する。 */
-    fun splitBlocks(markdown: String): List<MdBlock> {
+    /**
+     * Mermaid フェンスでドキュメントをブロック列に分割する。
+     * extractTables=true のとき、GFM テーブルも MdBlock.Table として切り出す。
+     */
+    fun splitBlocks(markdown: String, extractTables: Boolean = false): List<MdBlock> {
         val blocks = ArrayList<MdBlock>()
         var last = 0
         for (m in mermaidFence.findAll(markdown)) {
             val pre = markdown.substring(last, m.range.first)
-            if (pre.isNotBlank()) blocks.add(MdBlock.Text(pre))
+            if (pre.isNotBlank()) blocks.addAll(textOrTables(pre, extractTables))
             blocks.add(MdBlock.Mermaid(m.groupValues[1]))
             last = m.range.last + 1
         }
         val tail = markdown.substring(last)
-        if (tail.isNotBlank()) blocks.add(MdBlock.Text(tail))
+        if (tail.isNotBlank()) blocks.addAll(textOrTables(tail, extractTables))
         if (blocks.isEmpty()) blocks.add(MdBlock.Text(markdown))
         return blocks
+    }
+
+    private fun textOrTables(md: String, extractTables: Boolean): List<MdBlock> =
+        if (extractTables) splitTables(md) else listOf(MdBlock.Text(md))
+
+    private val tableDelimiter =
+        Regex("""^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$""")
+
+    /** GFM テーブル(ヘッダ行 + 区切り行 + 本文行)を MdBlock.Table として切り出す。フェンス内は無視。 */
+    private fun splitTables(md: String): List<MdBlock> {
+        val lines = md.split("\n")
+        val out = ArrayList<MdBlock>()
+        val buf = StringBuilder()
+        var inFence = false
+        fun flush() { if (buf.isNotBlank()) out.add(MdBlock.Text(buf.toString())); buf.setLength(0) }
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i]
+            if (line.trimStart().startsWith("```")) {
+                inFence = !inFence; buf.append(line).append('\n'); i++; continue
+            }
+            val isTableStart = !inFence && line.contains('|') && line.isNotBlank() &&
+                i + 1 < lines.size && tableDelimiter.matches(lines[i + 1])
+            if (isTableStart) {
+                flush()
+                val header = parseTableCells(line)
+                i += 2
+                val rows = ArrayList<List<String>>()
+                while (i < lines.size && !lines[i].trimStart().startsWith("```") &&
+                    lines[i].contains('|') && lines[i].isNotBlank()
+                ) {
+                    rows.add(parseTableCells(lines[i])); i++
+                }
+                out.add(MdBlock.Table(header, rows))
+            } else {
+                buf.append(line).append('\n'); i++
+            }
+        }
+        flush()
+        return out.ifEmpty { listOf(MdBlock.Text(md)) }
+    }
+
+    private fun parseTableCells(line: String): List<String> {
+        var s = line.trim()
+        if (s.startsWith("|")) s = s.substring(1)
+        if (s.endsWith("|")) s = s.dropLast(1)
+        return s.split("|").map { it.trim() }
     }
 
     /**

@@ -61,6 +61,7 @@ fun GitReaderApp() {
             onSetWrapByDefault = vm::setWrapByDefault,
             onSetLinkOpenMode = vm::setLinkOpenMode,
             onSetShowLineNumbers = vm::setShowLineNumbers,
+            onSetTableMode = vm::setTableMode,
             onClearCache = { vm.clearCache() },
             onBack = { pop() },
         )
@@ -131,6 +132,7 @@ fun GitReaderApp() {
                 defaultWrap = settings.wrapByDefault,
                 linkOpenMode = settings.linkOpenMode,
                 showLineNumbers = settings.showLineNumbers,
+                tableMode = settings.tableMode,
                 targetLine = current.line,
                 onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
                 onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },

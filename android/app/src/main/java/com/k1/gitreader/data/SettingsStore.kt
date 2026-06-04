@@ -11,6 +11,9 @@ enum class FontScale(val scale: Float) { SMALL(0.85f), MEDIUM(1.0f), LARGE(1.3f)
 /** 外部リンク(http/https)の開き方。BROWSER=外部ブラウザ、IN_APP=アプリ内(Custom Tabs)。 */
 enum class LinkOpenMode { BROWSER, IN_APP }
 
+/** Markdown テーブルの表示形式。INLINE=Markwon 既定の本文埋込、SCROLLABLE=横スクロール＋ヘッダ固定。 */
+enum class TableMode { INLINE, SCROLLABLE }
+
 /** アプリ全体のデフォルト設定。 */
 data class AppSettings(
     val defaultTheme: ThemeMode = ThemeMode.SYSTEM,
@@ -18,6 +21,7 @@ data class AppSettings(
     val wrapByDefault: Boolean = true,
     val linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     val showLineNumbers: Boolean = false,
+    val tableMode: TableMode = TableMode.INLINE,
 )
 
 /**
@@ -37,6 +41,7 @@ class SettingsStore(context: Context) {
         wrapByDefault = prefs.getBoolean(KEY_WRAP, true),
         linkOpenMode = enumOrDefault(prefs.getString(KEY_LINK, null), LinkOpenMode.IN_APP),
         showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
+        tableMode = enumOrDefault(prefs.getString(KEY_TABLE, null), TableMode.INLINE),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {
@@ -64,12 +69,18 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(showLineNumbers = show)
     }
 
+    fun setTableMode(mode: TableMode) {
+        prefs.edit().putString(KEY_TABLE, mode.name).apply()
+        _settings.value = _settings.value.copy(tableMode = mode)
+    }
+
     private companion object {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
         const val KEY_WRAP = "wrap_by_default"
         const val KEY_LINK = "link_open_mode"
         const val KEY_LINENUM = "show_line_numbers"
+        const val KEY_TABLE = "table_mode"
 
         inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default
