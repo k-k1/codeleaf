@@ -2,6 +2,7 @@ package com.k1.gitreader.render
 
 import android.content.Context
 import android.text.Spanned
+import android.text.method.LinkMovementMethod
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
@@ -399,11 +400,14 @@ fun MarkdownView(
     }
     AndroidView(
         modifier = modifier,
-        factory = { ctx -> TextView(ctx).apply { setTextIsSelectable(true) } },
+        // setTextIsSelectable(true) は MovementMethod を選択用に置換しリンクのタップを無効化するため使わない。
+        factory = { ctx -> TextView(ctx) },
         update = { tv ->
             tv.setTextColor(textColor)
             tv.textSize = MARKDOWN_BASE_SP * fontScale
             markwon.setMarkdown(tv, rendered)
+            // リンク(相対リンク=アプリ内遷移 / 外部=ブラウザ)をタップ可能にする。
+            tv.movementMethod = LinkMovementMethod.getInstance()
         },
     )
 }
