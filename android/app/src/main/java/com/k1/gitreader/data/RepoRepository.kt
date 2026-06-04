@@ -29,6 +29,50 @@ data class SearchHit(
     val text: String,
 )
 
+/** 検索対象テキストファイル1件（インメモリ・インクリメンタル検索用のコーパス）。 */
+data class TextFile(
+    val relPath: String,
+    val content: String,
+)
+
+/** 検索結果。error が非 null のとき（不正な正規表現など）は hits は空。 */
+data class SearchOutcome(
+    val hits: List<SearchHit>,
+    val error: String? = null,
+)
+
+/**
+ * メモリ上のコーパスを検索する純粋関数。regex=true なら正規表現(大文字小文字無視)、
+ * false なら大文字小文字無視の部分一致。不正な正規表現は error を返す。
+ */
+fun searchCorpus(
+    corpus: List<TextFile>,
+    query: String,
+    regex: Boolean,
+    maxHits: Int = 500,
+): SearchOutcome {
+    if (query.isBlank()) return SearchOutcome(emptyList())
+    val re = if (regex) {
+        runCatching { Regex(query, RegexOption.IGNORE_CASE) }
+            .getOrElse { return SearchOutcome(emptyList(), "正規表現が不正です") }
+    } else {
+        null
+    }
+    val hits = ArrayList<SearchHit>()
+    outer@ for (file in corpus) {
+        var lineNo = 0
+        for (line in file.content.lineSequence()) {
+            lineNo++
+            val matched = if (re != null) re.containsMatchIn(line) else line.contains(query, ignoreCase = true)
+            if (matched) {
+                hits.add(SearchHit(file.relPath, lineNo, line.trim().take(200)))
+                if (hits.size >= maxHits) break@outer
+            }
+        }
+    }
+    return SearchOutcome(hits)
+}
+
 /** 新規リポジトリ登録フォームの入力値。 */
 data class NewRepo(
     val name: String,
@@ -114,33 +158,26 @@ class RepoRepository(
     }
 
     /**
-     * 作業ツリーをテキスト全文検索する（大文字小文字無視の部分一致）。
-     * .git・巨大ファイル(>1MB)・バイナリ(NULを含む)は除外し、ヒット総数を maxHits で打ち切る。
+     * 作業ツリーのテキストファイル本文をメモリに読み込む（インクリメンタル検索用コーパス）。
+     * .git・巨大ファイル(>1MB)・バイナリ(NULを含む)は除外し、合計サイズ上限で打ち切る。
+     * relPath 昇順で返す。
      */
-    suspend fun search(repo: Repo, query: String, maxHits: Int = 500): List<SearchHit> =
-        withContext(ioDispatcher) {
-            if (query.isBlank()) return@withContext emptyList()
-            val root = workDir(repo)
-            val hits = ArrayList<SearchHit>()
-            val files = root.walkTopDown().onEnter { it.name != ".git" }.filter { it.isFile }
-            for (f in files) {
-                if (hits.size >= maxHits) break
-                if (f.length() > MAX_SEARCH_FILE_BYTES) continue
-                val data = runCatching { f.readBytes() }.getOrNull() ?: continue
-                if (data.any { it == 0.toByte() }) continue // バイナリ判定
-                val rel = f.relativeTo(root).path.replace('\\', '/')
-                val content = String(data, Charsets.UTF_8)
-                var lineNo = 0
-                for (line in content.lineSequence()) {
-                    lineNo++
-                    if (line.contains(query, ignoreCase = true)) {
-                        hits.add(SearchHit(rel, lineNo, line.trim().take(SNIPPET_MAX)))
-                        if (hits.size >= maxHits) break
-                    }
-                }
-            }
-            hits.sortedWith(compareBy({ it.relPath }, { it.line }))
+    suspend fun loadSearchCorpus(repo: Repo): List<TextFile> = withContext(ioDispatcher) {
+        val root = workDir(repo)
+        val files = root.walkTopDown().onEnter { it.name != ".git" }.filter { it.isFile }
+        val corpus = ArrayList<TextFile>()
+        var total = 0L
+        for (f in files) {
+            if (total >= MAX_CORPUS_BYTES) break
+            if (f.length() > MAX_SEARCH_FILE_BYTES) continue
+            val data = runCatching { f.readBytes() }.getOrNull() ?: continue
+            if (data.any { it == 0.toByte() }) continue // バイナリ判定
+            total += data.size
+            val rel = f.relativeTo(root).path.replace('\\', '/')
+            corpus.add(TextFile(rel, String(data, Charsets.UTF_8)))
         }
+        corpus.sortedBy { it.relPath }
+    }
 
     /** ファイルのコミット履歴。 */
     suspend fun fileHistory(repo: Repo, relPath: String, limit: Int = 100): List<CommitInfo> =
@@ -168,6 +205,6 @@ class RepoRepository(
 
     private companion object {
         const val MAX_SEARCH_FILE_BYTES = 1_000_000L
-        const val SNIPPET_MAX = 200
+        const val MAX_CORPUS_BYTES = 8_000_000L
     }
 }

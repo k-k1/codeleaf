@@ -13,8 +13,8 @@ import com.k1.gitreader.data.FileEntry
 import com.k1.gitreader.data.FontScale
 import com.k1.gitreader.data.NewRepo
 import com.k1.gitreader.data.RepoRepository
-import com.k1.gitreader.data.SearchHit
 import com.k1.gitreader.data.SettingsStore
+import com.k1.gitreader.data.TextFile
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.BranchInfo
@@ -100,8 +100,8 @@ class RepoListViewModel(
     suspend fun readFile(repo: Repo, relPath: String): String =
         repository.readText(repo, relPath)
 
-    suspend fun searchRepo(repo: Repo, query: String): List<SearchHit> =
-        repository.search(repo, query)
+    suspend fun loadSearchCorpus(repo: Repo): List<TextFile> =
+        repository.loadSearchCorpus(repo)
 
     fun workDirOf(repo: Repo): File = repository.workDir(repo)
 

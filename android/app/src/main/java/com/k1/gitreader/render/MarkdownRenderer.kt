@@ -1,17 +1,33 @@
 package com.k1.gitreader.render
 
 import android.content.Context
-import android.graphics.Typeface
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.vdurmont.emoji.EmojiParser
 import io.noties.markwon.AbstractMarkwonPlugin
@@ -394,26 +410,57 @@ fun MarkdownView(
 private const val MARKDOWN_BASE_SP = 16f
 private const val CODE_BASE_SP = 14f
 
-/** 非 Markdown のソースコードを Prism4j でハイライト表示する。巨大ファイルは素のまま表示。 */
-@Composable
-fun CodeView(code: String, language: String?, dark: Boolean, fontScale: Float, modifier: Modifier = Modifier) {
-    val theme = remember(dark) { CodeHighlight.theme(dark) }
-    val rendered: CharSequence = remember(code, language, dark) {
-        if (code.length > 200_000) code else CodeHighlight.highlight(language, code, dark)
+/** Prism4j の Spanned(ForegroundColorSpan)を Compose の AnnotatedString に変換する。 */
+private fun spannedToAnnotatedString(cs: CharSequence): AnnotatedString {
+    if (cs !is Spanned) return AnnotatedString(cs.toString())
+    return buildAnnotatedString {
+        append(cs.toString())
+        for (sp in cs.getSpans(0, cs.length, ForegroundColorSpan::class.java)) {
+            addStyle(SpanStyle(color = Color(sp.foregroundColor)), cs.getSpanStart(sp), cs.getSpanEnd(sp))
+        }
     }
-    AndroidView(
-        modifier = modifier,
-        factory = { ctx ->
-            TextView(ctx).apply {
-                typeface = Typeface.MONOSPACE
-                setTextIsSelectable(true)
-            }
-        },
-        update = { tv ->
-            tv.setBackgroundColor(theme.background())
-            tv.setTextColor(theme.textColor())
-            tv.textSize = CODE_BASE_SP * fontScale
-            tv.text = rendered
-        },
-    )
+}
+
+/**
+ * ソースコード/プレーンテキストを行単位の LazyColumn で表示する。
+ * 各行を Prism4j でハイライト(language=null なら無装飾)し、巨大ファイルは無装飾。
+ * highlightLine(0始まり)を渡すとその行へスクロールし背景強調する(検索の行ジャンプ用)。
+ */
+@Composable
+fun CodeView(
+    code: String,
+    language: String?,
+    dark: Boolean,
+    fontScale: Float,
+    highlightLine: Int? = null,
+    modifier: Modifier = Modifier,
+) {
+    val theme = remember(dark) { CodeHighlight.theme(dark) }
+    val lines = remember(code, language, dark) {
+        val raw = code.split("\n")
+        if (code.length > 200_000) raw.map { AnnotatedString(it) }
+        else raw.map { spannedToAnnotatedString(CodeHighlight.highlight(language, it, dark)) }
+    }
+    val listState = rememberLazyListState()
+    LaunchedEffect(highlightLine, lines.size) {
+        if (highlightLine != null && highlightLine in lines.indices) {
+            listState.scrollToItem(highlightLine)
+        }
+    }
+    val baseColor = Color(theme.textColor())
+    val highlightBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
+    LazyColumn(state = listState, modifier = modifier.background(Color(theme.background()))) {
+        itemsIndexed(lines) { idx, line ->
+            Text(
+                text = line,
+                color = baseColor,
+                fontFamily = FontFamily.Monospace,
+                fontSize = (CODE_BASE_SP * fontScale).sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (idx == highlightLine) Modifier.background(highlightBg) else Modifier)
+                    .padding(horizontal = 12.dp, vertical = 1.dp),
+            )
+        }
+    }
 }

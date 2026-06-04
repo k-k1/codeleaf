@@ -15,7 +15,7 @@ private sealed interface Screen {
     data object Settings : Screen
     data class Browse(val repo: Repo, val path: String) : Screen
     data class Search(val repo: Repo) : Screen
-    data class View(val repo: Repo, val filePath: String) : Screen
+    data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
     data class History(val repo: Repo, val filePath: String) : Screen
     data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
 }
@@ -87,8 +87,8 @@ fun GitReaderApp() {
         is Screen.Search -> GitReaderTheme(current.repo.themeMode) {
             SearchScreen(
                 repoName = current.repo.name,
-                onSearch = { q -> vm.searchRepo(current.repo, q) },
-                onOpenFile = { navigate(Screen.View(current.repo, it)) },
+                loadCorpus = { vm.loadSearchCorpus(current.repo) },
+                onOpenFile = { path, line -> navigate(Screen.View(current.repo, path, line)) },
                 onBack = { pop() },
             )
         }
@@ -100,6 +100,7 @@ fun GitReaderApp() {
                 workDir = vm.workDirOf(current.repo),
                 loadText = { vm.readFile(current.repo, current.filePath) },
                 fontScale = settings.fontScale.scale,
+                targetLine = current.line,
                 onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
                 onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },
                 onBack = { pop() },

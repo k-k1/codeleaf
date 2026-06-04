@@ -48,7 +48,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,13 +73,15 @@ fun FileViewerScreen(
     workDir: File,
     loadText: suspend () -> String,
     fontScale: Float,
+    targetLine: Int? = null,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
-    var raw by remember(filePath) { mutableStateOf(false) }
+    // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
+    var raw by remember(filePath) { mutableStateOf(targetLine != null) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(repo.id, filePath) {
@@ -209,27 +210,26 @@ fun FileViewerScreen(
                         }
                     }
                 }
-                // Raw 表示(Markdown のソース)は装飾せずそのまま見せる
-                isMarkdown && raw -> Text(
-                    text = body,
-                    fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                // Raw 表示(Markdown のソース)は無装飾の行表示。行ジャンプ時はその行へ。
+                isMarkdown && raw -> CodeView(
+                    code = body,
+                    language = null,
+                    dark = dark,
+                    fontScale = fontScale,
+                    highlightLine = targetLine?.let { it - 1 },
+                    modifier = Modifier.fillMaxSize(),
                 )
-                // 非 Markdown ファイルはコードとして拡張子からハイライト
+                // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
                 else -> {
                     val language = remember(filePath) { CodeHighlight.languageForFile(fileName) }
-                    Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                    ) {
-                        CodeView(
-                            code = body,
-                            language = language,
-                            dark = dark,
-                            fontScale = fontScale,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    CodeView(
+                        code = body,
+                        language = language,
+                        dark = dark,
+                        fontScale = fontScale,
+                        highlightLine = targetLine?.let { it - 1 },
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
         }

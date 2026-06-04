@@ -23,10 +23,8 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
- * 全文検索の E2E: ブラウザ → 検索 → クエリ入力 → ヒット表示 → タップでファイルを開く。
+ * 全文検索の E2E: 部分一致＋行ジャンプ、正規表現検索。
  * ネットワーク非依存(ローカル git リポを file パスで clone)。
- *
- * 実行: `./gradlew pixel6Api35DebugAndroidTest`。
  */
 @RunWith(AndroidJUnit4::class)
 class SearchE2EInstrumentedTest {
@@ -66,9 +64,7 @@ class SearchE2EInstrumentedTest {
         }
     }
 
-    @Test
-    fun search_findsMatches_andOpensFile() {
-        // リポを開く → ブラウザ → 検索アイコン
+    private fun openSearch() {
         compose.onNodeWithText("search-fixture").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("README.md").fetchSemanticsNodes().isNotEmpty()
@@ -77,8 +73,11 @@ class SearchE2EInstrumentedTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("ファイル内を全文検索").fetchSemanticsNodes().isNotEmpty()
         }
+    }
 
-        // クエリ入力 → 両ファイルがヒット(other.txt は不一致)
+    @Test
+    fun literalSearch_findsMatches_andJumpsToLine() {
+        openSearch()
         compose.onNode(hasSetTextAction()).performTextInput("needle")
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("📄 docs/guide.md").fetchSemanticsNodes().isNotEmpty()
@@ -86,11 +85,26 @@ class SearchE2EInstrumentedTest {
         compose.onNodeWithText("📄 README.md").assertIsDisplayed()
         compose.onNodeWithText("📄 docs/guide.md").assertIsDisplayed()
 
-        // ヒットしたファイルを開く → Markdown ビューア(整形/Raw)
-        compose.onNodeWithText("📄 docs/guide.md").performClick()
+        // ヒット行をタップ → Raw 表示で該当行へジャンプ(行テキストが表示される)
+        compose.onNodeWithText("L1: needle beta").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("整形").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("needle beta").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("整形").assertIsDisplayed()
+        compose.onNodeWithText("needle beta").assertIsDisplayed()
+    }
+
+    @Test
+    fun regexSearch_matchesPatternOnly() {
+        openSearch()
+        // 正規表現トグル(.*) を有効化して "be.a" を検索 → guide(beta) のみ一致、README(alpha)は不一致
+        compose.onNodeWithText(".*").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("be.a")
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("📄 docs/guide.md").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("📄 docs/guide.md").assertIsDisplayed()
+        compose.waitUntil(timeoutMillis = 3_000) {
+            compose.onAllNodesWithText("📄 README.md").fetchSemanticsNodes().isEmpty()
+        }
     }
 }

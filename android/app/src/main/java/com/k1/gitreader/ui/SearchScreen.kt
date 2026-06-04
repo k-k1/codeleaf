@@ -2,6 +2,7 @@ package com.k1.gitreader.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,37 +28,52 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.SearchHit
+import com.k1.gitreader.data.TextFile
+import com.k1.gitreader.data.searchCorpus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     repoName: String,
-    onSearch: suspend (String) -> List<SearchHit>,
-    onOpenFile: (String) -> Unit,
+    loadCorpus: suspend () -> List<TextFile>,
+    onOpenFile: (path: String, line: Int) -> Unit,
     onBack: () -> Unit,
 ) {
+    var corpus by remember { mutableStateOf<List<TextFile>?>(null) }
     var query by remember { mutableStateOf("") }
+    var regex by remember { mutableStateOf(false) }
     var results by remember { mutableStateOf<List<SearchHit>>(emptyList()) }
+    var error by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
 
-    // 入力が落ち着いてから(300ms デバウンス)検索する。query 変化で前回はキャンセルされる。
-    LaunchedEffect(query) {
-        if (query.isBlank()) {
+    // 検索画面に入ったら本文を一度だけメモリへ読み込む（以降はメモリ内で増分検索）。
+    LaunchedEffect(Unit) { corpus = loadCorpus() }
+
+    // クエリ/正規表現トグル/コーパスの変化で増分検索（120ms デバウンス、別スレッド実行）。
+    LaunchedEffect(query, regex, corpus) {
+        val c = corpus
+        if (c == null || query.isBlank()) {
             results = emptyList()
+            error = null
             searching = false
-        } else {
-            searching = true
-            delay(300)
-            results = onSearch(query)
-            searching = false
+            return@LaunchedEffect
         }
+        searching = true
+        delay(120)
+        val outcome = withContext(Dispatchers.Default) { searchCorpus(c, query, regex) }
+        results = outcome.hits
+        error = outcome.error
+        searching = false
     }
 
     Scaffold(
@@ -72,20 +89,36 @@ fun SearchScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("ファイル内を全文検索") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-
-            if (searching) LinearProgressIndicator(Modifier.fillMaxWidth())
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(if (regex) "正規表現で検索" else "ファイル内を全文検索") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    modifier = Modifier.weight(1f),
+                )
+                FilterChip(
+                    selected = regex,
+                    onClick = { regex = !regex },
+                    label = { Text(".*") },
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
 
             when {
+                corpus == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                searching -> LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+
+            when {
+                error != null ->
+                    Text(error!!, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
                 query.isBlank() -> Unit
-                !searching && results.isEmpty() ->
+                corpus != null && !searching && results.isEmpty() ->
                     Text("一致なし", Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
                 else -> {
                     val byFile = remember(results) { results.groupBy { it.relPath } }
@@ -100,7 +133,7 @@ fun SearchScreen(
                                 Text(
                                     "📄 $path",
                                     Modifier.fillMaxWidth()
-                                        .clickable { onOpenFile(path) }
+                                        .clickable { onOpenFile(path, hits.first().line) }
                                         .padding(horizontal = 16.dp, vertical = 8.dp),
                                     style = MaterialTheme.typography.titleSmall,
                                     maxLines = 1,
@@ -108,7 +141,16 @@ fun SearchScreen(
                                 )
                             }
                             items(hits, key = { "${path}:${it.line}" }) { hit ->
-                                Row2(hit, onClick = { onOpenFile(path) })
+                                Text(
+                                    "L${hit.line}: ${hit.text}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
+                                        .clickable { onOpenFile(path, hit.line) }
+                                        .padding(start = 28.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+                                )
                             }
                             item(key = "d:$path") { HorizontalDivider() }
                         }
@@ -116,21 +158,5 @@ fun SearchScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun Row2(hit: SearchHit, onClick: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(start = 28.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
-    ) {
-        Text(
-            "L${hit.line}: ${hit.text}",
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
