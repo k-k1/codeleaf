@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -235,6 +236,12 @@ fun FileViewerScreen(
     }
 
     if (showToc) {
+        // 現在のスクロール位置に対応する見出しを強調する。
+        val activeIndex = activeTocIndex(
+            tocEntries.map { it.sectionIndex },
+            sectionTops,
+            scrollState.value,
+        )
         ModalBottomSheet(onDismissRequest = { showToc = false }) {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
@@ -245,9 +252,12 @@ fun FileViewerScreen(
                     modifier = Modifier.padding(16.dp),
                 )
                 tocEntries.forEach { entry ->
+                    val active = entry.sectionIndex == activeIndex
                     Text(
                         entry.heading.text,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = if (active) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        fontWeight = if (active) FontWeight.Bold else null,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
@@ -271,6 +281,20 @@ fun FileViewerScreen(
 }
 
 private data class TocEntry(val sectionIndex: Int, val heading: Heading)
+
+/**
+ * 現在のスクロール位置(px)に対応する見出しのセクション index を返す。
+ * top が scrollY 以下である最後の見出しを採用する(該当なし/空なら最初の見出し or -1)。
+ * sectionIndices は文書順、tops は section index → Y(px)。
+ */
+internal fun activeTocIndex(sectionIndices: List<Int>, tops: Map<Int, Int>, scrollY: Int): Int {
+    var active = sectionIndices.firstOrNull() ?: -1
+    for (idx in sectionIndices) {
+        val top = tops[idx] ?: continue
+        if (top <= scrollY + 1) active = idx else break
+    }
+    return active
+}
 
 /** YAML フロントマターをメタ情報カードとして表示する。 */
 @Composable
