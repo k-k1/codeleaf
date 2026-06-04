@@ -50,4 +50,22 @@ class HeadingStackTest {
         // top==scrollY は「まだインライン表示」扱いでスタックに入らない
         assertEquals(listOf(Heading(1, "A")), stack(200)) // B(top=200)は未, A(100)のみ
     }
+
+    // --- スティッキー見出しタップの飛び先(top+1)が、間に深い兄弟があっても正しい祖先パスになる ---
+
+    private fun stackAfterJumpTo(idx: Int) =
+        computeHeadingStack(sections, tops, (tops[idx]!!) + 1).map { it.second }
+
+    @Test
+    fun jumpToHeading_landsItAsLastPinned_withCorrectAncestors() {
+        // D(##, idx=4) をタップ → top+1 へ飛ぶ。間の C(###) は pop され A>D で D が最下段
+        assertEquals(listOf(Heading(1, "A"), Heading(2, "D")), stackAfterJumpTo(4))
+        // C(### idx=3) をタップ → A>B>C
+        assertEquals(
+            listOf(Heading(1, "A"), Heading(2, "B"), Heading(3, "C")),
+            stackAfterJumpTo(3),
+        )
+        // A(# idx=1) をタップ → A のみ(祖先なし)
+        assertEquals(listOf(Heading(1, "A")), stackAfterJumpTo(1))
+    }
 }

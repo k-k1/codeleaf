@@ -407,15 +407,13 @@ private fun StickyHeadingsOverlay(
         onHeight(0)
         return
     }
-    // 各見出し行の高さ(px)。タップ時、その見出しが祖先バーの下に来るよう祖先分を差し引く。
-    val rowHeights = remember { mutableStateMapOf<Int, Int>() }
     Column(
         modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
             .onGloballyPositioned { onHeight(it.size.height) },
     ) {
-        stack.forEachIndexed { pos, (idx, h) ->
+        stack.forEach { (idx, h) ->
             Text(
                 text = h.text,
                 fontSize = headingSp(h.level, fontScale).sp,
@@ -424,11 +422,8 @@ private fun StickyHeadingsOverlay(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
-                        val ancestorsHeight = stack.take(pos).sumOf { rowHeights[it.first] ?: 0 }
-                        onJump((sectionTops[idx] ?: 0) - ancestorsHeight)
-                    }
-                    .onGloballyPositioned { rowHeights[idx] = it.size.height }
+                    // その見出しの直後へ飛ばし、見出し自身を固定バー最下段に表示する
+                    .clickable { onJump((sectionTops[idx] ?: 0) + 1) }
                     .padding(start = (16 + (h.level - 1) * 8).dp, end = 16.dp, top = 3.dp, bottom = 3.dp),
             )
         }
