@@ -67,6 +67,11 @@ class RepoListViewModel(
         }
     }
 
+    /** 完了まで待つ同期（pull-to-refresh 用）。失敗時は例外を送出する。 */
+    suspend fun syncNow(repo: Repo) {
+        repository.sync(repo)
+    }
+
     fun delete(repo: Repo) {
         viewModelScope.launch { runCatching { repository.delete(repo) } }
     }

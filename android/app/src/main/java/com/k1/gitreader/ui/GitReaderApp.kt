@@ -66,6 +66,7 @@ fun GitReaderApp() {
                 path = current.path,
                 loadDir = { vm.listDir(current.repo, it) },
                 loadBranches = { vm.listBranches(current.repo) },
+                onSync = { vm.syncNow(current.repo) },
                 onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
                 onOpenFile = { navigate(Screen.View(current.repo, it)) },
                 onSwitchBranch = { branch ->

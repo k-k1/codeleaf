@@ -20,14 +20,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +47,7 @@ fun FileBrowserScreen(
     path: String,
     loadDir: suspend (String) -> List<FileEntry>,
     loadBranches: suspend () -> List<com.k1.gitreader.git.BranchInfo>,
+    onSync: suspend () -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
@@ -50,6 +56,9 @@ fun FileBrowserScreen(
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
     var showBranchSheet by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(repo.id, path) {
         error = null
@@ -77,6 +86,7 @@ fun FileBrowserScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             BottomAppBar {
                 IconButton(onClick = onBack) {
@@ -92,7 +102,22 @@ fun FileBrowserScreen(
             }
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                scope.launch {
+                    refreshing = true
+                    val result = runCatching { onSync() }
+                    // 同期後はツリーが変わりうるので再読込
+                    entries = runCatching { loadDir(path) }.getOrElse { error = it.message; emptyList() }
+                    refreshing = false
+                    snackbar.showSnackbar(
+                        result.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxSize().padding(padding),
+        ) {
             when {
                 entries == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
