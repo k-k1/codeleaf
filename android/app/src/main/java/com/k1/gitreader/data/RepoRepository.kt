@@ -42,8 +42,9 @@ data class SearchOutcome(
 )
 
 /**
- * メモリ上のコーパスを検索する純粋関数。regex=true なら正規表現(大文字小文字無視)、
- * false なら大文字小文字無視の部分一致。不正な正規表現は error を返す。
+ * メモリ上のコーパスを検索する純粋関数。クエリは空白区切りの複数語を AND 条件で扱い、
+ * 行が全語を含む(順不同)ときヒットする。regex=true なら各語を正規表現(大文字小文字無視)、
+ * false なら各語を大文字小文字無視の部分一致で判定する。不正な正規表現は error を返す。
  * pathFilter が非空なら relPath にそれを含むファイルだけを対象にする(拡張子/ディレクトリ絞り込み)。
  */
 fun searchCorpus(
@@ -53,10 +54,13 @@ fun searchCorpus(
     pathFilter: String = "",
     maxHits: Int = 500,
 ): SearchOutcome {
-    if (query.isBlank()) return SearchOutcome(emptyList())
-    val re = if (regex) {
-        runCatching { Regex(query, RegexOption.IGNORE_CASE) }
-            .getOrElse { return SearchOutcome(emptyList(), "正規表現が不正です") }
+    val terms = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (terms.isEmpty()) return SearchOutcome(emptyList())
+    val regexes = if (regex) {
+        terms.map {
+            runCatching { Regex(it, RegexOption.IGNORE_CASE) }
+                .getOrElse { return SearchOutcome(emptyList(), "正規表現が不正です") }
+        }
     } else {
         null
     }
@@ -67,7 +71,11 @@ fun searchCorpus(
         var lineNo = 0
         for (line in file.content.lineSequence()) {
             lineNo++
-            val matched = if (re != null) re.containsMatchIn(line) else line.contains(query, ignoreCase = true)
+            val matched = if (regexes != null) {
+                regexes.all { it.containsMatchIn(line) }
+            } else {
+                terms.all { line.contains(it, ignoreCase = true) }
+            }
             if (matched) {
                 hits.add(SearchHit(file.relPath, lineNo, line.trim().take(200)))
                 if (hits.size >= maxHits) break@outer

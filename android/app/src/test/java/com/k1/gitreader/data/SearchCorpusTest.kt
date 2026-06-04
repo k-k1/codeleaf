@@ -66,6 +66,31 @@ class SearchCorpusTest {
     }
 
     @Test
+    fun multiWord_andOrderIndependent() {
+        // "alpha needle" は語順に依らず "needle alpha" 行に一致、"needle beta" には一致しない
+        val out = searchCorpus(corpus, "alpha needle", regex = false)
+        assertEquals(listOf(SearchHit("a.md", 1, "needle alpha")), out.hits)
+    }
+
+    @Test
+    fun multiWord_requiresAllTerms() {
+        // beta は a.md に無いので、両語を含む行は無し
+        assertTrue(searchCorpus(corpus, "needle bar", regex = false).hits.isEmpty())
+        assertEquals(1, searchCorpus(corpus, "foo bar", regex = false).hits.size)
+    }
+
+    @Test
+    fun multiWord_regexTermsAreAnded() {
+        val out = searchCorpus(corpus, "ne.dle al.ha", regex = true)
+        assertEquals(listOf(SearchHit("a.md", 1, "needle alpha")), out.hits)
+    }
+
+    @Test
+    fun multiWord_invalidRegexTermReturnsError() {
+        assertNotNull(searchCorpus(corpus, "needle (", regex = true).error)
+    }
+
+    @Test
     fun maxHits_isRespected() {
         val many = listOf(TextFile("x.txt", (1..10).joinToString("\n") { "hit $it" }))
         val out = searchCorpus(many, "hit", regex = false, maxHits = 3)

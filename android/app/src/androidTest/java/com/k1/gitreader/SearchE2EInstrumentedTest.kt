@@ -72,7 +72,7 @@ class SearchE2EInstrumentedTest {
         }
         compose.onNodeWithContentDescription("検索").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("ファイル内を全文検索").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("全文検索", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -111,6 +111,20 @@ class SearchE2EInstrumentedTest {
         // 正規表現トグル(.*) を有効化して "be.a" を検索 → guide(beta) のみ一致、README(alpha)は不一致
         compose.onNodeWithText(".*").performClick()
         typeQuery("be.a")
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("📄 docs/guide.md").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("📄 docs/guide.md").assertIsDisplayed()
+        compose.waitUntil(timeoutMillis = 3_000) {
+            compose.onAllNodesWithText("📄 README.md").fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
+    fun multiWordAnd_matchesLinesWithAllTerms() {
+        openSearch()
+        // "needle beta" は guide(needle beta) のみ。README(needle alpha) は beta が無く除外
+        typeQuery("needle beta")
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("📄 docs/guide.md").fetchSemanticsNodes().isNotEmpty()
         }

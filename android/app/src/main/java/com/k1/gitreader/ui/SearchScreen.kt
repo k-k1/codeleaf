@@ -97,7 +97,7 @@ fun SearchScreen(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text(if (regex) "正規表現で検索" else "ファイル内を全文検索") },
+                    label = { Text(if (regex) "正規表現で検索 (空白でAND)" else "ファイル内を全文検索 (空白でAND)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     modifier = Modifier.weight(1f),
