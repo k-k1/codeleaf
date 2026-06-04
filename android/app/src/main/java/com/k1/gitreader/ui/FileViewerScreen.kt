@@ -82,6 +82,7 @@ fun FileViewerScreen(
     var error by remember(filePath) { mutableStateOf<String?>(null) }
     // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
     var raw by remember(filePath) { mutableStateOf(targetLine != null) }
+    var wrap by remember(filePath) { mutableStateOf(true) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(repo.id, filePath) {
@@ -140,8 +141,8 @@ fun FileViewerScreen(
             )
         },
         bottomBar = {
-            if (isMarkdown) {
-                BottomAppBar {
+            BottomAppBar {
+                if (isMarkdown) {
                     SingleChoiceSegmentedButtonRow(Modifier.padding(horizontal = 12.dp)) {
                         SegmentedButton(
                             selected = !raw,
@@ -154,13 +155,20 @@ fun FileViewerScreen(
                             shape = SegmentedButtonDefaults.itemShape(1, 2),
                         ) { Text("Raw") }
                     }
-                    Spacer(Modifier.weight(1f))
-                    if (!raw && tocEntries.isNotEmpty()) {
-                        TextButton(
-                            onClick = { showToc = true },
-                            modifier = Modifier.padding(end = 8.dp),
-                        ) { Text("☰ 目次") }
-                    }
+                }
+                Spacer(Modifier.weight(1f))
+                // コード/Raw 表示中のみ折り返しトグルを出す
+                if (!isMarkdown || raw) {
+                    TextButton(
+                        onClick = { wrap = !wrap },
+                        modifier = Modifier.padding(end = 4.dp),
+                    ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
+                }
+                if (isMarkdown && !raw && tocEntries.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showToc = true },
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) { Text("☰ 目次") }
                 }
             }
         },
@@ -217,6 +225,7 @@ fun FileViewerScreen(
                     dark = dark,
                     fontScale = fontScale,
                     highlightLine = targetLine?.let { it - 1 },
+                    wrap = wrap,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
@@ -228,6 +237,7 @@ fun FileViewerScreen(
                         dark = dark,
                         fontScale = fontScale,
                         highlightLine = targetLine?.let { it - 1 },
+                        wrap = wrap,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

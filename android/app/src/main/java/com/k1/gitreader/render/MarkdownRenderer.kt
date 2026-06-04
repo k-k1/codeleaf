@@ -6,9 +6,11 @@ import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
@@ -425,6 +427,7 @@ private fun spannedToAnnotatedString(cs: CharSequence): AnnotatedString {
  * ソースコード/プレーンテキストを行単位の LazyColumn で表示する。
  * 各行を Prism4j でハイライト(language=null なら無装飾)し、巨大ファイルは無装飾。
  * highlightLine(0始まり)を渡すとその行へスクロールし背景強調する(検索の行ジャンプ用)。
+ * wrap=false なら各行を折り返さず、リスト全体を横スクロールできる。
  */
 @Composable
 fun CodeView(
@@ -433,6 +436,7 @@ fun CodeView(
     dark: Boolean,
     fontScale: Float,
     highlightLine: Int? = null,
+    wrap: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val theme = remember(dark) { CodeHighlight.theme(dark) }
@@ -449,15 +453,21 @@ fun CodeView(
     }
     val baseColor = Color(theme.textColor())
     val highlightBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
-    LazyColumn(state = listState, modifier = modifier.background(Color(theme.background()))) {
+    val hScroll = rememberScrollState()
+    val listModifier = modifier
+        .background(Color(theme.background()))
+        .let { if (wrap) it else it.horizontalScroll(hScroll) }
+    LazyColumn(state = listState, modifier = listModifier) {
         itemsIndexed(lines) { idx, line ->
             Text(
                 text = line,
                 color = baseColor,
                 fontFamily = FontFamily.Monospace,
                 fontSize = (CODE_BASE_SP * fontScale).sp,
+                softWrap = wrap,
+                maxLines = if (wrap) Int.MAX_VALUE else 1,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
                     .then(if (idx == highlightLine) Modifier.background(highlightBg) else Modifier)
                     .padding(horizontal = 12.dp, vertical = 1.dp),
             )
