@@ -1,0 +1,75 @@
+package com.k1.gitreader.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import com.k1.gitreader.GitReaderApplication
+import com.k1.gitreader.data.NewRepo
+import com.k1.gitreader.data.RepoRepository
+import com.k1.gitreader.data.db.Repo
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/** 進行中の非同期操作・エラーを画面に伝えるための状態。 */
+data class UiStatus(
+    val busy: Boolean = false,
+    val message: String? = null,
+)
+
+class RepoListViewModel(
+    private val repository: RepoRepository,
+) : ViewModel() {
+
+    val repos: StateFlow<List<Repo>> = repository.observeRepos()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _status = MutableStateFlow(UiStatus())
+    val status: StateFlow<UiStatus> = _status
+
+    fun addRepo(input: NewRepo, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            _status.value = UiStatus(busy = true, message = "clone 中...")
+            val ok = runCatching { repository.addAndClone(input) }
+            _status.value = UiStatus(
+                busy = false,
+                message = ok.exceptionOrNull()?.let { "失敗: ${it.message}" },
+            )
+            onDone(ok.isSuccess)
+        }
+    }
+
+    fun sync(repo: Repo) {
+        viewModelScope.launch {
+            _status.value = UiStatus(busy = true, message = "${repo.name} を同期中...")
+            val ok = runCatching { repository.sync(repo) }
+            _status.value = UiStatus(
+                busy = false,
+                message = ok.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
+            )
+        }
+    }
+
+    fun delete(repo: Repo) {
+        viewModelScope.launch { runCatching { repository.delete(repo) } }
+    }
+
+    fun clearMessage() {
+        _status.value = _status.value.copy(message = null)
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as GitReaderApplication
+                RepoListViewModel(app.container.repoRepository)
+            }
+        }
+    }
+}
