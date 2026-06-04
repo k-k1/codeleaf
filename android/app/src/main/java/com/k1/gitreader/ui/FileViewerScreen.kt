@@ -445,7 +445,14 @@ private fun MarkdownTableView(
     modifier: Modifier = Modifier,
 ) {
     val colCount = maxOf(header.size, rows.maxOfOrNull { it.size } ?: 0)
-    val cellWidth = 140.dp
+    // 各カラム幅を内容(最大文字数)から推定。短い列は狭く、長い列は広く(クランプ)。CJK等は概算。
+    val colWidths = remember(header, rows, fontScale) {
+        (0 until colCount).map { c ->
+            val maxChars = (sequenceOf(header.getOrElse(c) { "" }) +
+                rows.asSequence().map { it.getOrElse(c) { "" } }).maxOf { it.length }
+            (maxChars * (10f * fontScale) + 20f).dp.coerceIn(48.dp, 260.dp)
+        }
+    }
     val hScroll = rememberScrollState()
     val headerBg = MaterialTheme.colorScheme.surfaceVariant
     val fontSize = (14f * fontScale).sp
@@ -458,10 +465,10 @@ private fun MarkdownTableView(
         .coerceIn(0f, (tableHeightPx - headerHeightPx).coerceAtLeast(0).toFloat())
 
     @Composable
-    fun cell(text: String, isHeader: Boolean) {
+    fun cell(text: String, isHeader: Boolean, col: Int) {
         Text(
             text = text,
-            modifier = Modifier.width(cellWidth).padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.width(colWidths[col]).padding(horizontal = 8.dp, vertical = 6.dp),
             fontSize = fontSize,
             fontWeight = if (isHeader) FontWeight.Bold else null,
             maxLines = 3,
@@ -485,11 +492,11 @@ private fun MarkdownTableView(
                 .onGloballyPositioned { headerHeightPx = it.size.height }
                 .background(headerBg),
         ) {
-            for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true)
+            for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true, c)
         }
         HorizontalDivider()
         rows.forEach { row ->
-            Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false) }
+            Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false, c) }
             HorizontalDivider()
         }
     }
