@@ -9,6 +9,7 @@ composeBom = "2024.12.01"
 room = "2.6.1"
 coroutines = "1.9.0"
 markwon = "4.6.2"
+emojiJava = "5.1.1"
 jgit = "7.6.0.202603022253-r"
 slf4j = "2.0.17"
 
@@ -34,6 +35,7 @@ markwon-ext-tasklist = { group = "io.noties.markwon", name = "ext-tasklist", ver
 markwon-html = { group = "io.noties.markwon", name = "html", version.ref = "markwon" }
 markwon-linkify = { group = "io.noties.markwon", name = "linkify", version.ref = "markwon" }
 markwon-image = { group = "io.noties.markwon", name = "image", version.ref = "markwon" }
+emoji-java = { group = "com.vdurmont", name = "emoji-java", version.ref = "emojiJava" }
 jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
 slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 

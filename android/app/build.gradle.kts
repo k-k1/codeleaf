@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.markwon.html)
     implementation(libs.markwon.linkify)
     implementation(libs.markwon.image)
+    implementation(libs.emoji.java)
 
     // git
     implementation(libs.jgit)

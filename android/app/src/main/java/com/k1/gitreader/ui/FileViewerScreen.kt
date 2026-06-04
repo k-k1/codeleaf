@@ -1,8 +1,10 @@
 package com.k1.gitreader.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,11 +29,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.render.MarkdownRenderer
 import com.k1.gitreader.render.MarkdownView
+import com.k1.gitreader.render.MdBlock
+import com.k1.gitreader.render.MermaidWebView
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +63,9 @@ fun FileViewerScreen(
     val fileName = filePath.substringAfterLast('/')
     val parent = filePath.substringBeforeLast('/', "")
     val baseDir = if (parent.isEmpty()) workDir else File(workDir, parent)
+
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
 
     Scaffold(
         topBar = {
@@ -92,11 +102,26 @@ fun FileViewerScreen(
             when {
                 error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
                 body == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                isMarkdown && !raw -> MarkdownView(
-                    markdown = body,
-                    baseDir = baseDir,
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                )
+                isMarkdown && !raw -> Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                ) {
+                    MarkdownRenderer.splitBlocks(body).forEach { block ->
+                        when (block) {
+                            is MdBlock.Text -> MarkdownView(
+                                markdown = block.markdown,
+                                baseDir = baseDir,
+                                textColor = textColor,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            is MdBlock.Mermaid -> MermaidWebView(
+                                code = block.code,
+                                dark = dark,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
                 else -> Text(
                     text = body,
                     fontFamily = FontFamily.Monospace,

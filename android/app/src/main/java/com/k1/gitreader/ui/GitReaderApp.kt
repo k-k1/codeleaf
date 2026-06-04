@@ -45,21 +45,25 @@ fun GitReaderApp() {
             onSubmit = { input -> vm.addRepo(input) { ok -> if (ok) pop() } },
         )
 
-        is Screen.Browse -> FileBrowserScreen(
-            repo = current.repo,
-            path = current.path,
-            loadDir = { vm.listDir(current.repo, it) },
-            onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
-            onOpenFile = { navigate(Screen.View(current.repo, it)) },
-            onBack = { pop() },
-        )
+        is Screen.Browse -> GitReaderTheme(current.repo.themeMode) {
+            FileBrowserScreen(
+                repo = current.repo,
+                path = current.path,
+                loadDir = { vm.listDir(current.repo, it) },
+                onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
+                onOpenFile = { navigate(Screen.View(current.repo, it)) },
+                onBack = { pop() },
+            )
+        }
 
-        is Screen.View -> FileViewerScreen(
-            repo = current.repo,
-            filePath = current.filePath,
-            workDir = vm.workDirOf(current.repo),
-            loadText = { vm.readFile(current.repo, current.filePath) },
-            onBack = { pop() },
-        )
+        is Screen.View -> GitReaderTheme(current.repo.themeMode) {
+            FileViewerScreen(
+                repo = current.repo,
+                filePath = current.filePath,
+                workDir = vm.workDirOf(current.repo),
+                loadText = { vm.readFile(current.repo, current.filePath) },
+                onBack = { pop() },
+            )
+        }
     }
 }
