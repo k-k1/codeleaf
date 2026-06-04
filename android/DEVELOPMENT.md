@@ -59,7 +59,21 @@ JGit が実機/エミュ上で動くことを `app/src/androidTest` の `JgitIns
 ./gradlew connectedDebugAndroidTest
 ```
 
-## 7. 再現性の担保について
-- **SDK/エミュは git に入れない**。代わりに本書の手順 + 固定済みバージョンで再現する。
-- さらに自動化したい場合は **Gradle Managed Devices**（`build.gradle` にデバイスを宣言すると
-  Gradle が system image を自動取得してヘッドレス実行）を導入するとCIでも完全再現できる。
+## 7. Gradle Managed Devices（推奨・CI/他PCで完全再現）
+`app/build.gradle.kts` にデバイス `pixel6Api35` を宣言済み。手動でエミュを作らなくても、
+Gradle が system image を自動取得し管理AVDをヘッドレス構築してテストまで流す:
+
+```bash
+cd android
+./gradlew pixel6Api35DebugAndroidTest
+# レポート: app/build/reports/androidTests/managedDevice/debug/allDevices/index.html
+```
+
+これが他PC/CIでの再現の本命。AVD作成（手順5）すら不要で、定義は git に入っている。
+
+## 8. 再現性の担保について
+- **SDK/system image/エミュ本体は git に入れない**（巨大・OS依存・ライセンス物）。
+  再現は「本書の手順 + 固定済みバージョン(`gradle/libs.versions.toml`, `app/build.gradle.kts`) +
+  Gradle Managed Devices 定義」で担保する。
+- ローカルでサッと動かすなら手順5の手動エミュ + `connectedDebugAndroidTest`、
+  CI/他PCでの確実な再現なら手順7の Managed Devices、という使い分け。

@@ -52,6 +52,20 @@ android {
             )
         }
     }
+
+    // Gradle Managed Devices: system image は git に入れず、ここでデバイスを宣言する。
+    // 実行: ./gradlew pixel6Api35DebugAndroidTest （Gradle が system image を自動取得しヘッドレス実行）
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("pixel6Api35") {
+                    device = "Pixel 6"
+                    apiLevel = 35
+                    systemImageSource = "google_apis"
+                }
+            }
+        }
+    }
 }
 
 dependencies {
