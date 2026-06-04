@@ -2,11 +2,17 @@ package com.k1.gitreader.git
 
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand.ResetType
+import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.treewalk.CanonicalTreeParser
+import org.eclipse.jgit.treewalk.EmptyTreeIterator
+import org.eclipse.jgit.treewalk.filter.PathFilter
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
 
@@ -14,6 +20,14 @@ import java.time.Instant
 data class BranchInfo(
     val name: String,
     val sha: String,
+    val committedAt: Instant,
+)
+
+/** コミット1件分の情報（履歴表示用）。 */
+data class CommitInfo(
+    val sha: String,
+    val shortMessage: String,
+    val author: String,
     val committedAt: Instant,
 )
 
@@ -78,6 +92,43 @@ class JgitClient {
     /** clone 直後の既定ブランチ名（HEAD）。 */
     fun currentBranch(dir: File): String =
         Git.open(dir).use { it.repository.branch }
+
+    /** HEAD から見たコミット履歴。filePath 指定時はそのファイルに触れたコミットのみ。 */
+    fun log(dir: File, filePath: String?, limit: Int): List<CommitInfo> {
+        Git.open(dir).use { git ->
+            val cmd = git.log().setMaxCount(limit)
+            if (filePath != null) cmd.addPath(filePath)
+            return cmd.call().map { c ->
+                CommitInfo(c.name, c.shortMessage, c.authorIdent.name, c.authorIdent.whenAsInstant)
+            }
+        }
+    }
+
+    /** 指定コミットにおける filePath の unified diff（第1親との差分）。 */
+    fun diff(dir: File, filePath: String, sha: String): String {
+        Git.open(dir).use { git ->
+            val repo = git.repository
+            RevWalk(repo).use { rw ->
+                val commit = rw.parseCommit(ObjectId.fromString(sha))
+                repo.newObjectReader().use { reader ->
+                    val newTree = CanonicalTreeParser().apply { reset(reader, commit.tree) }
+                    val oldIter = if (commit.parentCount > 0) {
+                        val parent = rw.parseCommit(commit.getParent(0).id)
+                        CanonicalTreeParser().apply { reset(reader, parent.tree) }
+                    } else {
+                        EmptyTreeIterator()
+                    }
+                    val out = ByteArrayOutputStream()
+                    DiffFormatter(out).use { df ->
+                        df.setRepository(repo)
+                        df.pathFilter = PathFilter.create(filePath)
+                        df.format(df.scan(oldIter, newTree))
+                    }
+                    return out.toString(Charsets.UTF_8.name())
+                }
+            }
+        }
+    }
 
     private fun fetchAll(git: Git, cp: CredentialsProvider?) {
         git.fetch()

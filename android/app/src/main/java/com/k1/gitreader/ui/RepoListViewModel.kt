@@ -13,6 +13,7 @@ import com.k1.gitreader.data.NewRepo
 import com.k1.gitreader.data.RepoRepository
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.git.BranchInfo
+import com.k1.gitreader.git.CommitInfo
 import java.io.File
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -87,6 +88,12 @@ class RepoListViewModel(
         repository.readText(repo, relPath)
 
     fun workDirOf(repo: Repo): File = repository.workDir(repo)
+
+    suspend fun fileHistory(repo: Repo, relPath: String): List<CommitInfo> =
+        repository.fileHistory(repo, relPath)
+
+    suspend fun fileDiff(repo: Repo, relPath: String, sha: String): String =
+        repository.fileDiff(repo, relPath, sha)
 
     fun clearMessage() {
         _status.value = _status.value.copy(message = null)

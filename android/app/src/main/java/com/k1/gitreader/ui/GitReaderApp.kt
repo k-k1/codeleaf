@@ -14,6 +14,8 @@ private sealed interface Screen {
     data object Add : Screen
     data class Browse(val repo: Repo, val path: String) : Screen
     data class View(val repo: Repo, val filePath: String) : Screen
+    data class History(val repo: Repo, val filePath: String) : Screen
+    data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
 }
 
 @Composable
@@ -72,6 +74,24 @@ fun GitReaderApp() {
                 filePath = current.filePath,
                 workDir = vm.workDirOf(current.repo),
                 loadText = { vm.readFile(current.repo, current.filePath) },
+                onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
+                onBack = { pop() },
+            )
+        }
+
+        is Screen.History -> GitReaderTheme(current.repo.themeMode) {
+            HistoryScreen(
+                filePath = current.filePath,
+                loadHistory = { vm.fileHistory(current.repo, current.filePath) },
+                onOpenDiff = { sha -> navigate(Screen.Diff(current.repo, current.filePath, sha)) },
+                onBack = { pop() },
+            )
+        }
+
+        is Screen.Diff -> GitReaderTheme(current.repo.themeMode) {
+            DiffScreen(
+                sha = current.sha,
+                loadDiff = { vm.fileDiff(current.repo, current.filePath, current.sha) },
                 onBack = { pop() },
             )
         }

@@ -10,7 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,11 +51,13 @@ fun FileViewerScreen(
     filePath: String,
     workDir: File,
     loadText: suspend () -> String,
+    onHistory: () -> Unit,
     onBack: () -> Unit,
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
     var raw by remember(filePath) { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(repo.id, filePath) {
         error = null
@@ -74,6 +79,17 @@ fun FileViewerScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("履歴") },
+                            onClick = { menuExpanded = false; onHistory() },
+                        )
                     }
                 },
             )

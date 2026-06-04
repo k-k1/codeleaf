@@ -6,6 +6,7 @@ import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.RepoDao
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.BranchInfo
+import com.k1.gitreader.git.CommitInfo
 import com.k1.gitreader.git.JgitClient
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -103,6 +104,14 @@ class RepoRepository(
     suspend fun readText(repo: Repo, relPath: String): String = withContext(ioDispatcher) {
         File(workDir(repo), relPath).readText()
     }
+
+    /** ファイルのコミット履歴。 */
+    suspend fun fileHistory(repo: Repo, relPath: String, limit: Int = 100): List<CommitInfo> =
+        withContext(ioDispatcher) { jgit.log(workDir(repo), relPath, limit) }
+
+    /** 指定コミットでのファイル unified diff。 */
+    suspend fun fileDiff(repo: Repo, relPath: String, sha: String): String =
+        withContext(ioDispatcher) { jgit.diff(workDir(repo), relPath, sha) }
 
     private fun joinRel(parent: String, child: String): String =
         if (parent.isEmpty()) child else "$parent/$child"
