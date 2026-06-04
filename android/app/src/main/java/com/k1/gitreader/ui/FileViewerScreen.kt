@@ -284,7 +284,7 @@ fun FileViewerScreen(
                             sectionTops = sectionTops,
                             scrollY = scrollState.value,
                             fontScale = fontScale,
-                            onJump = { idx -> scope.launch { scrollState.animateScrollTo(sectionTops[idx] ?: 0) } },
+                            onJump = { targetY -> scope.launch { scrollState.animateScrollTo(targetY.coerceAtLeast(0)) } },
                             onHeight = { stickyHeadingsHeightPx = it },
                             modifier = Modifier.align(Alignment.TopStart),
                         )
@@ -407,13 +407,15 @@ private fun StickyHeadingsOverlay(
         onHeight(0)
         return
     }
+    // 各見出し行の高さ(px)。タップ時、その見出しが祖先バーの下に来るよう祖先分を差し引く。
+    val rowHeights = remember { mutableStateMapOf<Int, Int>() }
     Column(
         modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
             .onGloballyPositioned { onHeight(it.size.height) },
     ) {
-        stack.forEach { (idx, h) ->
+        stack.forEachIndexed { pos, (idx, h) ->
             Text(
                 text = h.text,
                 fontSize = headingSp(h.level, fontScale).sp,
@@ -422,7 +424,11 @@ private fun StickyHeadingsOverlay(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onJump(idx) }
+                    .clickable {
+                        val ancestorsHeight = stack.take(pos).sumOf { rowHeights[it.first] ?: 0 }
+                        onJump((sectionTops[idx] ?: 0) - ancestorsHeight)
+                    }
+                    .onGloballyPositioned { rowHeights[idx] = it.size.height }
                     .padding(start = (16 + (h.level - 1) * 8).dp, end = 16.dp, top = 3.dp, bottom = 3.dp),
             )
         }
