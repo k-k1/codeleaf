@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -44,6 +43,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,11 +52,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -133,6 +137,8 @@ fun FileViewerScreen(
     val scrollState = remember(filePath) { ScrollState(0) }
     val sectionTops = remember(filePath) { mutableStateMapOf<Int, Int>() }
     var showToc by remember(filePath) { mutableStateOf(false) }
+    // スクロールビューポート上端(root座標, px)。テーブルのヘッダ固定の基準。
+    var viewportTopPx by remember(filePath) { mutableFloatStateOf(0f) }
 
     // フロントマター抽出 + 見出しセクション分割(整形 Markdown のときのみ)。
     val mdModel = remember(text, isMarkdown) {
@@ -214,7 +220,10 @@ fun FileViewerScreen(
                 isMarkdown && !raw -> {
                     val (frontmatter, sections) = mdModel!!
                     Column(
-                        Modifier.fillMaxSize().verticalScroll(scrollState).padding(16.dp),
+                        Modifier.fillMaxSize()
+                            .onGloballyPositioned { viewportTopPx = it.positionInRoot().y }
+                            .verticalScroll(scrollState)
+                            .padding(16.dp),
                     ) {
                         if (frontmatter != null) {
                             FrontmatterView(frontmatter, Modifier.fillMaxWidth())
@@ -253,6 +262,7 @@ fun FileViewerScreen(
                                             header = block.header,
                                             rows = block.rows,
                                             fontScale = fontScale,
+                                            viewportTopPx = viewportTopPx,
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                     }
@@ -354,44 +364,65 @@ internal fun activeTocIndex(sectionIndices: List<Int>, tops: Map<Int, Int>, scro
 
 /**
  * GFM テーブルを横スクロール＋ヘッダ固定で表示する(設定 SCROLLABLE 時)。
- * ヘッダ行はスクロール外に置き、本文のみ縦スクロール(高さ上限)。両者を横スクロールで共有しカラム整列。
+ * 全行をそのまま表示し、テーブルを読んでいる間はヘッダ行をビューポート上端に貼り付ける
+ * (graphicsLayer.translationY + zIndex による擬似スティッキー)。横は共有スクロールでカラム整列。
+ * viewportTopPx はスクロール領域上端の root 座標(px)。
  */
 @Composable
 private fun MarkdownTableView(
     header: List<String>,
     rows: List<List<String>>,
     fontScale: Float,
+    viewportTopPx: Float,
     modifier: Modifier = Modifier,
 ) {
     val colCount = maxOf(header.size, rows.maxOfOrNull { it.size } ?: 0)
     val cellWidth = 140.dp
     val hScroll = rememberScrollState()
-    val vScroll = rememberScrollState()
     val headerBg = MaterialTheme.colorScheme.surfaceVariant
     val fontSize = (14f * fontScale).sp
 
+    var tableTopPx by remember { mutableFloatStateOf(0f) }
+    var tableHeightPx by remember { mutableIntStateOf(0) }
+    var headerHeightPx by remember { mutableIntStateOf(0) }
+    // テーブル上端がビューポート上端より上にある量。ヘッダはその分だけ下げて上端に留める。
+    val stickyOffset = (viewportTopPx - tableTopPx)
+        .coerceIn(0f, (tableHeightPx - headerHeightPx).coerceAtLeast(0).toFloat())
+
     @Composable
-    fun cell(text: String, header: Boolean) {
+    fun cell(text: String, isHeader: Boolean) {
         Text(
             text = text,
             modifier = Modifier.width(cellWidth).padding(horizontal = 8.dp, vertical = 6.dp),
             fontSize = fontSize,
-            fontWeight = if (header) FontWeight.Bold else null,
+            fontWeight = if (isHeader) FontWeight.Bold else null,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
     }
 
-    Column(modifier.horizontalScroll(hScroll)) {
-        Row(Modifier.background(headerBg)) {
+    Column(
+        modifier
+            .horizontalScroll(hScroll)
+            .onGloballyPositioned {
+                tableTopPx = it.positionInRoot().y
+                tableHeightPx = it.size.height
+            },
+    ) {
+        // ヘッダ: translationY で上端に追従、zIndex で本文より前面に描画
+        Row(
+            Modifier
+                .zIndex(1f)
+                .graphicsLayer { translationY = stickyOffset }
+                .onGloballyPositioned { headerHeightPx = it.size.height }
+                .background(headerBg),
+        ) {
             for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true)
         }
         HorizontalDivider()
-        Column(Modifier.heightIn(max = 360.dp).verticalScroll(vScroll)) {
-            rows.forEach { row ->
-                Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false) }
-                HorizontalDivider()
-            }
+        rows.forEach { row ->
+            Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false) }
+            HorizontalDivider()
         }
     }
 }
