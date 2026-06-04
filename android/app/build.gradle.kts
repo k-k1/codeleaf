@@ -73,6 +73,15 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.android)
 
+    // markdown
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.ext.tables)
+    implementation(libs.markwon.ext.strikethrough)
+    implementation(libs.markwon.ext.tasklist)
+    implementation(libs.markwon.html)
+    implementation(libs.markwon.linkify)
+    implementation(libs.markwon.image)
+
     // git
     implementation(libs.jgit)
     implementation(libs.slf4j.simple)

@@ -42,6 +42,7 @@ fun RepoListScreen(
     repos: List<Repo>,
     status: UiStatus,
     onAddClick: () -> Unit,
+    onOpen: (Repo) -> Unit,
     onSync: (Repo) -> Unit,
     onDelete: (Repo) -> Unit,
     onMessageShown: () -> Unit,
@@ -85,7 +86,12 @@ fun RepoListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(repos, key = { it.id }) { repo ->
-                        RepoCard(repo, onSync = { onSync(repo) }, onDelete = { onDelete(repo) })
+                        RepoCard(
+                            repo,
+                            onOpen = { onOpen(repo) },
+                            onSync = { onSync(repo) },
+                            onDelete = { onDelete(repo) },
+                        )
                     }
                 }
             }
@@ -93,9 +99,10 @@ fun RepoListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RepoCard(repo: Repo, onSync: () -> Unit, onDelete: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+private fun RepoCard(repo: Repo, onOpen: () -> Unit, onSync: () -> Unit, onDelete: () -> Unit) {
+    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

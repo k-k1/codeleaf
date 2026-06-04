@@ -13,6 +13,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/** ファイルブラウザ1エントリ。relPath はリポジトリルートからの相対パス（'/'区切り）。 */
+data class FileEntry(
+    val name: String,
+    val relPath: String,
+    val isDir: Boolean,
+)
+
 /** 新規リポジトリ登録フォームの入力値。 */
 data class NewRepo(
     val name: String,
@@ -82,6 +89,23 @@ class RepoRepository(
     suspend fun listBranches(repo: Repo): List<BranchInfo> = withContext(ioDispatcher) {
         jgit.listBranches(workDir(repo))
     }
+
+    /** 作業ツリー内の relPath 配下を列挙（.git 除外・フォルダ優先→名前順）。 */
+    suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> = withContext(ioDispatcher) {
+        val dir = if (relPath.isEmpty()) workDir(repo) else File(workDir(repo), relPath)
+        val children = dir.listFiles().orEmpty().filterNot { it.name == ".git" }
+        children
+            .map { FileEntry(it.name, joinRel(relPath, it.name), it.isDirectory) }
+            .sortedWith(compareByDescending<FileEntry> { it.isDir }.thenBy { it.name.lowercase() })
+    }
+
+    /** テキストファイルを UTF-8 で読み込む。 */
+    suspend fun readText(repo: Repo, relPath: String): String = withContext(ioDispatcher) {
+        File(workDir(repo), relPath).readText()
+    }
+
+    private fun joinRel(parent: String, child: String): String =
+        if (parent.isEmpty()) child else "$parent/$child"
 
     suspend fun delete(repo: Repo) = withContext(ioDispatcher) {
         dao.delete(repo)

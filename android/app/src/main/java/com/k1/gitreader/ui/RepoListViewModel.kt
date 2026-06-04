@@ -8,9 +8,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import com.k1.gitreader.GitReaderApplication
+import com.k1.gitreader.data.FileEntry
 import com.k1.gitreader.data.NewRepo
 import com.k1.gitreader.data.RepoRepository
 import com.k1.gitreader.data.db.Repo
+import java.io.File
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +61,15 @@ class RepoListViewModel(
     fun delete(repo: Repo) {
         viewModelScope.launch { runCatching { repository.delete(repo) } }
     }
+
+    // --- ファイルブラウザ / 閲覧 ---
+    suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> =
+        repository.listDir(repo, relPath)
+
+    suspend fun readFile(repo: Repo, relPath: String): String =
+        repository.readText(repo, relPath)
+
+    fun workDirOf(repo: Repo): File = repository.workDir(repo)
 
     fun clearMessage() {
         _status.value = _status.value.copy(message = null)
