@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -48,6 +49,7 @@ fun FileBrowserScreen(
     loadDir: suspend (String) -> List<FileEntry>,
     loadBranches: suspend () -> List<com.k1.gitreader.git.BranchInfo>,
     onSync: suspend () -> Unit,
+    onSearch: () -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
@@ -82,6 +84,11 @@ fun FileBrowserScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearch) {
+                        Icon(Icons.Default.Search, contentDescription = "検索")
                     }
                 },
             )

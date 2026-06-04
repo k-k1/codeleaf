@@ -14,6 +14,7 @@ private sealed interface Screen {
     data object Add : Screen
     data object Settings : Screen
     data class Browse(val repo: Repo, val path: String) : Screen
+    data class Search(val repo: Repo) : Screen
     data class View(val repo: Repo, val filePath: String) : Screen
     data class History(val repo: Repo, val filePath: String) : Screen
     data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
@@ -67,6 +68,7 @@ fun GitReaderApp() {
                 loadDir = { vm.listDir(current.repo, it) },
                 loadBranches = { vm.listBranches(current.repo) },
                 onSync = { vm.syncNow(current.repo) },
+                onSearch = { navigate(Screen.Search(current.repo)) },
                 onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
                 onOpenFile = { navigate(Screen.View(current.repo, it)) },
                 onSwitchBranch = { branch ->
@@ -78,6 +80,15 @@ fun GitReaderApp() {
                         }
                     }
                 },
+                onBack = { pop() },
+            )
+        }
+
+        is Screen.Search -> GitReaderTheme(current.repo.themeMode) {
+            SearchScreen(
+                repoName = current.repo.name,
+                onSearch = { q -> vm.searchRepo(current.repo, q) },
+                onOpenFile = { navigate(Screen.View(current.repo, it)) },
                 onBack = { pop() },
             )
         }

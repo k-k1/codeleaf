@@ -22,6 +22,13 @@ data class FileEntry(
     val isDir: Boolean,
 )
 
+/** 全文検索のヒット1件。relPath はリポルートからの相対パス、line は1始まりの行番号。 */
+data class SearchHit(
+    val relPath: String,
+    val line: Int,
+    val text: String,
+)
+
 /** 新規リポジトリ登録フォームの入力値。 */
 data class NewRepo(
     val name: String,
@@ -106,6 +113,35 @@ class RepoRepository(
         File(workDir(repo), relPath).readText()
     }
 
+    /**
+     * 作業ツリーをテキスト全文検索する（大文字小文字無視の部分一致）。
+     * .git・巨大ファイル(>1MB)・バイナリ(NULを含む)は除外し、ヒット総数を maxHits で打ち切る。
+     */
+    suspend fun search(repo: Repo, query: String, maxHits: Int = 500): List<SearchHit> =
+        withContext(ioDispatcher) {
+            if (query.isBlank()) return@withContext emptyList()
+            val root = workDir(repo)
+            val hits = ArrayList<SearchHit>()
+            val files = root.walkTopDown().onEnter { it.name != ".git" }.filter { it.isFile }
+            for (f in files) {
+                if (hits.size >= maxHits) break
+                if (f.length() > MAX_SEARCH_FILE_BYTES) continue
+                val data = runCatching { f.readBytes() }.getOrNull() ?: continue
+                if (data.any { it == 0.toByte() }) continue // バイナリ判定
+                val rel = f.relativeTo(root).path.replace('\\', '/')
+                val content = String(data, Charsets.UTF_8)
+                var lineNo = 0
+                for (line in content.lineSequence()) {
+                    lineNo++
+                    if (line.contains(query, ignoreCase = true)) {
+                        hits.add(SearchHit(rel, lineNo, line.trim().take(SNIPPET_MAX)))
+                        if (hits.size >= maxHits) break
+                    }
+                }
+            }
+            hits.sortedWith(compareBy({ it.relPath }, { it.line }))
+        }
+
     /** ファイルのコミット履歴。 */
     suspend fun fileHistory(repo: Repo, relPath: String, limit: Int = 100): List<CommitInfo> =
         withContext(ioDispatcher) { jgit.log(workDir(repo), relPath, limit) }
@@ -129,4 +165,9 @@ class RepoRepository(
     }
 
     private fun nowMillis(): Long = System.currentTimeMillis()
+
+    private companion object {
+        const val MAX_SEARCH_FILE_BYTES = 1_000_000L
+        const val SNIPPET_MAX = 200
+    }
 }
