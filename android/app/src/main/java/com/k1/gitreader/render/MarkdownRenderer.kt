@@ -45,6 +45,12 @@ sealed interface MdBlock {
 /** YAML フロントマターの 1 項目（表示用に key と整形済み value を保持）。 */
 data class FrontmatterEntry(val key: String, val value: String)
 
+/** Markdown 見出し（ATX 形式）。level=1..6。 */
+data class Heading(val level: Int, val text: String)
+
+/** 目次スクロール用に、先頭見出しでドキュメントを区切ったセクション。heading=null は前文。 */
+data class MdSection(val heading: Heading?, val markdown: String)
+
 /**
  * Markwon の配色をリポ毎テーマに連動させるための色(ARGB int)。
  * コードフェンスの背景は Prism4j 側テーマが受け持つため、ここではインラインコード・
@@ -185,6 +191,43 @@ object MarkdownRenderer {
         } else {
             s
         }
+
+    private val atxHeading = Regex("""^(#{1,6})\s+(.*?)\s*#*\s*$""")
+
+    /**
+     * ATX 見出し(`#`〜`######`)の行で本文をセクションに分割する(目次スクロール用)。
+     * フェンスドコードブロック内の `#` は見出し扱いしない。先頭見出しより前は heading=null。
+     */
+    fun splitIntoSections(markdown: String): List<MdSection> {
+        val sections = ArrayList<MdSection>()
+        val cur = StringBuilder()
+        var curHeading: Heading? = null
+        var inFence = false
+
+        fun flush() {
+            if (cur.isNotEmpty() || curHeading != null) {
+                sections.add(MdSection(curHeading, cur.toString()))
+            }
+        }
+
+        for (line in markdown.split("\n")) {
+            if (line.trimStart().startsWith("```")) inFence = !inFence
+            val h = if (!inFence) atxHeading.matchEntire(line)?.let {
+                Heading(it.groupValues[1].length, it.groupValues[2].trim())
+            } else {
+                null
+            }
+            if (h != null) {
+                flush()
+                cur.setLength(0)
+                curHeading = h
+            }
+            cur.append(line).append('\n')
+        }
+        flush()
+        if (sections.isEmpty()) sections.add(MdSection(null, markdown))
+        return sections
+    }
 
     /** 絵文字 shortcode を unicode 化し、相対画像を file:// へ解決する。 */
     fun preprocess(markdown: String, baseDir: File): String =
