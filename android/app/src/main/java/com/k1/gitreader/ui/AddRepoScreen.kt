@@ -46,6 +46,7 @@ fun AddRepoScreen(
     var host by remember { mutableStateOf(GitHost.GITHUB) }
     var url by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
+    var nameEdited by remember { mutableStateOf(false) } // 手動編集後は自動補完しない
     var username by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var branch by remember { mutableStateOf("") }
@@ -85,13 +86,18 @@ fun AddRepoScreen(
             }
 
             OutlinedTextField(
-                value = url, onValueChange = { url = it },
+                value = url,
+                onValueChange = {
+                    url = it
+                    if (!nameEdited) name = repoNameFromUrl(it) // 未編集なら表示名を自動補完
+                },
                 label = { Text("URL (https://...)") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
-                value = name, onValueChange = { name = it },
-                label = { Text("表示名 (任意)") },
+                value = name,
+                onValueChange = { name = it; nameEdited = true },
+                label = { Text("表示名 (任意・URLから自動入力)") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -143,4 +149,17 @@ fun AddRepoScreen(
             ) { Text(if (status.busy) "clone 中..." else "保存・clone") }
         }
     }
+}
+
+/**
+ * git URL からリポジトリ名を推定する。末尾スラッシュ・.git・クエリ/フラグメントを除去し、
+ * 最後のパスセグメントを返す。GitHub/Bitbucket の https URL を想定。
+ */
+internal fun repoNameFromUrl(url: String): String {
+    val cleaned = url.trim()
+        .substringBefore('?')
+        .substringBefore('#')
+        .trimEnd('/')
+    if (cleaned.isEmpty()) return ""
+    return cleaned.substringAfterLast('/').removeSuffix(".git")
 }
