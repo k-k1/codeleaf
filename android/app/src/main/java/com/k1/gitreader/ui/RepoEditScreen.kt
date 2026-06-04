@@ -3,16 +3,18 @@ package com.k1.gitreader.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +58,7 @@ import com.k1.gitreader.data.db.RepoColor
 import kotlin.math.roundToInt
 
 private val ROW_HEIGHT = 88.dp
+private val ROW_SPACING = 8.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +73,8 @@ fun RepoEditScreen(
     var draggingId by remember { mutableStateOf<Long?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var confirmDelete by remember { mutableStateOf<Repo?>(null) }
-    val rowHeightPx = with(LocalDensity.current) { ROW_HEIGHT.toPx() }
+    // 並べ替えの判定は行スペースを含む実ピッチ(行高+間隔)を基準にする。
+    val pitchPx = with(LocalDensity.current) { (ROW_HEIGHT + ROW_SPACING).toPx() }
 
     // ドラッグ中以外は最新の repos に同期(削除・色変更の反映)。
     LaunchedEffect(repos) {
@@ -94,26 +99,30 @@ fun RepoEditScreen(
         LazyColumn(
             state = rememberLazyListState(),
             modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
         ) {
             itemsIndexed(items, key = { _, r -> r.id }) { _, repo ->
                 val dragging = repo.id == draggingId
                 Card(
-                    Modifier
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = if (dragging) 8.dp else 1.dp,
+                    ),
+                    modifier = Modifier
                         .fillMaxWidth()
                         .height(ROW_HEIGHT)
                         .zIndex(if (dragging) 1f else 0f)
                         .graphicsLayer { translationY = if (dragging) dragOffset else 0f },
                 ) {
                     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                        // ドラッグハンドル(長押しで並べ替え)
-                        Icon(
-                            Icons.Default.Menu,
-                            contentDescription = "並べ替え",
+                        // ドラッグハンドル(掴んで上下にドラッグで並べ替え)。
+                        // 専用ハンドルなので長押し不要・即ドラッグ開始。タッチ領域は広めに確保する。
+                        Box(
                             modifier = Modifier
-                                .padding(horizontal = 12.dp)
+                                .fillMaxHeight()
+                                .padding(horizontal = 4.dp)
+                                .width(48.dp)
                                 .pointerInput(repo.id) {
-                                    detectDragGesturesAfterLongPress(
+                                    detectDragGestures(
                                         onDragStart = { draggingId = repo.id; dragOffset = 0f },
                                         onDragEnd = { draggingId = null; dragOffset = 0f; onReorder(items.toList()) },
                                         onDragCancel = { draggingId = null; dragOffset = 0f },
@@ -122,17 +131,20 @@ fun RepoEditScreen(
                                             dragOffset += amount.y
                                             val from = items.indexOfFirst { it.id == draggingId }
                                             if (from >= 0) {
-                                                val to = (from + (dragOffset / rowHeightPx).roundToInt())
+                                                val to = (from + (dragOffset / pitchPx).roundToInt())
                                                     .coerceIn(0, items.size - 1)
                                                 if (to != from) {
                                                     items.add(to, items.removeAt(from))
-                                                    dragOffset -= (to - from) * rowHeightPx
+                                                    dragOffset -= (to - from) * pitchPx
                                                 }
                                             }
                                         },
                                     )
                                 },
-                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.Menu, contentDescription = "並べ替え")
+                        }
                         Column(Modifier.weight(1f)) {
                             Text(
                                 repo.name,
