@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +53,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -92,6 +94,7 @@ fun FileViewerScreen(
     linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     showLineNumbers: Boolean = false,
     tableMode: TableMode = TableMode.INLINE,
+    stickyHeadings: Boolean = true,
     targetLine: Int? = null,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
@@ -217,7 +220,7 @@ fun FileViewerScreen(
             when {
                 error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
                 body == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                isMarkdown && !raw -> {
+                isMarkdown && !raw -> Box(Modifier.fillMaxSize()) {
                     val (frontmatter, sections) = mdModel!!
                     Column(
                         Modifier.fillMaxSize()
@@ -270,6 +273,16 @@ fun FileViewerScreen(
                                 }
                             }
                         }
+                    }
+                    if (stickyHeadings) {
+                        StickyHeadingsOverlay(
+                            sections = sections,
+                            sectionTops = sectionTops,
+                            scrollY = scrollState.value,
+                            fontScale = fontScale,
+                            onJump = { idx -> scope.launch { scrollState.animateScrollTo(sectionTops[idx] ?: 0) } },
+                            modifier = Modifier.align(Alignment.TopStart),
+                        )
                     }
                 }
                 // Raw 表示(Markdown のソース)は無装飾の行表示。行ジャンプ時はその行へ。
@@ -347,6 +360,61 @@ fun FileViewerScreen(
 }
 
 private data class TocEntry(val sectionIndex: Int, val heading: Heading)
+
+/**
+ * 現在のスクロール位置で「上に通り過ぎた」見出しの祖先パス(h1>h2>h3...)を返す。
+ * 各見出しセクションを順に走査し、level >= の見出しを pop しながらスタックを作る。
+ * top < scrollY(=画面上端より上に出た見出し)だけを対象にするので、インライン表示中の見出しと重複しない。
+ */
+internal fun computeHeadingStack(
+    sections: List<MdSection>,
+    tops: Map<Int, Int>,
+    scrollY: Int,
+): List<Pair<Int, Heading>> {
+    val stack = ArrayList<Pair<Int, Heading>>()
+    sections.forEachIndexed { idx, section ->
+        val h = section.heading ?: return@forEachIndexed
+        val top = tops[idx] ?: return@forEachIndexed
+        if (top < scrollY) {
+            while (stack.isNotEmpty() && stack.last().second.level >= h.level) stack.removeAt(stack.lastIndex)
+            stack.add(idx to h)
+        }
+    }
+    return stack
+}
+
+private fun headingSp(level: Int, fontScale: Float): Float =
+    (when (level) { 1 -> 20f; 2 -> 18f; 3 -> 16f; else -> 15f }) * fontScale
+
+/** 見出しの祖先パスを画面上部に固定表示する(スティッキー見出し)。 */
+@Composable
+private fun StickyHeadingsOverlay(
+    sections: List<MdSection>,
+    sectionTops: Map<Int, Int>,
+    scrollY: Int,
+    fontScale: Float,
+    onJump: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val stack = computeHeadingStack(sections, sectionTops, scrollY)
+    if (stack.isEmpty()) return
+    Column(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+        stack.forEach { (idx, h) ->
+            Text(
+                text = h.text,
+                fontSize = headingSp(h.level, fontScale).sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onJump(idx) }
+                    .padding(start = (16 + (h.level - 1) * 8).dp, end = 16.dp, top = 3.dp, bottom = 3.dp),
+            )
+        }
+        HorizontalDivider()
+    }
+}
 
 /**
  * 現在のスクロール位置(px)に対応する見出しのセクション index を返す。

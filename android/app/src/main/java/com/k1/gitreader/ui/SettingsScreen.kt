@@ -61,6 +61,7 @@ fun SettingsScreen(
     onSetLinkOpenMode: (LinkOpenMode) -> Unit,
     onSetShowLineNumbers: (Boolean) -> Unit,
     onSetTableMode: (TableMode) -> Unit,
+    onSetStickyHeadings: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -154,6 +155,17 @@ fun SettingsScreen(
                     )
                 }
                 Switch(checked = settings.showLineNumbers, onCheckedChange = onSetShowLineNumbers)
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("見出しを上部に固定", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Markdown 整形表示で、現在地の見出し(h1>h2>h3…)を上部にスティッキー表示。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = settings.stickyHeadings, onCheckedChange = onSetStickyHeadings)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

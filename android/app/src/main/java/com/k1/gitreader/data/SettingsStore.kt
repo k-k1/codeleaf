@@ -22,6 +22,7 @@ data class AppSettings(
     val linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     val showLineNumbers: Boolean = false,
     val tableMode: TableMode = TableMode.INLINE,
+    val stickyHeadings: Boolean = true,
 )
 
 /**
@@ -42,6 +43,7 @@ class SettingsStore(context: Context) {
         linkOpenMode = enumOrDefault(prefs.getString(KEY_LINK, null), LinkOpenMode.IN_APP),
         showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
         tableMode = enumOrDefault(prefs.getString(KEY_TABLE, null), TableMode.INLINE),
+        stickyHeadings = prefs.getBoolean(KEY_STICKY, true),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {
@@ -74,6 +76,11 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(tableMode = mode)
     }
 
+    fun setStickyHeadings(on: Boolean) {
+        prefs.edit().putBoolean(KEY_STICKY, on).apply()
+        _settings.value = _settings.value.copy(stickyHeadings = on)
+    }
+
     private companion object {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
@@ -81,6 +88,7 @@ class SettingsStore(context: Context) {
         const val KEY_LINK = "link_open_mode"
         const val KEY_LINENUM = "show_line_numbers"
         const val KEY_TABLE = "table_mode"
+        const val KEY_STICKY = "sticky_headings"
 
         inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default

@@ -62,6 +62,7 @@ fun GitReaderApp() {
             onSetLinkOpenMode = vm::setLinkOpenMode,
             onSetShowLineNumbers = vm::setShowLineNumbers,
             onSetTableMode = vm::setTableMode,
+            onSetStickyHeadings = vm::setStickyHeadings,
             onClearCache = { vm.clearCache() },
             onBack = { pop() },
         )
@@ -133,6 +134,7 @@ fun GitReaderApp() {
                 linkOpenMode = settings.linkOpenMode,
                 showLineNumbers = settings.showLineNumbers,
                 tableMode = settings.tableMode,
+                stickyHeadings = settings.stickyHeadings,
                 targetLine = current.line,
                 onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
                 onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },

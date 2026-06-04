@@ -139,6 +139,8 @@ class RepoListViewModel(
 
     fun setTableMode(mode: com.k1.gitreader.data.TableMode) = settingsStore.setTableMode(mode)
 
+    fun setStickyHeadings(on: Boolean) = settingsStore.setStickyHeadings(on)
+
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {
