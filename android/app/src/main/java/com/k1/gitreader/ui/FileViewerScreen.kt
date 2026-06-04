@@ -1,12 +1,16 @@
 package com.k1.gitreader.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -35,11 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.render.CodeHighlight
 import com.k1.gitreader.render.CodeView
+import com.k1.gitreader.render.FrontmatterEntry
 import com.k1.gitreader.render.MarkdownRenderer
 import com.k1.gitreader.render.MarkdownView
 import com.k1.gitreader.render.MdBlock
@@ -125,7 +132,14 @@ fun FileViewerScreen(
                 isMarkdown && !raw -> Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 ) {
-                    MarkdownRenderer.splitBlocks(body).forEach { block ->
+                    val (frontmatter, content) = remember(body) {
+                        MarkdownRenderer.extractFrontmatter(body)
+                    }
+                    if (frontmatter != null) {
+                        FrontmatterView(frontmatter, Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    MarkdownRenderer.splitBlocks(content).forEach { block ->
                         when (block) {
                             is MdBlock.Text -> MarkdownView(
                                 markdown = block.markdown,
@@ -167,6 +181,34 @@ fun FileViewerScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/** YAML フロントマターをメタ情報カードとして表示する。 */
+@Composable
+private fun FrontmatterView(entries: List<FrontmatterEntry>, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier,
+    ) {
+        Column(
+            Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            entries.forEach { e ->
+                Row {
+                    Text(
+                        e.key,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(96.dp),
+                    )
+                    Text(e.value, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

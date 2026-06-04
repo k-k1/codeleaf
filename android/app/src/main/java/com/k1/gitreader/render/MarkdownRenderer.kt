@@ -42,6 +42,9 @@ sealed interface MdBlock {
     data class Mermaid(val code: String) : MdBlock
 }
 
+/** YAML フロントマターの 1 項目（表示用に key と整形済み value を保持）。 */
+data class FrontmatterEntry(val key: String, val value: String)
+
 /**
  * Markwon の配色をリポ毎テーマに連動させるための色(ARGB int)。
  * コードフェンスの背景は Prism4j 側テーマが受け持つため、ここではインラインコード・
@@ -132,6 +135,56 @@ object MarkdownRenderer {
         if (blocks.isEmpty()) blocks.add(MdBlock.Text(markdown))
         return blocks
     }
+
+    /**
+     * 先頭の YAML フロントマター(`---` で囲まれたブロック)を抽出する。
+     * 見つかれば (項目リスト, フロントマターを除いた本文) を、無ければ (null, 元のまま) を返す。
+     * 完全な YAML ではなく、ドキュメントで多い top-level の `key: value` と
+     * その下のブロックリスト(`- item`)を簡易にパースする。
+     */
+    fun extractFrontmatter(markdown: String): Pair<List<FrontmatterEntry>?, String> {
+        val text = markdown.removePrefix("﻿")
+        val lines = text.split("\n")
+        if (lines.isEmpty() || lines[0].trim() != "---") return null to markdown
+
+        var closing = -1
+        for (i in 1 until lines.size) {
+            val t = lines[i].trim()
+            if (t == "---" || t == "...") { closing = i; break }
+        }
+        if (closing < 0) return null to markdown // 閉じが無ければフロントマター扱いしない
+
+        val entries = ArrayList<FrontmatterEntry>()
+        for (i in 1 until closing) {
+            val raw = lines[i]
+            if (raw.isBlank()) continue
+            val indented = raw[0].isWhitespace() || raw.trimStart().startsWith("- ")
+            val colon = raw.indexOf(':')
+            if (!indented && colon > 0) {
+                val key = raw.substring(0, colon).trim()
+                val value = unquote(raw.substring(colon + 1).trim())
+                entries.add(FrontmatterEntry(key, value))
+            } else if (entries.isNotEmpty()) {
+                // リスト項目・継続行は直前のキーに連結する
+                val add = unquote(raw.trim().removePrefix("- ").trim())
+                if (add.isNotEmpty()) {
+                    val last = entries.removeAt(entries.lastIndex)
+                    val merged = if (last.value.isBlank()) add else "${last.value}, $add"
+                    entries.add(last.copy(value = merged))
+                }
+            }
+        }
+
+        val body = lines.subList(closing + 1, lines.size).joinToString("\n").trimStart('\n')
+        return (if (entries.isEmpty()) null else entries) to body
+    }
+
+    private fun unquote(s: String): String =
+        if (s.length >= 2 && (s.first() == '"' && s.last() == '"' || s.first() == '\'' && s.last() == '\'')) {
+            s.substring(1, s.length - 1)
+        } else {
+            s
+        }
 
     /** 絵文字 shortcode を unicode 化し、相対画像を file:// へ解決する。 */
     fun preprocess(markdown: String, baseDir: File): String =
