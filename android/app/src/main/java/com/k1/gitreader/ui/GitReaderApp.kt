@@ -57,6 +57,7 @@ fun GitReaderApp() {
             repoCount = repos.size,
             onSetTheme = vm::setDefaultTheme,
             onSetFontScale = vm::setFontScale,
+            onSetWrapByDefault = vm::setWrapByDefault,
             onClearCache = { vm.clearCache() },
             onBack = { pop() },
         )
@@ -100,6 +101,7 @@ fun GitReaderApp() {
                 workDir = vm.workDirOf(current.repo),
                 loadText = { vm.readFile(current.repo, current.filePath) },
                 fontScale = settings.fontScale.scale,
+                defaultWrap = settings.wrapByDefault,
                 targetLine = current.line,
                 onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
                 onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },

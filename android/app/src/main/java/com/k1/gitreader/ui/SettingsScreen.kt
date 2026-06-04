@@ -2,6 +2,7 @@ package com.k1.gitreader.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -25,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.AppSettings
@@ -50,6 +53,7 @@ fun SettingsScreen(
     repoCount: Int,
     onSetTheme: (ThemeMode) -> Unit,
     onSetFontScale: (FontScale) -> Unit,
+    onSetWrapByDefault: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -103,6 +107,17 @@ fun SettingsScreen(
                         ) { Text(fontLabel(f)) }
                     }
                 }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("コードの折り返し（既定）", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "コード/Raw 表示を開いたときの初期状態。OFF は横スクロール。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = settings.wrapByDefault, onCheckedChange = onSetWrapByDefault)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

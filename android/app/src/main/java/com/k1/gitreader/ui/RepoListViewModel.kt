@@ -120,6 +120,8 @@ class RepoListViewModel(
 
     fun setFontScale(scale: FontScale) = settingsStore.setFontScale(scale)
 
+    fun setWrapByDefault(wrap: Boolean) = settingsStore.setWrapByDefault(wrap)
+
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {

@@ -73,6 +73,7 @@ fun FileViewerScreen(
     workDir: File,
     loadText: suspend () -> String,
     fontScale: Float,
+    defaultWrap: Boolean = true,
     targetLine: Int? = null,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
@@ -82,7 +83,7 @@ fun FileViewerScreen(
     var error by remember(filePath) { mutableStateOf<String?>(null) }
     // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
     var raw by remember(filePath) { mutableStateOf(targetLine != null) }
-    var wrap by remember(filePath) { mutableStateOf(true) }
+    var wrap by remember(filePath) { mutableStateOf(defaultWrap) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(repo.id, filePath) {
