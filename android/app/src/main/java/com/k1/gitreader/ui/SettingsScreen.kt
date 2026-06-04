@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.AppSettings
 import com.k1.gitreader.data.FontScale
+import com.k1.gitreader.data.LinkOpenMode
 import com.k1.gitreader.data.db.ThemeMode
 
 private fun themeLabel(m: ThemeMode) = when (m) {
@@ -54,6 +55,7 @@ fun SettingsScreen(
     onSetTheme: (ThemeMode) -> Unit,
     onSetFontScale: (FontScale) -> Unit,
     onSetWrapByDefault: (Boolean) -> Unit,
+    onSetLinkOpenMode: (LinkOpenMode) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -105,6 +107,24 @@ fun SettingsScreen(
                             onClick = { onSetFontScale(f) },
                             shape = SegmentedButtonDefaults.itemShape(i, FontScale.entries.size),
                         ) { Text(fontLabel(f)) }
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("外部リンクの開き方", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "http/https リンクをアプリ内ブラウザ(Custom Tabs)か外部ブラウザのどちらで開くか。相対リンクは常にアプリ内遷移。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val items = listOf(LinkOpenMode.IN_APP to "アプリ内", LinkOpenMode.BROWSER to "外部ブラウザ")
+                    items.forEachIndexed { i, (mode, label) ->
+                        SegmentedButton(
+                            selected = settings.linkOpenMode == mode,
+                            onClick = { onSetLinkOpenMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(i, items.size),
+                        ) { Text(label) }
                     }
                 }
             }

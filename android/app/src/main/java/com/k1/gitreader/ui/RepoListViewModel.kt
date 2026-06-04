@@ -133,6 +133,8 @@ class RepoListViewModel(
 
     fun setWrapByDefault(wrap: Boolean) = settingsStore.setWrapByDefault(wrap)
 
+    fun setLinkOpenMode(mode: com.k1.gitreader.data.LinkOpenMode) = settingsStore.setLinkOpenMode(mode)
+
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {

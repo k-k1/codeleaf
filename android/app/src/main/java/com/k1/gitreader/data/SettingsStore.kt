@@ -8,11 +8,15 @@ import kotlinx.coroutines.flow.StateFlow
 /** Markdown/コード本文のフォント倍率。 */
 enum class FontScale(val scale: Float) { SMALL(0.85f), MEDIUM(1.0f), LARGE(1.3f) }
 
-/** アプリ全体のデフォルト設定。リポ未指定時の既定テーマ・本文フォント倍率・コード折り返し既定。 */
+/** 外部リンク(http/https)の開き方。BROWSER=外部ブラウザ、IN_APP=アプリ内(Custom Tabs)。 */
+enum class LinkOpenMode { BROWSER, IN_APP }
+
+/** アプリ全体のデフォルト設定。 */
 data class AppSettings(
     val defaultTheme: ThemeMode = ThemeMode.SYSTEM,
     val fontScale: FontScale = FontScale.MEDIUM,
     val wrapByDefault: Boolean = true,
+    val linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
 )
 
 /**
@@ -30,6 +34,7 @@ class SettingsStore(context: Context) {
         defaultTheme = enumOrDefault(prefs.getString(KEY_THEME, null), ThemeMode.SYSTEM),
         fontScale = enumOrDefault(prefs.getString(KEY_FONT, null), FontScale.MEDIUM),
         wrapByDefault = prefs.getBoolean(KEY_WRAP, true),
+        linkOpenMode = enumOrDefault(prefs.getString(KEY_LINK, null), LinkOpenMode.IN_APP),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {
@@ -47,10 +52,16 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(wrapByDefault = wrap)
     }
 
+    fun setLinkOpenMode(mode: LinkOpenMode) {
+        prefs.edit().putString(KEY_LINK, mode.name).apply()
+        _settings.value = _settings.value.copy(linkOpenMode = mode)
+    }
+
     private companion object {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
         const val KEY_WRAP = "wrap_by_default"
+        const val KEY_LINK = "link_open_mode"
 
         inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default

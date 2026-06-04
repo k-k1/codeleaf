@@ -1,5 +1,8 @@
 package com.k1.gitreader.ui
 
+import android.content.Intent
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,11 +49,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.k1.gitreader.data.LinkOpenMode
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.render.CodeHighlight
 import com.k1.gitreader.render.CodeView
@@ -74,6 +79,7 @@ fun FileViewerScreen(
     loadText: suspend () -> String,
     fontScale: Float,
     defaultWrap: Boolean = true,
+    linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     targetLine: Int? = null,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
@@ -98,6 +104,21 @@ fun FileViewerScreen(
 
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+
+    // 外部リンク(http/https)の開き方は設定に従う(アプリ内 Custom Tabs / 外部ブラウザ)。
+    val context = LocalContext.current
+    val openExternal: (String) -> Unit = remember(linkOpenMode) {
+        { url ->
+            runCatching {
+                val uri = Uri.parse(url)
+                if (linkOpenMode == LinkOpenMode.IN_APP) {
+                    CustomTabsIntent.Builder().build().launchUrl(context, uri)
+                } else {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                }
+            }
+        }
+    }
 
     // 目次スクロール用: 整形ビューのスクロール状態と各セクションの Y 位置(px)。
     val scope = rememberCoroutineScope()
@@ -208,6 +229,7 @@ fun FileViewerScreen(
                                             dark = dark,
                                             fontScale = fontScale,
                                             onNavigateToFile = onNavigateToFile,
+                                            onExternalLink = openExternal,
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                         is MdBlock.Mermaid -> MermaidWebView(

@@ -35,7 +35,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.vdurmont.emoji.EmojiParser
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.LinkResolver
-import io.noties.markwon.LinkResolverDef
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonConfiguration
 import io.noties.markwon.core.MarkwonTheme
@@ -285,16 +284,15 @@ class RepoLinkResolver(
     private val baseDir: File,
     private val workDir: File,
     private val onFile: (String) -> Unit,
+    private val onExternal: (String) -> Unit,
 ) : LinkResolver {
-
-    private val fallback = LinkResolverDef()
 
     override fun resolve(view: View, link: String) {
         // 同一ドキュメント内アンカーは未対応(何もしない)
         if (link.startsWith("#")) return
         if (!MarkdownRenderer.isRelative(link)) {
-            // http(s)/mailto/絶対パス等は既定動作に委譲
-            fallback.resolve(view, link)
+            // http(s)/mailto/絶対パス等は外部リンク扱い(開き方は呼び出し側=設定で決定)
+            onExternal(link)
             return
         }
         val path = resolveRepoRelativePath(baseDir, workDir, link)
@@ -378,11 +376,13 @@ fun MarkdownView(
     dark: Boolean,
     fontScale: Float,
     onNavigateToFile: (String) -> Unit,
+    onExternalLink: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     // コールバックの最新参照を保持(Markwon は再生成せず、resolver から間接参照する)
     val latestNavigate by rememberUpdatedState(onNavigateToFile)
+    val latestExternal by rememberUpdatedState(onExternalLink)
     val scheme = MaterialTheme.colorScheme
     val colors = MarkdownColors(
         link = scheme.primary.toArgb(),
@@ -392,7 +392,12 @@ fun MarkdownView(
         divider = scheme.outlineVariant.toArgb(),
     )
     val markwon = remember(context, dark, baseDir.path, workDir.path, colors) {
-        val resolver = RepoLinkResolver(baseDir, workDir) { latestNavigate(it) }
+        val resolver = RepoLinkResolver(
+            baseDir = baseDir,
+            workDir = workDir,
+            onFile = { latestNavigate(it) },
+            onExternal = { latestExternal(it) },
+        )
         MarkdownRenderer.create(context, dark, resolver, colors)
     }
     val rendered = remember(markdown, baseDir.path) {
