@@ -49,6 +49,7 @@ class RepoListViewModel(
         viewModelScope.launch {
             _status.value = UiStatus(busy = true, message = "clone 中...")
             val ok = runCatching { repository.addAndClone(input) }
+            ok.exceptionOrNull()?.let { android.util.Log.w("GitReader", "addAndClone failed", it) }
             _status.value = UiStatus(
                 busy = false,
                 message = ok.exceptionOrNull()?.let { "失敗: ${it.message}" },

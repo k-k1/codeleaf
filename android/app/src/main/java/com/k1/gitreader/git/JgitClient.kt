@@ -55,8 +55,13 @@ class JgitClient {
     private val allBranchesRefSpec = RefSpec("+refs/heads/*:refs/remotes/origin/*")
 
     fun credentials(username: String?, token: String?): CredentialsProvider? =
-        if (token.isNullOrBlank()) null
-        else UsernamePasswordCredentialsProvider(username ?: "", token)
+        if (token.isNullOrBlank()) {
+            null
+        } else {
+            // GitHub は空ユーザー名だと 401 になるため、未指定時は慣例の x-access-token を使う。
+            val user = username?.takeIf { it.isNotBlank() } ?: "x-access-token"
+            UsernamePasswordCredentialsProvider(user, token)
+        }
 
     /** clone して全ブランチを取得。既に存在する場合は何もしない。 */
     fun clone(url: String, dir: File, cp: CredentialsProvider?) {
