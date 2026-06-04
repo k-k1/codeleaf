@@ -8,10 +8,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import com.k1.gitreader.GitReaderApplication
+import com.k1.gitreader.data.AppSettings
 import com.k1.gitreader.data.FileEntry
+import com.k1.gitreader.data.FontScale
 import com.k1.gitreader.data.NewRepo
 import com.k1.gitreader.data.RepoRepository
+import com.k1.gitreader.data.SettingsStore
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.BranchInfo
 import com.k1.gitreader.git.CommitInfo
 import java.io.File
@@ -29,10 +33,13 @@ data class UiStatus(
 
 class RepoListViewModel(
     private val repository: RepoRepository,
+    private val settingsStore: SettingsStore,
 ) : ViewModel() {
 
     val repos: StateFlow<List<Repo>> = repository.observeRepos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val settings: StateFlow<AppSettings> = settingsStore.settings
 
     private val _status = MutableStateFlow(UiStatus())
     val status: StateFlow<UiStatus> = _status
@@ -99,11 +106,29 @@ class RepoListViewModel(
         _status.value = _status.value.copy(message = null)
     }
 
+    // --- グローバル設定 ---
+    fun setDefaultTheme(mode: ThemeMode) = settingsStore.setDefaultTheme(mode)
+
+    fun setFontScale(scale: FontScale) = settingsStore.setFontScale(scale)
+
+    /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
+    fun clearCache(onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _status.value = UiStatus(busy = true, message = "削除中...")
+            val ok = runCatching { repository.deleteAll() }
+            _status.value = UiStatus(
+                busy = false,
+                message = ok.exceptionOrNull()?.let { "削除失敗: ${it.message}" } ?: "キャッシュを削除しました",
+            )
+            onDone()
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as GitReaderApplication
-                RepoListViewModel(app.container.repoRepository)
+                RepoListViewModel(app.container.repoRepository, app.container.settingsStore)
             }
         }
     }

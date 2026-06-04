@@ -3,6 +3,7 @@ package com.k1.gitreader
 import android.app.Application
 import androidx.room.Room
 import com.k1.gitreader.data.RepoRepository
+import com.k1.gitreader.data.SettingsStore
 import com.k1.gitreader.data.crypto.TokenStore
 import com.k1.gitreader.data.db.AppDatabase
 import com.k1.gitreader.git.JgitClient
@@ -22,6 +23,8 @@ class AppContainer(app: Application) {
         jgit = JgitClient(),
         reposRoot = reposRoot,
     )
+
+    val settingsStore: SettingsStore = SettingsStore(app)
 }
 
 class GitReaderApplication : Application() {

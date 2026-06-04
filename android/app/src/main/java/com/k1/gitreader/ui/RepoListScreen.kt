@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -42,6 +43,7 @@ fun RepoListScreen(
     repos: List<Repo>,
     status: UiStatus,
     onAddClick: () -> Unit,
+    onSettings: () -> Unit,
     onOpen: (Repo) -> Unit,
     onSync: (Repo) -> Unit,
     onDelete: (Repo) -> Unit,
@@ -56,7 +58,16 @@ fun RepoListScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("git-reader") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("git-reader") },
+                actions = {
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "設定")
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {

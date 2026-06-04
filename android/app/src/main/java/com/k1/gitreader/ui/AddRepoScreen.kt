@@ -39,6 +39,7 @@ import com.k1.gitreader.data.db.ThemeMode
 @Composable
 fun AddRepoScreen(
     status: UiStatus,
+    defaultTheme: ThemeMode = ThemeMode.SYSTEM,
     onBack: () -> Unit,
     onSubmit: (NewRepo) -> Unit,
 ) {
@@ -48,7 +49,7 @@ fun AddRepoScreen(
     var username by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var branch by remember { mutableStateOf("") }
-    var theme by remember { mutableStateOf(ThemeMode.SYSTEM) }
+    var theme by remember { mutableStateOf(defaultTheme) }
 
     val usernameRequired = host == GitHost.BITBUCKET
     val canSubmit = url.isNotBlank() && token.isNotBlank() &&

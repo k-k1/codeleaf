@@ -11,6 +11,7 @@ import com.k1.gitreader.git.JgitClient
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -120,6 +121,11 @@ class RepoRepository(
         dao.delete(repo)
         tokenStore.removeToken(repo.id)
         workDir(repo).deleteRecursively()
+    }
+
+    /** 登録済みリポジトリ・暗号化トークン・作業ツリーをすべて削除する(キャッシュ全削除)。 */
+    suspend fun deleteAll() = withContext(ioDispatcher) {
+        observeRepos().first().forEach { delete(it) }
     }
 
     private fun nowMillis(): Long = System.currentTimeMillis()

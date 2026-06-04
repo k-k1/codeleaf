@@ -53,6 +53,7 @@ fun FileViewerScreen(
     filePath: String,
     workDir: File,
     loadText: suspend () -> String,
+    fontScale: Float,
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
     onBack: () -> Unit,
@@ -132,6 +133,7 @@ fun FileViewerScreen(
                                 workDir = workDir,
                                 textColor = textColor,
                                 dark = dark,
+                                fontScale = fontScale,
                                 onNavigateToFile = onNavigateToFile,
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -161,6 +163,7 @@ fun FileViewerScreen(
                             code = body,
                             language = language,
                             dark = dark,
+                            fontScale = fontScale,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

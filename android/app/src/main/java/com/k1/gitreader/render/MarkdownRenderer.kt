@@ -261,6 +261,7 @@ fun MarkdownView(
     workDir: File,
     textColor: Int,
     dark: Boolean,
+    fontScale: Float,
     onNavigateToFile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -287,14 +288,19 @@ fun MarkdownView(
         factory = { ctx -> TextView(ctx).apply { setTextIsSelectable(true) } },
         update = { tv ->
             tv.setTextColor(textColor)
+            tv.textSize = MARKDOWN_BASE_SP * fontScale
             markwon.setMarkdown(tv, rendered)
         },
     )
 }
 
+/** Markdown / コード本文の基準フォントサイズ(sp)。fontScale を掛けて適用する。 */
+private const val MARKDOWN_BASE_SP = 16f
+private const val CODE_BASE_SP = 14f
+
 /** 非 Markdown のソースコードを Prism4j でハイライト表示する。巨大ファイルは素のまま表示。 */
 @Composable
-fun CodeView(code: String, language: String?, dark: Boolean, modifier: Modifier = Modifier) {
+fun CodeView(code: String, language: String?, dark: Boolean, fontScale: Float, modifier: Modifier = Modifier) {
     val theme = remember(dark) { CodeHighlight.theme(dark) }
     val rendered: CharSequence = remember(code, language, dark) {
         if (code.length > 200_000) code else CodeHighlight.highlight(language, code, dark)
@@ -310,6 +316,7 @@ fun CodeView(code: String, language: String?, dark: Boolean, modifier: Modifier 
         update = { tv ->
             tv.setBackgroundColor(theme.background())
             tv.setTextColor(theme.textColor())
+            tv.textSize = CODE_BASE_SP * fontScale
             tv.text = rendered
         },
     )

@@ -12,6 +12,7 @@ import com.k1.gitreader.data.db.Repo
 private sealed interface Screen {
     data object List : Screen
     data object Add : Screen
+    data object Settings : Screen
     data class Browse(val repo: Repo, val path: String) : Screen
     data class View(val repo: Repo, val filePath: String) : Screen
     data class History(val repo: Repo, val filePath: String) : Screen
@@ -29,12 +30,14 @@ fun GitReaderApp() {
 
     val repos by vm.repos.collectAsState()
     val status by vm.status.collectAsState()
+    val settings by vm.settings.collectAsState()
 
     when (val current = backStack.last()) {
         Screen.List -> RepoListScreen(
             repos = repos,
             status = status,
             onAddClick = { navigate(Screen.Add) },
+            onSettings = { navigate(Screen.Settings) },
             onOpen = { navigate(Screen.Browse(it, "")) },
             onSync = vm::sync,
             onDelete = vm::delete,
@@ -43,8 +46,18 @@ fun GitReaderApp() {
 
         Screen.Add -> AddRepoScreen(
             status = status,
+            defaultTheme = settings.defaultTheme,
             onBack = { pop() },
             onSubmit = { input -> vm.addRepo(input) { ok -> if (ok) pop() } },
+        )
+
+        Screen.Settings -> SettingsScreen(
+            settings = settings,
+            repoCount = repos.size,
+            onSetTheme = vm::setDefaultTheme,
+            onSetFontScale = vm::setFontScale,
+            onClearCache = { vm.clearCache() },
+            onBack = { pop() },
         )
 
         is Screen.Browse -> GitReaderTheme(current.repo.themeMode) {
@@ -74,6 +87,7 @@ fun GitReaderApp() {
                 filePath = current.filePath,
                 workDir = vm.workDirOf(current.repo),
                 loadText = { vm.readFile(current.repo, current.filePath) },
+                fontScale = settings.fontScale.scale,
                 onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
                 onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },
                 onBack = { pop() },
