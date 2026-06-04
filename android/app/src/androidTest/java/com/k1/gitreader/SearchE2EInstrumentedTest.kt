@@ -2,6 +2,7 @@ package com.k1.gitreader
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -75,10 +76,21 @@ class SearchE2EInstrumentedTest {
         }
     }
 
+    // クエリ欄(ラベルは通常/正規表現で変わる)とパス絞り込み欄を取り違えないよう label で特定する。
+    private fun typeQuery(text: String) {
+        compose.onNode(
+            hasSetTextAction() and (hasText("全文検索", substring = true) or hasText("正規表現で検索", substring = true)),
+        ).performTextInput(text)
+    }
+
+    private fun typePathFilter(text: String) {
+        compose.onNode(hasSetTextAction() and hasText("絞り込み", substring = true)).performTextInput(text)
+    }
+
     @Test
     fun literalSearch_findsMatches_andJumpsToLine() {
         openSearch()
-        compose.onNode(hasSetTextAction()).performTextInput("needle")
+        typeQuery("needle")
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("📄 docs/guide.md").fetchSemanticsNodes().isNotEmpty()
         }
@@ -98,7 +110,7 @@ class SearchE2EInstrumentedTest {
         openSearch()
         // 正規表現トグル(.*) を有効化して "be.a" を検索 → guide(beta) のみ一致、README(alpha)は不一致
         compose.onNodeWithText(".*").performClick()
-        compose.onNode(hasSetTextAction()).performTextInput("be.a")
+        typeQuery("be.a")
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("📄 docs/guide.md").fetchSemanticsNodes().isNotEmpty()
         }
@@ -106,5 +118,20 @@ class SearchE2EInstrumentedTest {
         compose.waitUntil(timeoutMillis = 3_000) {
             compose.onAllNodesWithText("📄 README.md").fetchSemanticsNodes().isEmpty()
         }
+    }
+
+    @Test
+    fun pathFilter_restrictsToMatchingFiles() {
+        openSearch()
+        typeQuery("needle")
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("📄 README.md").fetchSemanticsNodes().isNotEmpty()
+        }
+        // "guide" で絞り込み → docs/guide.md のみ、README は除外
+        typePathFilter("guide")
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("📄 README.md").fetchSemanticsNodes().isEmpty()
+        }
+        compose.onNodeWithText("📄 docs/guide.md").assertIsDisplayed()
     }
 }

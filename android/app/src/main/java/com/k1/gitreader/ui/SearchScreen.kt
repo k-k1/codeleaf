@@ -51,6 +51,7 @@ fun SearchScreen(
 ) {
     var corpus by remember { mutableStateOf<List<TextFile>?>(null) }
     var query by remember { mutableStateOf("") }
+    var pathFilter by remember { mutableStateOf("") }
     var regex by remember { mutableStateOf(false) }
     var results by remember { mutableStateOf<List<SearchHit>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -59,8 +60,8 @@ fun SearchScreen(
     // 検索画面に入ったら本文を一度だけメモリへ読み込む（以降はメモリ内で増分検索）。
     LaunchedEffect(Unit) { corpus = loadCorpus() }
 
-    // クエリ/正規表現トグル/コーパスの変化で増分検索（120ms デバウンス、別スレッド実行）。
-    LaunchedEffect(query, regex, corpus) {
+    // クエリ/絞り込み/正規表現トグル/コーパスの変化で増分検索（120ms デバウンス、別スレッド実行）。
+    LaunchedEffect(query, pathFilter, regex, corpus) {
         val c = corpus
         if (c == null || query.isBlank()) {
             results = emptyList()
@@ -70,7 +71,7 @@ fun SearchScreen(
         }
         searching = true
         delay(120)
-        val outcome = withContext(Dispatchers.Default) { searchCorpus(c, query, regex) }
+        val outcome = withContext(Dispatchers.Default) { searchCorpus(c, query, regex, pathFilter) }
         results = outcome.hits
         error = outcome.error
         searching = false
@@ -108,6 +109,13 @@ fun SearchScreen(
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
+            OutlinedTextField(
+                value = pathFilter,
+                onValueChange = { pathFilter = it },
+                label = { Text("パス/拡張子で絞り込み (任意, 例: .md / docs/)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
 
             when {
                 corpus == null -> LinearProgressIndicator(Modifier.fillMaxWidth())

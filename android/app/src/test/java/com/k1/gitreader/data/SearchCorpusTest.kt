@@ -54,6 +54,18 @@ class SearchCorpusTest {
     }
 
     @Test
+    fun pathFilter_restrictsToMatchingPaths() {
+        val out = searchCorpus(corpus, "needle", regex = false, pathFilter = "a.md")
+        assertEquals(listOf(SearchHit("a.md", 1, "needle alpha")), out.hits)
+    }
+
+    @Test
+    fun pathFilter_extensionKeepsAll() {
+        val out = searchCorpus(corpus, "needle", regex = false, pathFilter = ".md")
+        assertEquals(2, out.hits.size)
+    }
+
+    @Test
     fun maxHits_isRespected() {
         val many = listOf(TextFile("x.txt", (1..10).joinToString("\n") { "hit $it" }))
         val out = searchCorpus(many, "hit", regex = false, maxHits = 3)

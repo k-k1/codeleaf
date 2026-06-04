@@ -44,11 +44,13 @@ data class SearchOutcome(
 /**
  * メモリ上のコーパスを検索する純粋関数。regex=true なら正規表現(大文字小文字無視)、
  * false なら大文字小文字無視の部分一致。不正な正規表現は error を返す。
+ * pathFilter が非空なら relPath にそれを含むファイルだけを対象にする(拡張子/ディレクトリ絞り込み)。
  */
 fun searchCorpus(
     corpus: List<TextFile>,
     query: String,
     regex: Boolean,
+    pathFilter: String = "",
     maxHits: Int = 500,
 ): SearchOutcome {
     if (query.isBlank()) return SearchOutcome(emptyList())
@@ -58,8 +60,10 @@ fun searchCorpus(
     } else {
         null
     }
+    val pf = pathFilter.trim()
     val hits = ArrayList<SearchHit>()
     outer@ for (file in corpus) {
+        if (pf.isNotEmpty() && !file.relPath.contains(pf, ignoreCase = true)) continue
         var lineNo = 0
         for (line in file.content.lineSequence()) {
             lineNo++
