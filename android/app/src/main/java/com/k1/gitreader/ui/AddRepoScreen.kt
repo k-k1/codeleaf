@@ -49,7 +49,6 @@ fun AddRepoScreen(
     var nameEdited by remember { mutableStateOf(false) } // 手動編集後は自動補完しない
     var username by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
-    var branch by remember { mutableStateOf("") }
     var theme by remember { mutableStateOf(defaultTheme) }
 
     val usernameRequired = host == GitHost.BITBUCKET
@@ -113,12 +112,6 @@ fun AddRepoScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
-                value = branch, onValueChange = { branch = it },
-                label = { Text("ブランチ (任意・空なら既定ブランチ)") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-
             Text("テーマ")
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 ThemeMode.entries.forEachIndexed { i, t ->
@@ -139,7 +132,7 @@ fun AddRepoScreen(
                             host = host,
                             username = username.trim(),
                             token = token,
-                            branch = branch.trim().ifBlank { null },
+                            branch = null, // 既定ブランチを使用(後でブランチ切替で変更可)
                             themeMode = theme,
                         ),
                     )

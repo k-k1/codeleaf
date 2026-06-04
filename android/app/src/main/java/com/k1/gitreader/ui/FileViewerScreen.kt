@@ -159,17 +159,19 @@ fun FileViewerScreen(
                     ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
                 }
                 if (isMarkdown) {
-                    SingleChoiceSegmentedButtonRow(Modifier.padding(end = 12.dp)) {
+                    SingleChoiceSegmentedButtonRow(Modifier.height(32.dp).padding(end = 12.dp)) {
                         SegmentedButton(
                             selected = !raw,
                             onClick = { raw = false },
                             shape = SegmentedButtonDefaults.itemShape(0, 2),
-                        ) { Text("整形") }
+                            icon = {},
+                        ) { Text("整形", style = MaterialTheme.typography.labelSmall) }
                         SegmentedButton(
                             selected = raw,
                             onClick = { raw = true },
                             shape = SegmentedButtonDefaults.itemShape(1, 2),
-                        ) { Text("Raw") }
+                            icon = {},
+                        ) { Text("Raw", style = MaterialTheme.typography.labelSmall) }
                     }
                 }
             }
