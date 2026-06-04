@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.k1.gitreader.data.FontScale
@@ -72,7 +73,7 @@ class WrapDefaultE2EInstrumentedTest {
             compose.onAllNodesWithText("コードの折り返し（既定）").fetchSemanticsNodes().isNotEmpty()
         }
         // 設定画面の最初のスイッチ=「コードの折り返し（既定）」(2番目は行番号表示)
-        compose.onAllNodes(isToggleable())[0].performClick()
+        compose.onAllNodes(isToggleable())[0].performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(false, app.container.settingsStore.settings.value.wrapByDefault)
 

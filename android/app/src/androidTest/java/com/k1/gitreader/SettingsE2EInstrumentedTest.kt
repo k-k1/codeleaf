@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.k1.gitreader.data.FontScale
@@ -83,8 +84,8 @@ class SettingsE2EInstrumentedTest {
         assertEquals(ThemeMode.DARK, app.container.settingsStore.settings.value.defaultTheme)
         assertEquals(FontScale.LARGE, app.container.settingsStore.settings.value.fontScale)
 
-        // キャッシュ全削除 → 確認ダイアログ → 削除
-        compose.onNodeWithText("キャッシュを全削除").performClick()
+        // キャッシュ全削除 → 確認ダイアログ → 削除(縦スクロールするので scrollTo してから)
+        compose.onNodeWithText("キャッシュを全削除").performScrollTo().performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("削除").fetchSemanticsNodes().isNotEmpty()
         }
