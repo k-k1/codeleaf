@@ -72,6 +72,20 @@ fun GitReaderApp() {
                 onSync = { vm.syncNow(current.repo) },
                 onSearch = { navigate(Screen.Search(current.repo)) },
                 onGraph = { navigate(Screen.Graph(current.repo)) },
+                onSetTheme = { mode ->
+                    vm.setRepoTheme(current.repo, mode) { updated ->
+                        // 開いている同一リポの全画面に新テーマを反映する
+                        for (idx in backStack.indices) {
+                            when (val s = backStack[idx]) {
+                                is Screen.Browse -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                                is Screen.View -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                                is Screen.Graph -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                                is Screen.Search -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                                else -> {}
+                            }
+                        }
+                    }
+                },
                 onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
                 onOpenFile = { navigate(Screen.View(current.repo, it)) },
                 onSwitchBranch = { branch ->

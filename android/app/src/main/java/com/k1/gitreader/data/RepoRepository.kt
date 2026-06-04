@@ -204,6 +204,13 @@ class RepoRepository(
     suspend fun commitGraph(repo: Repo): List<GraphCommit> =
         withContext(ioDispatcher) { jgit.commitGraph(workDir(repo)) }
 
+    /** リポジトリの表示テーマを変更して保存する。更新後の Repo を返す。 */
+    suspend fun setTheme(repo: Repo, mode: ThemeMode): Repo = withContext(ioDispatcher) {
+        val updated = repo.copy(themeMode = mode)
+        dao.update(updated)
+        updated
+    }
+
     private fun joinRel(parent: String, child: String): String =
         if (parent.isEmpty()) child else "$parent/$child"
 
