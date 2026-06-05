@@ -2,20 +2,30 @@ package com.k1.gitreader.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -39,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import android.os.Parcelable
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
+import com.k1.gitreader.git.CommitInfo
 import com.k1.gitreader.git.GraphCommit
 import kotlinx.parcelize.Parcelize
 
@@ -81,6 +92,8 @@ fun GitReaderApp() {
     ) { mutableStateListOf<Screen.View>() }
     // コミットグラフ2/3ペインで右に出す選択コミット。
     var graphSelected by rememberSaveable { mutableStateOf<GraphCommit?>(null) }
+    // ファイル履歴2/3ペインで右に出す選択コミット(CommitInfo は非Parcelableのため非保存・回転は維持)。
+    var historySelected by remember { mutableStateOf<CommitInfo?>(null) }
     // 3ペインの左レール(リポ一覧)を畳んでいるか。
     var railCollapsed by rememberSaveable { mutableStateOf(false) }
 
@@ -142,7 +155,58 @@ fun GitReaderApp() {
         )
     }
 
-    // 3ペインの枠: 左=レール(default テーマ) / 中右=content(repo テーマ)。レール畳み時は細い展開ストリップ。
+    // レール畳み時の細いアイコンレール: ≡(展開) / リポのアバター縦並び / 下に編集(or＋)・設定。
+    @Composable
+    fun IconRail(selectedRepoId: Long?) {
+        GitReaderTheme(settings.defaultTheme) {
+            Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxHeight().width(64.dp)) {
+                Column(
+                    Modifier.fillMaxHeight().statusBarsPadding(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    // ≡ は TopAppBar(64dp)中央に合わせ、展開時の「畳む<」と縦位置を揃える。
+                    Box(Modifier.height(64.dp), contentAlignment = Alignment.Center) {
+                        IconButton(onClick = { railCollapsed = false }) {
+                            Icon(Icons.Default.Menu, contentDescription = "リポ一覧を表示")
+                        }
+                    }
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        repos.forEach { r ->
+                            RepoAvatar(
+                                repo = r,
+                                selected = r.id == selectedRepoId,
+                                onClick = { navigate(Screen.Browse(r, "")) },
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                    }
+                    Column(
+                        Modifier.navigationBarsPadding(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        if (repos.isEmpty()) {
+                            IconButton(onClick = { navigate(Screen.Add) }) {
+                                Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
+                            }
+                        } else {
+                            IconButton(onClick = { navigate(Screen.RepoEdit) }) {
+                                Icon(Icons.Default.Create, contentDescription = "リポジトリを編集")
+                            }
+                        }
+                        IconButton(onClick = { navigate(Screen.Settings) }) {
+                            Icon(Icons.Default.Settings, contentDescription = "設定")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3ペインの枠: 左=レール(default テーマ) / 中右=content(repo テーマ)。レール畳み時はアイコンレール。
     @Composable
     fun ThreePaneScaffold(selectedRepoId: Long?, repoTheme: ThemeMode, content: @Composable () -> Unit) {
         Row(Modifier.fillMaxSize()) {
@@ -155,7 +219,7 @@ fun GitReaderApp() {
                 VerticalDivider()
                 Box(Modifier.weight(0.75f)) { GitReaderTheme(repoTheme) { content() } }
             } else {
-                RailExpandStrip(onExpand = { railCollapsed = false })
+                IconRail(selectedRepoId)
                 VerticalDivider()
                 Box(Modifier.weight(1f)) { GitReaderTheme(repoTheme) { content() } }
             }
@@ -269,7 +333,7 @@ fun GitReaderApp() {
                         tableMode = settings.tableMode,
                         stickyHeadings = settings.stickyHeadings,
                         targetLine = file.line,
-                        onHistory = { navigate(Screen.History(file.repo, file.filePath)) },
+                        onHistory = { historySelected = null; navigate(Screen.History(file.repo, file.filePath)) },
                         onNavigateToFile = { path -> detailStack.add(Screen.View(file.repo, path)) },
                         onBack = { handleBack() },
                     )
@@ -364,13 +428,53 @@ fun GitReaderApp() {
             }
         }
 
-        is Screen.History -> GitReaderTheme(current.repo.themeMode) {
-            HistoryScreen(
-                filePath = current.filePath,
-                loadHistory = { vm.fileHistory(current.repo, current.filePath) },
-                onOpenDiff = { sha -> navigate(Screen.Diff(current.repo, current.filePath, sha)) },
-                onBack = { pop() },
-            )
+        is Screen.History -> {
+            val repo = current.repo
+            val filePath = current.filePath
+
+            @Composable
+            fun HistoryPane(selSha: String?, onSelect: (CommitInfo) -> Unit) {
+                HistoryScreen(
+                    filePath = filePath,
+                    loadHistory = { vm.fileHistory(repo, filePath) },
+                    onSelectCommit = onSelect,
+                    onBack = { pop() },
+                    selectedSha = selSha,
+                )
+            }
+
+            BoxWithConstraints {
+                val three = maxWidth >= THREE_PANE_MIN_WIDTH
+                val two = maxWidth >= TWO_PANE_MIN_WIDTH
+
+                @Composable
+                fun ContentPanes() {
+                    if (!two) {
+                        HistoryPane(selSha = null, onSelect = { navigate(Screen.Diff(repo, filePath, it.sha)) })
+                    } else {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(0.45f)) {
+                                HistoryPane(selSha = historySelected?.sha, onSelect = { historySelected = it })
+                            }
+                            VerticalDivider()
+                            Box(Modifier.weight(0.55f)) {
+                                val sel = historySelected
+                                if (sel != null) {
+                                    key(sel.sha) { FileDiffPane(sel) { vm.fileDiff(repo, filePath, sel.sha) } }
+                                } else {
+                                    SelectPlaceholder("コミットを選択")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (three) {
+                    ThreePaneScaffold(repo.id, repo.themeMode) { ContentPanes() }
+                } else {
+                    GitReaderTheme(repo.themeMode) { ContentPanes() }
+                }
+            }
         }
 
         is Screen.Diff -> GitReaderTheme(current.repo.themeMode) {
@@ -402,18 +506,3 @@ private fun SelectPlaceholder(text: String) {
     }
 }
 
-/** レールを畳んだときの細い展開ストリップ(≡ で再表示)。 */
-@Composable
-private fun RailExpandStrip(onExpand: () -> Unit) {
-    Column(
-        Modifier.fillMaxHeight().width(48.dp).statusBarsPadding(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // ≡ を TopAppBar(高さ64dp)のナビアイコンと同じ縦位置に合わせ、開閉でボタンが上下にズレないようにする。
-        Box(Modifier.height(64.dp), contentAlignment = Alignment.Center) {
-            IconButton(onClick = onExpand) {
-                Icon(Icons.Default.Menu, contentDescription = "リポ一覧を表示")
-            }
-        }
-    }
-}

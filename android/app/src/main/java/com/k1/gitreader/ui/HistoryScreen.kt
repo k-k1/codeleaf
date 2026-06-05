@@ -1,9 +1,12 @@
 package com.k1.gitreader.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,8 +37,9 @@ import com.k1.gitreader.git.CommitInfo
 fun HistoryScreen(
     filePath: String,
     loadHistory: suspend () -> List<CommitInfo>,
-    onOpenDiff: (String) -> Unit,
+    onSelectCommit: (CommitInfo) -> Unit,
     onBack: () -> Unit,
+    selectedSha: String? = null,
 ) {
     var commits by remember(filePath) { mutableStateOf<List<CommitInfo>?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
@@ -65,8 +69,17 @@ fun HistoryScreen(
                 list.isEmpty() -> Text("履歴がありません", Modifier.padding(16.dp))
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(list, key = { it.sha }) { c ->
+                        val selected = c.sha == selectedSha
                         Column(
-                            Modifier.fillMaxWidth().clickable { onOpenDiff(c.sha) }
+                            Modifier.fillMaxWidth()
+                                .clickable { onSelectCommit(c) }
+                                .then(
+                                    if (selected) {
+                                        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+                                    } else {
+                                        Modifier
+                                    },
+                                )
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                         ) {
                             Text(c.shortMessage, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -79,6 +92,44 @@ fun HistoryScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * 2/3ペインの右に出すファイル履歴の差分(選択コミットでのそのファイルの diff)。
+ * ヘッダ(件名・著者・時刻・sha)＋ DiffText。コミットグラフの CommitDetailContent と対の関係。
+ */
+@Composable
+fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String) {
+    var diff by remember(commit.sha) { mutableStateOf<String?>(null) }
+    var error by remember(commit.sha) { mutableStateOf<String?>(null) }
+    LaunchedEffect(commit.sha) {
+        error = null
+        diff = runCatching { loadDiff() }.getOrElse { error = it.message; "" }
+    }
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                commit.shortMessage,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli())} · ${commit.sha.take(7)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        HorizontalDivider()
+        val d = diff
+        when {
+            error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
+            d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+            d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
+            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth())
         }
     }
 }

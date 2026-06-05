@@ -1,6 +1,7 @@
 package com.k1.gitreader.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,9 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
@@ -191,10 +197,29 @@ internal fun gitUnquotePath(s: String): String {
     return String(bytes.toByteArray(), Charsets.UTF_8)
 }
 
-/** 整形済み diff を表示する(DiffScreen / コミット詳細で共有)。長い行は自動改行・行番号付き。 */
+/** 1ファイル分の diff(ヘッダ＋本文行)。 */
+data class DiffFile(val header: DiffRow.FileHeader?, val rows: List<DiffRow>)
+
+/** 行リストをファイル単位(FileHeader 区切り)にまとめる純粋関数。 */
+fun groupDiffByFile(rows: List<DiffRow>): List<DiffFile> {
+    val files = ArrayList<DiffFile>()
+    var header: DiffRow.FileHeader? = null
+    var body = ArrayList<DiffRow>()
+    fun flush() { if (header != null || body.isNotEmpty()) files.add(DiffFile(header, body)) }
+    for (r in rows) {
+        if (r is DiffRow.FileHeader) { flush(); header = r; body = ArrayList() } else body.add(r)
+    }
+    flush()
+    return files
+}
+
+/** 整形済み diff を表示する(DiffScreen / コミット詳細で共有)。
+ *  ファイル毎に折りたたみ可・長い行は自動改行・行番号付き。 */
 @Composable
 fun DiffText(diff: String, modifier: Modifier = Modifier) {
     val rows = remember(diff) { parseDiffRows(diff) }
+    val files = remember(rows) { groupDiffByFile(rows) }
+    val collapsed = remember(diff) { mutableStateMapOf<Int, Boolean>() }
     val base = MaterialTheme.colorScheme.onSurface
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val hunkBg = MaterialTheme.colorScheme.surfaceVariant
@@ -208,48 +233,69 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
     val gutterWidth = (gutterChars * 8 + 12).dp
 
     Column(modifier.verticalScroll(rememberScrollState())) {
-        rows.forEach { row ->
-            when (row) {
-                is DiffRow.FileHeader -> Text(
-                    text = row.path,
-                    color = headerFg,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    softWrap = true,
-                    modifier = Modifier.fillMaxWidth().background(headerBg)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-                is DiffRow.Hunk -> Text(
-                    text = row.text,
-                    color = muted,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    softWrap = true,
-                    modifier = Modifier.fillMaxWidth().background(hunkBg)
-                        .padding(horizontal = 12.dp, vertical = 3.dp),
-                )
-                is DiffRow.Line -> Row(
-                    Modifier.fillMaxWidth()
-                        .background(when (row.kind) { '+' -> addBg; '-' -> delBg; else -> Color.Transparent })
-                        .padding(vertical = 1.dp),
+        files.forEachIndexed { i, file ->
+            val isCollapsed = collapsed[i] == true
+            file.header?.let { h ->
+                Row(
+                    Modifier.fillMaxWidth().background(headerBg)
+                        .clickable { collapsed[i] = !isCollapsed }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = row.lineNo?.toString().orEmpty(),
-                        color = muted,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        textAlign = TextAlign.End,
-                        maxLines = 1,
-                        modifier = Modifier.width(gutterWidth).padding(end = 6.dp),
+                    Icon(
+                        if (isCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isCollapsed) "展開" else "折りたたむ",
+                        tint = headerFg,
+                        modifier = Modifier.size(18.dp),
                     )
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = row.text.ifEmpty { " " },
-                        color = base,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
+                        h.path,
+                        color = headerFg,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
                         softWrap = true,
-                        modifier = Modifier.weight(1f).padding(end = 12.dp),
+                        modifier = Modifier.weight(1f),
                     )
+                }
+            }
+            if (!isCollapsed) {
+                file.rows.forEach { row ->
+                    when (row) {
+                        is DiffRow.FileHeader -> Unit // ヘッダは上で描画済み
+                        is DiffRow.Hunk -> Text(
+                            text = row.text,
+                            color = muted,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            softWrap = true,
+                            modifier = Modifier.fillMaxWidth().background(hunkBg)
+                                .padding(horizontal = 12.dp, vertical = 3.dp),
+                        )
+                        is DiffRow.Line -> Row(
+                            Modifier.fillMaxWidth()
+                                .background(when (row.kind) { '+' -> addBg; '-' -> delBg; else -> Color.Transparent })
+                                .padding(vertical = 1.dp),
+                        ) {
+                            Text(
+                                text = row.lineNo?.toString().orEmpty(),
+                                color = muted,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                textAlign = TextAlign.End,
+                                maxLines = 1,
+                                modifier = Modifier.width(gutterWidth).padding(end = 6.dp),
+                            )
+                            Text(
+                                text = row.text.ifEmpty { " " },
+                                color = base,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                softWrap = true,
+                                modifier = Modifier.weight(1f).padding(end = 12.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
