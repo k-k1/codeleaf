@@ -96,6 +96,8 @@ fun FileViewerScreen(
     onHistory: () -> Unit,
     onNavigateToFile: (String) -> Unit,
     onBack: () -> Unit,
+    /** 戻る矢印を表示するか。2/3ペインでは一覧が常に見えるため非表示にする。 */
+    showBack: Boolean = true,
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
@@ -161,8 +163,10 @@ fun FileViewerScreen(
             TopAppBar(
                 title = { Text(fileName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    if (showBack) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        }
                     }
                 },
                 actions = {

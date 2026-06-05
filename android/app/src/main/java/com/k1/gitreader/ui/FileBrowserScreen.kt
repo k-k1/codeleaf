@@ -84,7 +84,8 @@ fun FileBrowserScreen(
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
-    onBack: () -> Unit,
+    /** リポを出てリポ一覧へ。3ペインではレールが担うため null で ← を非表示にする。 */
+    onBack: (() -> Unit)?,
     /** ひとつ上のディレクトリへ(パスから親を算出して遷移)。ルートでは無効。 */
     onUp: () -> Unit,
     iconSet: IconSet = IconSet.MATERIAL,
@@ -119,8 +120,10 @@ fun FileBrowserScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "リポ一覧へ")
+                        }
                     }
                 },
                 actions = {

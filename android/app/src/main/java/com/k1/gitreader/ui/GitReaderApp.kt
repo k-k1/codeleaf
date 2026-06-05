@@ -113,6 +113,12 @@ fun GitReaderApp() {
         if (before is Screen.Browse && backStack.last() !is Screen.Browse) detailStack.clear()
     }
 
+    // リポを出てリポ一覧へ戻る(Browse チェーンを畳む)。ブラウザ ← の動作。
+    fun leaveRepo() {
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        detailStack.clear()
+    }
+
     // リポ毎テーマ変更を backStack / detailStack 内の同一リポ全画面へ反映する。
     fun applyThemeUpdate(updated: Repo) {
         for (idx in backStack.indices) {
@@ -288,7 +294,7 @@ fun GitReaderApp() {
             val repo = current.repo
 
             @Composable
-            fun BrowserPane() {
+            fun BrowserPane(showBack: Boolean) {
                 FileBrowserScreen(
                     repo = repo,
                     path = current.path,
@@ -314,7 +320,8 @@ fun GitReaderApp() {
                             detailStack.clear() // 作業ツリー書換でファイルが変化/消滅しうる
                         }
                     },
-                    onBack = { handleBack() },
+                    // ← はリポ退出(リポ一覧へ)。3ペインはレールが担うため非表示(null)。
+                    onBack = if (showBack) ({ leaveRepo() }) else null,
                     onUp = {
                         val parent = current.path.substringBeforeLast('/', "")
                         val below = backStack.getOrNull(backStack.lastIndex - 1)
@@ -330,7 +337,7 @@ fun GitReaderApp() {
             }
 
             @Composable
-            fun ViewerPane(file: Screen.View) {
+            fun ViewerPane(file: Screen.View, showBack: Boolean) {
                 key(file.repo.id, file.filePath) {
                     FileViewerScreen(
                         repo = file.repo,
@@ -347,6 +354,7 @@ fun GitReaderApp() {
                         onHistory = { historySelected = null; navigate(Screen.History(file.repo, file.filePath)) },
                         onNavigateToFile = { path -> detailStack.add(Screen.View(file.repo, path)) },
                         onBack = { handleBack() },
+                        showBack = showBack,
                     )
                 }
             }
@@ -359,13 +367,16 @@ fun GitReaderApp() {
                 @Composable
                 fun ContentPanes() {
                     if (!two) {
-                        if (file != null) ViewerPane(file) else BrowserPane()
+                        // 1ペイン: ビューア←=ファイルを閉じる / ブラウザ←=リポ退出。
+                        if (file != null) ViewerPane(file, showBack = true) else BrowserPane(showBack = true)
                     } else {
                         Row(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(0.4f)) { BrowserPane() }
+                            // 3ペインはレールがリポ切替/退出を担うのでブラウザ←を撤去。2ペインは残す。
+                            Box(Modifier.weight(0.4f)) { BrowserPane(showBack = !three) }
                             VerticalDivider()
                             Box(Modifier.weight(0.6f)) {
-                                if (file != null) ViewerPane(file) else SelectPlaceholder("ファイルを選択")
+                                // 2/3ペインは一覧が常に見えるためビューア←は撤去。
+                                if (file != null) ViewerPane(file, showBack = false) else SelectPlaceholder("ファイルを選択")
                             }
                         }
                     }
