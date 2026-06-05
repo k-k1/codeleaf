@@ -34,6 +34,8 @@ data class AppSettings(
     val iconSet: IconSet = IconSet.MATERIAL,
     /** リポ一覧で選択中のグループ。空=すべて表示。 */
     val selectedGroup: String = "",
+    /** 定義済みグループ名(表示順)。空グループも保持できるよう各リポの groupName とは別に持つ。 */
+    val groups: List<String> = emptyList(),
 )
 
 /**
@@ -57,6 +59,8 @@ class SettingsStore(context: Context) {
         stickyHeadings = prefs.getBoolean(KEY_STICKY, true),
         iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.MATERIAL),
         selectedGroup = prefs.getString(KEY_GROUP, "") ?: "",
+        groups = prefs.getString(KEY_GROUPS, null)
+            ?.split("\n")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList(),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {
@@ -104,6 +108,12 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(selectedGroup = group)
     }
 
+    fun setGroups(groups: List<String>) {
+        val cleaned = groups.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        prefs.edit().putString(KEY_GROUPS, cleaned.joinToString("\n")).apply()
+        _settings.value = _settings.value.copy(groups = cleaned)
+    }
+
     private companion object {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
@@ -114,6 +124,7 @@ class SettingsStore(context: Context) {
         const val KEY_STICKY = "sticky_headings"
         const val KEY_ICONSET = "icon_set"
         const val KEY_GROUP = "selected_group"
+        const val KEY_GROUPS = "groups"
 
         inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default

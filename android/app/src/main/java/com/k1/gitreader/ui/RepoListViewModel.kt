@@ -140,13 +140,39 @@ class RepoListViewModel(
         viewModelScope.launch { runCatching { repository.setColor(repo, color) } }
     }
 
-    /** リポの所属グループを変更(空=未分類)。 */
-    fun setRepoGroup(repo: Repo, group: String) {
-        viewModelScope.launch { runCatching { repository.setGroup(repo, group) } }
-    }
-
     /** リポ一覧で表示するグループを選択(空=すべて)。 */
     fun setSelectedGroup(group: String) = settingsStore.setSelectedGroup(group)
+
+    /** 空のグループを新規作成する(名前一覧に追加)。 */
+    fun addGroup(name: String) {
+        val n = name.trim()
+        if (n.isEmpty()) return
+        val cur = settings.value.groups
+        if (cur.none { it == n }) settingsStore.setGroups(cur + n)
+    }
+
+    /** グループ名を変更する(名前一覧＋所属リポの groupName を更新)。 */
+    fun renameGroup(old: String, new: String) {
+        val n = new.trim()
+        if (n.isEmpty() || n == old) return
+        viewModelScope.launch {
+            settingsStore.setGroups(settings.value.groups.map { if (it == old) n else it })
+            repos.value.filter { it.groupName == old }.forEach { runCatching { repository.setGroup(it, n) } }
+        }
+    }
+
+    /** グループを削除する(名前一覧から除外＋所属リポを未分類に戻す)。 */
+    fun deleteGroup(name: String) {
+        viewModelScope.launch {
+            settingsStore.setGroups(settings.value.groups.filter { it != name })
+            repos.value.filter { it.groupName == name }.forEach { runCatching { repository.setGroup(it, "") } }
+        }
+    }
+
+    /** 編集画面のセクション D&D 結果(表示順＋所属)を保存する。 */
+    fun saveRepoGroupsAndOrder(ordered: List<Repo>) {
+        viewModelScope.launch { runCatching { repository.saveGroupsAndOrder(ordered) } }
+    }
 
     fun saveRepoOrder(ordered: List<Repo>) {
         viewModelScope.launch { runCatching { repository.saveOrder(ordered) } }

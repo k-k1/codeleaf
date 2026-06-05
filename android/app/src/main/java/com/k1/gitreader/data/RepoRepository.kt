@@ -351,6 +351,19 @@ class RepoRepository(
         }
     }
 
+    /**
+     * 編集画面のセクション D&D 結果を保存する。`ordered` は表示順で、各 Repo の groupName は
+     * ドロップ先セクションに更新済み。所属(groupName)と並び順(sortOrder=index)をまとめて書き込む。
+     */
+    suspend fun saveGroupsAndOrder(ordered: List<Repo>) = withContext(ioDispatcher) {
+        ordered.forEachIndexed { index, repo ->
+            val cur = dao.getById(repo.id) ?: return@forEachIndexed
+            if (cur.groupName != repo.groupName || cur.sortOrder != index) {
+                dao.update(cur.copy(groupName = repo.groupName, sortOrder = index))
+            }
+        }
+    }
+
     private fun joinRel(parent: String, child: String): String =
         if (parent.isEmpty()) child else "$parent/$child"
 

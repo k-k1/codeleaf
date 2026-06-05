@@ -158,13 +158,16 @@ fun GitReaderApp() {
     val settings by vm.settings.collectAsState()
 
     // 左レール(リポ一覧)。List 全画面・3ペインの左で共有する。
+    // グループ一覧 = 定義済み(settings, 表示順) ＋ 念のため未登録のリポ所属名(末尾)。
+    val allGroups = run {
+        val orphans = repos.map { it.groupName }.filter { it.isNotBlank() && it !in settings.groups }.distinct().sorted()
+        settings.groups + orphans
+    }
+
     @Composable
     fun RailPane(selectedRepoId: Long?, onCollapse: (() -> Unit)? = null) {
-        // 存在するグループ(昇順)。選択中グループが消えていたら「すべて」に退避。
-        val groups = remember(repos) {
-            repos.map { it.groupName }.filter { it.isNotBlank() }.distinct().sorted()
-        }
-        val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in groups } ?: ""
+        // 選択中グループが消えていたら「すべて」に退避。
+        val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in allGroups } ?: ""
         val shownRepos = if (selectedGroup.isEmpty()) repos else repos.filter { it.groupName == selectedGroup }
         RepoListScreen(
             repos = shownRepos,
@@ -176,7 +179,7 @@ fun GitReaderApp() {
             onOpenGraph = { graphSelected = null; navigate(Screen.Graph(it)) },
             onSync = vm::sync,
             onMessageShown = vm::clearMessage,
-            groups = groups,
+            groups = allGroups,
             selectedGroup = selectedGroup,
             onSelectGroup = vm::setSelectedGroup,
             selectedRepoId = selectedRepoId,
@@ -291,11 +294,13 @@ fun GitReaderApp() {
 
         Screen.RepoEdit -> RepoEditScreen(
             repos = repos,
-            groups = repos.map { it.groupName }.filter { it.isNotBlank() }.distinct().sorted(),
-            onReorder = vm::saveRepoOrder,
+            groups = allGroups,
+            onReorderAndGroup = vm::saveRepoGroupsAndOrder,
             onSetColor = vm::setRepoColor,
-            onSetGroup = vm::setRepoGroup,
             onDelete = vm::delete,
+            onAddGroup = vm::addGroup,
+            onRenameGroup = vm::renameGroup,
+            onDeleteGroup = vm::deleteGroup,
             onAdd = { navigate(Screen.Add) },
             onBack = { pop() },
         )

@@ -28,10 +28,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,41 +53,84 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.RepoColor
-import kotlin.math.roundToInt
 
-private val ROW_HEIGHT = 116.dp
+private val ITEM_HEIGHT = 96.dp
+private val HEADER_HEIGHT = 48.dp
 private val ROW_SPACING = 8.dp
+
+/** 編集リストの1行。Header=見出し(group=null は未分類)、Item=リポカード、DropZone=空セクションの落とし所。 */
+private sealed interface EditSlot {
+    data class Header(val group: String?) : EditSlot
+    data class Item(val repo: Repo) : EditSlot
+    data class DropZone(val group: String) : EditSlot
+}
+
+/** repos と groups から表示スロット列を作る。未分類を先頭に、続けて groups の順でセクション化する。
+ *  空セクションには DropZone を1枚入れて、ドラッグの落とし所(=的)を大きくする。 */
+private fun buildSlots(repos: List<Repo>, groups: List<String>): List<EditSlot> {
+    val byGroup = repos.groupBy { it.groupName }
+    val out = ArrayList<EditSlot>()
+    fun section(headerGroup: String?, key: String) {
+        out.add(EditSlot.Header(headerGroup))
+        val items = (byGroup[key] ?: emptyList()).sortedBy { it.sortOrder }
+        if (items.isEmpty()) out.add(EditSlot.DropZone(key))
+        else items.forEach { out.add(EditSlot.Item(it)) }
+    }
+    section(null, "") // 未分類(先頭)
+    for (g in groups) section(g, g)
+    return out
+}
+
+/** スロット列を表示順の Repo 列に変換。各 Item には直前の見出しのグループを割り当てる(DropZone は無視)。 */
+private fun slotsToRepos(slots: List<EditSlot>): List<Repo> {
+    val out = ArrayList<Repo>()
+    var current = ""
+    for (s in slots) when (s) {
+        is EditSlot.Header -> current = s.group ?: ""
+        is EditSlot.Item -> out.add(s.repo.copy(groupName = current))
+        is EditSlot.DropZone -> Unit
+    }
+    return out
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RepoEditScreen(
     repos: List<Repo>,
-    onReorder: (List<Repo>) -> Unit,
+    groups: List<String>,
+    /** D&D 結果(表示順＋ドロップ先で更新済みの groupName)を保存する。 */
+    onReorderAndGroup: (List<Repo>) -> Unit,
     onSetColor: (Repo, RepoColor) -> Unit,
-    onSetGroup: (Repo, String) -> Unit,
     onDelete: (Repo) -> Unit,
+    onAddGroup: (String) -> Unit,
+    onRenameGroup: (String, String) -> Unit,
+    onDeleteGroup: (String) -> Unit,
     onAdd: () -> Unit,
     onBack: () -> Unit,
-    /** 既存グループ名(昇順)。割当メニューに候補として並べる。 */
-    groups: List<String> = emptyList(),
 ) {
-    val items = remember { mutableStateListOf<Repo>() }
+    val slots = remember { mutableStateListOf<EditSlot>() }
     var draggingId by remember { mutableStateOf<Long?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var confirmDelete by remember { mutableStateOf<Repo?>(null) }
-    // 並べ替えの判定は行スペースを含む実ピッチ(行高+間隔)を基準にする。
-    val pitchPx = with(LocalDensity.current) { (ROW_HEIGHT + ROW_SPACING).toPx() }
+    var addDialog by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<String?>(null) }
 
-    // ドラッグ中以外は最新の repos に同期(削除・色変更の反映)。
-    LaunchedEffect(repos) {
+    val density = LocalDensity.current
+    val itemPitch = with(density) { (ITEM_HEIGHT + ROW_SPACING).toPx() }
+    val headerPitch = with(density) { (HEADER_HEIGHT + ROW_SPACING).toPx() }
+    fun pitchOf(slot: EditSlot) = if (slot is EditSlot.Header) headerPitch else itemPitch // DropZone は Item と同じ高さ
+
+    // ドラッグ中以外は最新状態へ同期(追加/削除/色/グループ変更の反映)。
+    LaunchedEffect(repos, groups) {
         if (draggingId == null) {
-            items.clear()
-            items.addAll(repos)
+            slots.clear()
+            slots.addAll(buildSlots(repos, groups))
         }
     }
 
@@ -116,75 +156,79 @@ fun RepoEditScreen(
             modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
         ) {
-            itemsIndexed(items, key = { _, r -> r.id }) { _, repo ->
-                val dragging = repo.id == draggingId
-                Card(
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = if (dragging) 8.dp else 1.dp,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(ROW_HEIGHT)
-                        .zIndex(if (dragging) 1f else 0f)
-                        .graphicsLayer { translationY = if (dragging) dragOffset else 0f },
-                ) {
-                    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                        // ドラッグハンドル(掴んで上下にドラッグで並べ替え)。
-                        // 専用ハンドルなので長押し不要・即ドラッグ開始。タッチ領域は広めに確保する。
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(horizontal = 4.dp)
-                                .width(48.dp)
-                                .pointerInput(repo.id) {
-                                    detectDragGestures(
-                                        onDragStart = { draggingId = repo.id; dragOffset = 0f },
-                                        onDragEnd = { draggingId = null; dragOffset = 0f; onReorder(items.toList()) },
-                                        onDragCancel = { draggingId = null; dragOffset = 0f },
-                                        onDrag = { change, amount ->
-                                            change.consume()
-                                            dragOffset += amount.y
-                                            val from = items.indexOfFirst { it.id == draggingId }
-                                            if (from >= 0) {
-                                                val to = (from + (dragOffset / pitchPx).roundToInt())
-                                                    .coerceIn(0, items.size - 1)
-                                                if (to != from) {
-                                                    items.add(to, items.removeAt(from))
-                                                    dragOffset -= (to - from) * pitchPx
-                                                }
-                                            }
-                                        },
-                                    )
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Default.Menu, contentDescription = "並べ替え")
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                repo.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Row(
-                                Modifier.padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                RepoColor.entries.forEach { c ->
-                                    ColorDot(c, selected = repo.colorTag == c, onClick = { onSetColor(repo, c) })
-                                }
-                            }
-                            GroupSelector(
-                                current = repo.groupName,
-                                groups = groups,
-                                onSet = { onSetGroup(repo, it) },
-                            )
-                        }
-                        IconButton(onClick = { confirmDelete = repo }) {
-                            Icon(Icons.Default.Delete, contentDescription = "削除")
-                        }
+            itemsIndexed(
+                slots,
+                key = { _, s ->
+                    when (s) {
+                        is EditSlot.Header -> "h:${s.group ?: "_none"}"
+                        is EditSlot.Item -> "i:${s.repo.id}"
+                        is EditSlot.DropZone -> "z:${s.group}"
                     }
+                },
+            ) { _, slot ->
+                when (slot) {
+                    is EditSlot.Header -> GroupHeader(
+                        group = slot.group,
+                        onRename = { slot.group?.let { renameTarget = it } },
+                        onDelete = { slot.group?.let { onDeleteGroup(it) } },
+                    )
+                    is EditSlot.DropZone -> DropZoneRow()
+                    is EditSlot.Item -> {
+                        val repo = slot.repo
+                        val dragging = repo.id == draggingId
+                        RepoEditCard(
+                            repo = repo,
+                            dragging = dragging,
+                            dragOffset = if (dragging) dragOffset else 0f,
+                            onSetColor = { onSetColor(repo, it) },
+                            onDelete = { confirmDelete = repo },
+                            dragModifier = Modifier.pointerInput(repo.id) {
+                                detectDragGestures(
+                                    onDragStart = { draggingId = repo.id; dragOffset = 0f },
+                                    onDragEnd = {
+                                        draggingId = null
+                                        dragOffset = 0f
+                                        onReorderAndGroup(slotsToRepos(slots))
+                                    },
+                                    onDragCancel = { draggingId = null; dragOffset = 0f },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        dragOffset += amount.y
+                                        // 1ステップずつ隣のスロットと入れ替える(見出しも跨ぐ=所属変更)。
+                                        // index 0 は未分類見出しで固定なので、Item は index>=1 に留める。
+                                        while (true) {
+                                            val from = slots.indexOfFirst {
+                                                it is EditSlot.Item && it.repo.id == draggingId
+                                            }
+                                            if (from < 0) break
+                                            if (from < slots.lastIndex && dragOffset > pitchOf(slots[from + 1]) / 2) {
+                                                val p = pitchOf(slots[from + 1])
+                                                slots.add(from + 1, slots.removeAt(from))
+                                                dragOffset -= p
+                                                continue
+                                            }
+                                            if (from >= 2 && dragOffset < -pitchOf(slots[from - 1]) / 2) {
+                                                val p = pitchOf(slots[from - 1])
+                                                slots.add(from - 1, slots.removeAt(from))
+                                                dragOffset += p
+                                                continue
+                                            }
+                                            break
+                                        }
+                                    },
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+            item(key = "_add_group") {
+                TextButton(
+                    onClick = { addDialog = true },
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("  グループを追加")
                 }
             }
         }
@@ -203,67 +247,162 @@ fun RepoEditScreen(
             },
         )
     }
-}
 
-/** 所属グループの割当chip。タップで「なし/既存グループ/新規作成…」のメニューを開く。 */
-@Composable
-private fun GroupSelector(current: String, groups: List<String>, onSet: (String) -> Unit) {
-    var menu by remember { mutableStateOf(false) }
-    var newDialog by remember { mutableStateOf(false) }
-    val label = current.ifEmpty { "なし" }
-    Box(Modifier.padding(top = 6.dp)) {
-        Row(
-            Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { menu = true }
-                .padding(horizontal = 8.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("グループ: $label ▾", style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(
-                text = { Text((if (current.isEmpty()) "● " else "○ ") + "なし") },
-                onClick = { menu = false; onSet("") },
-            )
-            groups.forEach { g ->
-                DropdownMenuItem(
-                    text = { Text((if (current == g) "● " else "○ ") + g) },
-                    onClick = { menu = false; onSet(g) },
-                )
-            }
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text("＋ 新規グループ…") },
-                onClick = { menu = false; newDialog = true },
-            )
-        }
-    }
-    if (newDialog) {
-        var name by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { newDialog = false },
-            title = { Text("新規グループ") },
-            text = {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    label = { Text("グループ名") },
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { newDialog = false; if (name.isNotBlank()) onSet(name.trim()) },
-                    enabled = name.isNotBlank(),
-                ) { Text("作成") }
-            },
-            dismissButton = {
-                TextButton(onClick = { newDialog = false }) { Text("キャンセル") }
-            },
+    if (addDialog) {
+        GroupNameDialog(
+            title = "新規グループ",
+            initial = "",
+            onConfirm = { onAddGroup(it); addDialog = false },
+            onDismiss = { addDialog = false },
         )
     }
+    renameTarget?.let { old ->
+        GroupNameDialog(
+            title = "グループ名を変更",
+            initial = old,
+            onConfirm = { onRenameGroup(old, it); renameTarget = null },
+            onDismiss = { renameTarget = null },
+        )
+    }
+}
+
+/** グループ見出し。未分類(group=null)は固定ラベルのみ。通常グループは改名(タップ)＋削除(ゴミ箱)。 */
+@Composable
+private fun GroupHeader(group: String?, onRename: () -> Unit, onDelete: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(HEADER_HEIGHT)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(if (group != null) Modifier.clickable(onClick = onRename) else Modifier)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (group == null) {
+            Text(
+                "未分類（「すべて」のみに表示）",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Text(
+                group,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "グループを削除", modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+/** 空セクションの落とし所。リポ1枚ぶんの高さの破線エリアで、ドラッグの的を大きくする。 */
+@Composable
+private fun DropZoneRow() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(ITEM_HEIGHT)
+            .clip(RoundedCornerShape(8.dp))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(8.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "ここにドラッグして追加",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** リポ1枚のカード。左にドラッグハンドル(セクション間移動)、名前、色ドット、右に削除。 */
+@Composable
+private fun RepoEditCard(
+    repo: Repo,
+    dragging: Boolean,
+    dragOffset: Float,
+    onSetColor: (RepoColor) -> Unit,
+    onDelete: () -> Unit,
+    dragModifier: Modifier,
+) {
+    Card(
+        elevation = CardDefaults.cardElevation(defaultElevation = if (dragging) 8.dp else 1.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(ITEM_HEIGHT)
+            .zIndex(if (dragging) 1f else 0f)
+            .graphicsLayer { translationY = dragOffset },
+    ) {
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            // 専用ハンドル: 掴んで上下ドラッグでセクション間を移動。
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = 4.dp)
+                    .width(48.dp)
+                    .then(dragModifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Menu, contentDescription = "並べ替え・グループ移動")
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    repo.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    RepoColor.entries.forEach { c ->
+                        ColorDot(c, selected = repo.colorTag == c, onClick = { onSetColor(c) })
+                    }
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "削除")
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupNameDialog(title: String, initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text("グループ名") },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) }, enabled = name.isNotBlank()) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("キャンセル") }
+        },
+    )
 }
 
 @Composable
