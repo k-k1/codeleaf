@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -403,11 +405,14 @@ private fun SelectPlaceholder(text: String) {
 @Composable
 private fun RailExpandStrip(onExpand: () -> Unit) {
     Column(
-        Modifier.fillMaxHeight().width(48.dp),
+        Modifier.fillMaxHeight().width(48.dp).statusBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        IconButton(onClick = onExpand) {
-            Icon(Icons.Default.Menu, contentDescription = "リポ一覧を表示")
+        // ≡ を TopAppBar(高さ64dp)のナビアイコンと同じ縦位置に合わせ、開閉でボタンが上下にズレないようにする。
+        Box(Modifier.height(64.dp), contentAlignment = Alignment.Center) {
+            IconButton(onClick = onExpand) {
+                Icon(Icons.Default.Menu, contentDescription = "リポ一覧を表示")
+            }
         }
     }
 }

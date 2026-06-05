@@ -1,5 +1,6 @@
 package com.k1.gitreader.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,13 +53,49 @@ fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String) {
                 }
                 Spacer(Modifier.height(6.dp))
             }
-            Text(commit.fullMessage.trim(), style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(8.dp))
+            // タイトル(コミットの件名)= 1行目を少し大きく。
+            val subject = commit.shortMessage.trim()
+            Text(
+                subject.ifBlank { "(メッセージなし)" },
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            // メタ: 著者・時刻・ハッシュ。
             Text(
                 "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli())} · ${commit.sha.take(7)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // 本文(件名以降)= 数行表示し、タップで全文展開。
+            val body = remember(commit.sha) { commit.fullMessage.trim().removePrefix(subject).trim() }
+            if (body.isNotBlank()) {
+                var expanded by remember(commit.sha) { mutableStateOf(false) }
+                var overflow by remember(commit.sha) { mutableStateOf(false) }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = if (expanded) Int.MAX_VALUE else 5,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { if (!expanded) overflow = it.hasVisualOverflow },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = expanded || overflow) { expanded = !expanded },
+                )
+                if (expanded || overflow) {
+                    Text(
+                        if (expanded) "閉じる" else "続きを表示",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { expanded = !expanded }
+                            .padding(top = 2.dp),
+                    )
+                }
+            }
         }
         HorizontalDivider()
         val d = diff

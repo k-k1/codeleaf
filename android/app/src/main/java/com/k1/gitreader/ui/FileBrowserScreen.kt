@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -157,13 +156,13 @@ fun FileBrowserScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            BottomAppBar {
+            SlimBottomBar {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "ひとつ上へ")
                 }
                 Text(
                     text = "/" + path,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(end = 16.dp),
