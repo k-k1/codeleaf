@@ -134,6 +134,13 @@ fun FileBrowserScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        // タイトルの小さな「branch ▾」が分かりづらいので、切替導線をここにも置く。
+                        DropdownMenuItem(
+                            text = { Text("ブランチを切り替え（${repo.branch}）") },
+                            enabled = !locked,
+                            onClick = { menuExpanded = false; showBranchSheet = true },
+                        )
+                        HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text("コミットグラフ") },
                             onClick = { menuExpanded = false; onGraph() },
