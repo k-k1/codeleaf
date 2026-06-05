@@ -140,6 +140,14 @@ class RepoListViewModel(
         viewModelScope.launch { runCatching { repository.setColor(repo, color) } }
     }
 
+    /** リポの所属グループを変更(空=未分類)。 */
+    fun setRepoGroup(repo: Repo, group: String) {
+        viewModelScope.launch { runCatching { repository.setGroup(repo, group) } }
+    }
+
+    /** リポ一覧で表示するグループを選択(空=すべて)。 */
+    fun setSelectedGroup(group: String) = settingsStore.setSelectedGroup(group)
+
     fun saveRepoOrder(ordered: List<Repo>) {
         viewModelScope.launch { runCatching { repository.saveOrder(ordered) } }
     }

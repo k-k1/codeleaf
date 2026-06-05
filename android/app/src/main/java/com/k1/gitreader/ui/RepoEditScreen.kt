@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -27,10 +28,14 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,7 +63,7 @@ import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.RepoColor
 import kotlin.math.roundToInt
 
-private val ROW_HEIGHT = 88.dp
+private val ROW_HEIGHT = 116.dp
 private val ROW_SPACING = 8.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,9 +72,12 @@ fun RepoEditScreen(
     repos: List<Repo>,
     onReorder: (List<Repo>) -> Unit,
     onSetColor: (Repo, RepoColor) -> Unit,
+    onSetGroup: (Repo, String) -> Unit,
     onDelete: (Repo) -> Unit,
     onAdd: () -> Unit,
     onBack: () -> Unit,
+    /** 既存グループ名(昇順)。割当メニューに候補として並べる。 */
+    groups: List<String> = emptyList(),
 ) {
     val items = remember { mutableStateListOf<Repo>() }
     var draggingId by remember { mutableStateOf<Long?>(null) }
@@ -167,6 +175,11 @@ fun RepoEditScreen(
                                     ColorDot(c, selected = repo.colorTag == c, onClick = { onSetColor(repo, c) })
                                 }
                             }
+                            GroupSelector(
+                                current = repo.groupName,
+                                groups = groups,
+                                onSet = { onSetGroup(repo, it) },
+                            )
                         }
                         IconButton(onClick = { confirmDelete = repo }) {
                             Icon(Icons.Default.Delete, contentDescription = "削除")
@@ -187,6 +200,67 @@ fun RepoEditScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = null }) { Text("キャンセル") }
+            },
+        )
+    }
+}
+
+/** 所属グループの割当chip。タップで「なし/既存グループ/新規作成…」のメニューを開く。 */
+@Composable
+private fun GroupSelector(current: String, groups: List<String>, onSet: (String) -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    var newDialog by remember { mutableStateOf(false) }
+    val label = current.ifEmpty { "なし" }
+    Box(Modifier.padding(top = 6.dp)) {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { menu = true }
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("グループ: $label ▾", style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text((if (current.isEmpty()) "● " else "○ ") + "なし") },
+                onClick = { menu = false; onSet("") },
+            )
+            groups.forEach { g ->
+                DropdownMenuItem(
+                    text = { Text((if (current == g) "● " else "○ ") + g) },
+                    onClick = { menu = false; onSet(g) },
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("＋ 新規グループ…") },
+                onClick = { menu = false; newDialog = true },
+            )
+        }
+    }
+    if (newDialog) {
+        var name by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { newDialog = false },
+            title = { Text("新規グループ") },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text("グループ名") },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { newDialog = false; if (name.isNotBlank()) onSet(name.trim()) },
+                    enabled = name.isNotBlank(),
+                ) { Text("作成") }
+            },
+            dismissButton = {
+                TextButton(onClick = { newDialog = false }) { Text("キャンセル") }
             },
         )
     }

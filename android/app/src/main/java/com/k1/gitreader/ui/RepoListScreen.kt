@@ -1,6 +1,7 @@
 package com.k1.gitreader.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,7 +35,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,6 +63,11 @@ fun RepoListScreen(
     onOpenGraph: (Repo) -> Unit,
     onSync: (Repo) -> Unit,
     onMessageShown: () -> Unit,
+    /** 存在するグループ名(昇順)。空ならグループ機能の導線は出さない。 */
+    groups: List<String> = emptyList(),
+    /** 選択中グループ(空=すべて)。`repos` は既にこの値で絞り込み済みで渡る。 */
+    selectedGroup: String = "",
+    onSelectGroup: (String) -> Unit = {},
     selectedRepoId: Long? = null,
     onCollapse: (() -> Unit)? = null,
 ) {
@@ -71,7 +82,36 @@ fun RepoListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("git-reader") },
+                title = {
+                    // グループがあるときだけタイトルを「git-reader / <group> ▾」のドロップダウンにする。
+                    var groupMenu by remember { mutableStateOf(false) }
+                    val hasGroups = groups.isNotEmpty()
+                    Box {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = if (hasGroups) Modifier.clickable { groupMenu = true } else Modifier,
+                        ) {
+                            Text(
+                                if (selectedGroup.isEmpty()) "git-reader" else "git-reader / $selectedGroup",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (hasGroups) Text(" ▾")
+                        }
+                        DropdownMenu(expanded = groupMenu, onDismissRequest = { groupMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text((if (selectedGroup.isEmpty()) "● " else "○ ") + "すべて") },
+                                onClick = { groupMenu = false; onSelectGroup("") },
+                            )
+                            groups.forEach { g ->
+                                DropdownMenuItem(
+                                    text = { Text((if (selectedGroup == g) "● " else "○ ") + g) },
+                                    onClick = { groupMenu = false; onSelectGroup(g) },
+                                )
+                            }
+                        }
+                    }
+                },
                 navigationIcon = {
                     // 3ペインのレールのときだけ「畳む」アイコンを出す。
                     if (onCollapse != null) {

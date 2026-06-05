@@ -160,8 +160,14 @@ fun GitReaderApp() {
     // 左レール(リポ一覧)。List 全画面・3ペインの左で共有する。
     @Composable
     fun RailPane(selectedRepoId: Long?, onCollapse: (() -> Unit)? = null) {
+        // 存在するグループ(昇順)。選択中グループが消えていたら「すべて」に退避。
+        val groups = remember(repos) {
+            repos.map { it.groupName }.filter { it.isNotBlank() }.distinct().sorted()
+        }
+        val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in groups } ?: ""
+        val shownRepos = if (selectedGroup.isEmpty()) repos else repos.filter { it.groupName == selectedGroup }
         RepoListScreen(
-            repos = repos,
+            repos = shownRepos,
             status = status,
             onAddClick = { navigate(Screen.Add) },
             onSettings = { navigate(Screen.Settings) },
@@ -170,6 +176,9 @@ fun GitReaderApp() {
             onOpenGraph = { graphSelected = null; navigate(Screen.Graph(it)) },
             onSync = vm::sync,
             onMessageShown = vm::clearMessage,
+            groups = groups,
+            selectedGroup = selectedGroup,
+            onSelectGroup = vm::setSelectedGroup,
             selectedRepoId = selectedRepoId,
             onCollapse = onCollapse,
         )
@@ -282,8 +291,10 @@ fun GitReaderApp() {
 
         Screen.RepoEdit -> RepoEditScreen(
             repos = repos,
+            groups = repos.map { it.groupName }.filter { it.isNotBlank() }.distinct().sorted(),
             onReorder = vm::saveRepoOrder,
             onSetColor = vm::setRepoColor,
+            onSetGroup = vm::setRepoGroup,
             onDelete = vm::delete,
             onAdd = { navigate(Screen.Add) },
             onBack = { pop() },

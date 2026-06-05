@@ -339,6 +339,11 @@ class RepoRepository(
         dao.update(repo.copy(colorTag = color))
     }
 
+    /** 所属グループ(Working Set)を変更して保存する。空=未分類。 */
+    suspend fun setGroup(repo: Repo, group: String) = withContext(ioDispatcher) {
+        dao.update(repo.copy(groupName = group.trim()))
+    }
+
     /** 並べ替え結果を保存する(リストの並び順を sortOrder=index で書き込む)。 */
     suspend fun saveOrder(orderedRepos: List<Repo>) = withContext(ioDispatcher) {
         orderedRepos.forEachIndexed { index, repo ->

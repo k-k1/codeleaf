@@ -34,4 +34,6 @@ data class Repo(
     val sortOrder: Int = 0,
     val colorTag: RepoColor = RepoColor.NONE,
     val authType: AuthType = AuthType.TOKEN,
+    /** 所属グループ(Working Set)。空=未分類。一覧はこの値で絞り込む。 */
+    val groupName: String = "",
 ) : Parcelable

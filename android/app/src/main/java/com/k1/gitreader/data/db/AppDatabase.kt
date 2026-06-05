@@ -33,7 +33,14 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
-@Database(entities = [Repo::class], version = 3, exportSchema = false)
+/** v3→v4: 所属グループ(groupName)を追加。既存行は未分類(空)。 */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE repos ADD COLUMN groupName TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+@Database(entities = [Repo::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun repoDao(): RepoDao

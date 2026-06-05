@@ -8,6 +8,7 @@ import com.k1.gitreader.data.crypto.TokenStore
 import com.k1.gitreader.data.db.AppDatabase
 import com.k1.gitreader.data.db.MIGRATION_1_2
 import com.k1.gitreader.data.db.MIGRATION_2_3
+import com.k1.gitreader.data.db.MIGRATION_3_4
 import com.k1.gitreader.data.oauth.BitbucketOAuthService
 import com.k1.gitreader.data.oauth.BitbucketOAuthTokenExchanger
 import com.k1.gitreader.data.oauth.GitHubDeviceFlowService
@@ -21,7 +22,7 @@ import java.io.File
 class AppContainer(app: Application) {
     private val db: AppDatabase = Room.databaseBuilder(
         app, AppDatabase::class.java, "gitreader.db",
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
 
     private val reposRoot: File = File(app.filesDir, "repos").apply { mkdirs() }
 
