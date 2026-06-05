@@ -1,15 +1,19 @@
 package com.k1.gitreader.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -43,13 +47,17 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -78,7 +86,7 @@ fun FileBrowserScreen(
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
     onBack: () -> Unit,
-    iconSet: IconSet = IconSet.DEVICON,
+    iconSet: IconSet = IconSet.MATERIAL,
 ) {
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
@@ -240,13 +248,72 @@ fun FileBrowserScreen(
 
 @Composable
 private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val mark = FileIcons.mark(entry.name)
+
+    // 分類ごとの描画スタイル(先頭バー/文字色/字形/チップ)を解決する。
+    val barColor: Color? = when (mark) {
+        FileMark.AI -> cs.tertiary
+        FileMark.SECRET -> cs.error
+        else -> null
+    }
+    val textColor: Color = when (mark) {
+        FileMark.AI -> cs.tertiary
+        FileMark.SECRET -> cs.error
+        FileMark.GENERATED -> cs.onSurfaceVariant.copy(alpha = 0.5f) // 最も減光
+        FileMark.DOTFILE -> cs.onSurfaceVariant                      // 少しグレー
+        FileMark.DOC, FileMark.NONE -> cs.onSurface
+    }
+    val fontWeight = if (mark == FileMark.DOC) FontWeight.Bold else null
+    val fontStyle = if (mark == FileMark.GENERATED) FontStyle.Italic else null // ドット始まりと区別
+    val chip: Pair<String, Color>? = when (mark) {
+        FileMark.AI -> "AI" to cs.tertiary
+        FileMark.SECRET -> "!" to cs.error
+        else -> null
+    }
+
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        FileEntryIcon(entry, iconSet)
-        Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // 先頭アクセントバー(非対象は透明で確保し、アイコン位置を全行で揃える)。
+        Box(Modifier.width(3.dp).fillMaxHeight().background(barColor ?: Color.Transparent))
+        Row(
+            Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            FileEntryIcon(entry, iconSet)
+            Text(
+                entry.name,
+                color = textColor,
+                fontWeight = fontWeight,
+                fontStyle = fontStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            chip?.let { (label, color) -> MarkChip(label, color) }
+        }
+    }
+}
+
+/** AI/機密などの分類を示す小さなピル。枠線＋淡い背景でアクセント色を主張しすぎない。 */
+@Composable
+private fun MarkChip(label: String, color: Color) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 1.dp),
+    ) {
+        Text(
+            label,
+            color = color,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

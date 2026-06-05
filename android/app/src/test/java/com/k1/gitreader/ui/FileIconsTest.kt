@@ -106,4 +106,52 @@ class FileIconsTest {
         )
         assertEquals(IconTint.FIXED, FileIcons.forKey(IconSet.SETI, "git")?.tint)
     }
+
+    @Test
+    fun marksAiFilesAndDirs() {
+        assertEquals(FileMark.AI, FileIcons.mark("CLAUDE.md"))
+        assertEquals(FileMark.AI, FileIcons.mark("AGENTS.md"))
+        assertEquals(FileMark.AI, FileIcons.mark(".claude"))
+        assertEquals(FileMark.AI, FileIcons.mark(".cursorrules")) // ドット始まりだが AI が優先
+        assertEquals(FileMark.AI, FileIcons.mark("copilot-instructions.md"))
+    }
+
+    @Test
+    fun marksSecretsButNotTemplatesOrPublicKeys() {
+        assertEquals(FileMark.SECRET, FileIcons.mark(".env"))
+        assertEquals(FileMark.SECRET, FileIcons.mark(".env.local")) // .env 実体は機密(ドットより優先)
+        assertEquals(FileMark.SECRET, FileIcons.mark("server.pem"))
+        assertEquals(FileMark.SECRET, FileIcons.mark("id_rsa"))
+        assertEquals(FileMark.SECRET, FileIcons.mark("app.keystore"))
+        // 雛形と公開鍵は機密でない
+        assertEquals(FileMark.DOTFILE, FileIcons.mark(".env.example"))
+        assertEquals(FileMark.NONE, FileIcons.mark("id_rsa.pub"))
+    }
+
+    @Test
+    fun marksGeneratedAndLockFiles() {
+        assertEquals(FileMark.GENERATED, FileIcons.mark("package-lock.json"))
+        assertEquals(FileMark.GENERATED, FileIcons.mark("yarn.lock"))
+        assertEquals(FileMark.GENERATED, FileIcons.mark("Cargo.lock"))
+        assertEquals(FileMark.GENERATED, FileIcons.mark("go.sum"))
+        assertEquals(FileMark.GENERATED, FileIcons.mark("app.min.js"))
+        assertEquals(FileMark.GENERATED, FileIcons.mark("bundle.js.map"))
+    }
+
+    @Test
+    fun marksImportantDocs() {
+        assertEquals(FileMark.DOC, FileIcons.mark("README.md"))
+        assertEquals(FileMark.DOC, FileIcons.mark("LICENSE"))
+        assertEquals(FileMark.DOC, FileIcons.mark("CONTRIBUTING.md"))
+        assertEquals(FileMark.DOC, FileIcons.mark("CHANGELOG.md"))
+    }
+
+    @Test
+    fun marksDotfilesAndLeavesNormalAlone() {
+        assertEquals(FileMark.DOTFILE, FileIcons.mark(".gitignore"))
+        assertEquals(FileMark.DOTFILE, FileIcons.mark(".editorconfig"))
+        assertEquals(FileMark.DOTFILE, FileIcons.mark(".github"))
+        assertEquals(FileMark.NONE, FileIcons.mark("Main.kt"))
+        assertEquals(FileMark.NONE, FileIcons.mark("build.gradle"))
+    }
 }

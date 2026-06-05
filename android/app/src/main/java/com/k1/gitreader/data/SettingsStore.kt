@@ -31,7 +31,7 @@ data class AppSettings(
     val showLineNumbers: Boolean = false,
     val tableMode: TableMode = TableMode.INLINE,
     val stickyHeadings: Boolean = true,
-    val iconSet: IconSet = IconSet.DEVICON,
+    val iconSet: IconSet = IconSet.MATERIAL,
 )
 
 /**
@@ -53,7 +53,7 @@ class SettingsStore(context: Context) {
         showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
         tableMode = enumOrDefault(prefs.getString(KEY_TABLE, null), TableMode.INLINE),
         stickyHeadings = prefs.getBoolean(KEY_STICKY, true),
-        iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.DEVICON),
+        iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.MATERIAL),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {

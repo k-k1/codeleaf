@@ -26,6 +26,30 @@ enum class IconTint {
 /** 解決済みアイコン。[uri] は Coil に渡す asset URI。[color] は tint=FIXED のとき使う ARGB。 */
 data class FileIconSpec(val uri: String, val tint: IconTint, val color: Long = 0L)
 
+/**
+ * 一覧で「特殊」として強調/減光するファイル分類。優先度の高い順に判定する
+ * (例: `.env` は DOTFILE でもあるが SECRET が勝つ)。描画スタイルは呼び出し側で解決。
+ */
+enum class FileMark {
+    /** AI アシスタント関連(指示書/設定)。tertiary 色＋先頭バー＋「AI」チップ。 */
+    AI,
+
+    /** 機密/要注意(鍵・認証情報・.env 実体)。error 色＋先頭バー＋「!」チップ。 */
+    SECRET,
+
+    /** 生成物・ロックファイル。減光して背景化する。 */
+    GENERATED,
+
+    /** README/LICENSE 等の重要ドキュメント。太字で軽く強調(色は足さない)。 */
+    DOC,
+
+    /** その他のドット始まりファイル/ディレクトリ。少しグレーにして控えめに。 */
+    DOTFILE,
+
+    /** 特殊扱いなし(通常表示)。 */
+    NONE,
+}
+
 object FileIcons {
 
     /** 拡張子 → 種別キー(セット非依存)。 */
@@ -77,6 +101,85 @@ object FileIcons {
 
     /** 全種別キー(どのセットも基本これを収録。Seti のみ一部欠落)。 */
     private val allKeys: Set<String> = (byExt.values + byName.values).toSet()
+
+    /**
+     * AI コーディングアシスタント関連の特殊ファイル/ディレクトリ名(完全一致, 小文字)。
+     * これらは種別アイコンより優先して AI マーカーで描画し、一覧で目立たせる。
+     */
+    private val aiNames: Set<String> = setOf(
+        // 指示書 / ルールファイル
+        "claude.md", "claude.local.md",
+        "agents.md",
+        "gemini.md",
+        "copilot-instructions.md",
+        ".cursorrules", ".windsurfrules",
+        ".aider.conf.yml", ".aiderignore",
+        "llms.txt", "llms-full.txt",
+        ".mcp.json",
+        // 設定ディレクトリ
+        ".claude", ".cursor", ".windsurf", ".continue", ".aider", ".codeium",
+    )
+
+    /** AI 系の特殊ファイル/ディレクトリか(セット非依存)。 */
+    fun isAiFile(name: String): Boolean = name.lowercase() in aiNames
+
+    /** README/LICENSE 等の重要ドキュメントの基底名(拡張子を除いた小文字)。 */
+    private val docBaseNames: Set<String> = setOf(
+        "readme", "license", "licence", "contributing", "changelog",
+        "security", "code_of_conduct", "authors", "notice", "copying",
+    )
+
+    /** 機密ファイルの拡張子(鍵・証明書・キーストア)。 */
+    private val secretExtensions: Set<String> = setOf(
+        "pem", "key", "keystore", "jks", "p12", "pfx", "ppk",
+    )
+
+    /** 生成物・ロックの固定ファイル名(拡張子では拾えないもの)。 */
+    private val generatedExactNames: Set<String> = setOf(
+        "go.sum", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml",
+        "composer.lock", "gemfile.lock", "poetry.lock", "pipfile.lock",
+        "podfile.lock", "flake.lock",
+    )
+
+    private fun isSecret(n: String): Boolean {
+        if (n.endsWith(".pub")) return false // 公開鍵は機密でない
+        // .env / .env.local 等は機密。ただし雛形(.env.example 等)は除外。
+        if (n == ".env" || n.startsWith(".env.")) {
+            return n.removePrefix(".env.") !in setOf("example", "sample", "template", "dist", "defaults")
+        }
+        if (n == "credentials" || n.startsWith("credentials.")) return true
+        if (n.startsWith("id_rsa") || n.startsWith("id_dsa") ||
+            n.startsWith("id_ecdsa") || n.startsWith("id_ed25519")
+        ) return true
+        return n.substringAfterLast('.', "") in secretExtensions
+    }
+
+    private fun isGenerated(n: String): Boolean = when {
+        n in generatedExactNames -> true
+        n.endsWith(".lock") -> true          // yarn.lock / Cargo.lock など
+        n.endsWith("-lock.json") -> true     // package-lock.json 系
+        n.endsWith(".min.js") || n.endsWith(".min.css") -> true
+        n.endsWith(".js.map") || n.endsWith(".css.map") -> true
+        else -> false
+    }
+
+    private fun isDoc(n: String): Boolean {
+        val base = if ('.' in n) n.substringBeforeLast('.') else n
+        return base in docBaseNames
+    }
+
+    /** ファイル名から特殊分類を判定する(優先度順)。セット非依存・純粋関数。 */
+    fun mark(name: String): FileMark {
+        val n = name.lowercase()
+        return when {
+            isAiFile(n) -> FileMark.AI
+            isSecret(n) -> FileMark.SECRET
+            isGenerated(n) -> FileMark.GENERATED
+            isDoc(n) -> FileMark.DOC
+            n.startsWith(".") -> FileMark.DOTFILE
+            else -> FileMark.NONE
+        }
+    }
 
     /** ファイル名から種別キーを引く(セット非依存)。未対応は null。 */
     fun typeKey(name: String): String? {

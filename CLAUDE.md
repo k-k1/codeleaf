@@ -43,7 +43,10 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
 - **ファイルアイコン**: 拡張子 → 種別キー → `assets/<セット>/<キー>.svg` を Coil で描画(`ui/FileIcons.kt`)。
   セットは設定で切替(Devicon/Material/VS Code/Seti, `SettingsStore.IconSet`)。Devicon の黒ロゴと Seti 全体は
   ティント(Seti はタイプ別 `SETI_COLOR`)。セット未収録キー(Seti の groovy/nodejs)・フォルダ・未対応は
-  `res/drawable` ベクターにフォールバック。出典/License は `assets/ICON_ATTRIBUTION.md`。
+  `res/drawable` ベクターにフォールバック。出典/License は `assets/ICON_ATTRIBUTION.md`。既定セットは Material。
+- **特殊ファイル強調**: `FileIcons.mark(name)` がファイル名で分類(優先順 AI>機密>生成物>ドキュメント>ドット始まり)。
+  行描画(`EntryRow`)で 先頭バー＋文字色＋チップ等を付与。AI=tertiary+「AI」, 機密(.env/鍵)=error+「!」,
+  生成物/ロック=減光斜体, README等=太字, ドット始まり=薄グレー。種別アイコン自体は変えない。
 - **E2E**: `Git.init().setInitialBranch("main")` で端末上にローカルリポを作り `file パス`で clone(NW 不要・credentials 無視)。
   @Before で `container.repoRepository` の既存リポを一掃して決定論化。
 
