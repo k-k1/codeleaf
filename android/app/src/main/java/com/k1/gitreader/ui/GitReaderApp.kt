@@ -63,6 +63,7 @@ fun GitReaderApp() {
                 }
             },
             oauthResult = vm.oauthResult,
+            loadBitbucketRepos = { account -> vm.listClonableBitbucketRepos(account) },
         )
 
         Screen.RepoEdit -> RepoEditScreen(

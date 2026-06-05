@@ -20,6 +20,7 @@ import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.data.oauth.AuthorizationRequest
 import com.k1.gitreader.data.oauth.BitbucketOAuthService
 import com.k1.gitreader.data.oauth.OAuthAccount
+import com.k1.gitreader.data.oauth.RemoteRepo
 import com.k1.gitreader.git.BranchInfo
 import com.k1.gitreader.git.CommitInfo
 import java.io.File
@@ -59,6 +60,10 @@ class RepoListViewModel(
 
     /** 認可を開始（state 保存）。UI は返り値の url を Custom Tabs で開く。未設定なら null。 */
     fun startBitbucketOAuth(): AuthorizationRequest? = oauthService?.startAuthorization()
+
+    /** OAuth でアクセス可能かつ未登録の Bitbucket リポ一覧（プルダウン選択用）。 */
+    suspend fun listClonableBitbucketRepos(account: OAuthAccount): Result<List<RemoteRepo>> =
+        runCatching { repository.listClonableBitbucketRepos(account) }
 
     private val _status = MutableStateFlow(UiStatus())
     val status: StateFlow<UiStatus> = _status

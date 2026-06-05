@@ -7,9 +7,12 @@ import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.RepoColor
 import com.k1.gitreader.data.db.RepoDao
 import com.k1.gitreader.data.db.ThemeMode
+import com.k1.gitreader.data.oauth.BitbucketApi
 import com.k1.gitreader.data.oauth.OAuthAccount
+import com.k1.gitreader.data.oauth.RemoteRepo
 import com.k1.gitreader.data.oauth.gitUsernameFor
 import com.k1.gitreader.data.oauth.needsRefresh
+import com.k1.gitreader.data.oauth.normalizeRepoUrl
 import com.k1.gitreader.git.BranchInfo
 import com.k1.gitreader.git.CommitInfo
 import com.k1.gitreader.git.GraphCommit
@@ -129,6 +132,7 @@ class RepoRepository(
     private val reposRoot: File,
     /** OAuth access token 失効時の更新。未設定(手動トークンのみ運用)なら null。 */
     private val refreshOAuth: (suspend (OAuthAccount) -> Result<OAuthAccount>)? = null,
+    private val bitbucketApi: BitbucketApi = BitbucketApi(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     fun observeRepos(): Flow<List<Repo>> = dao.observeAll()
@@ -204,6 +208,14 @@ class RepoRepository(
         tokenStore.setOAuth(repoId, refreshed.toJson())
         return refreshed
     }
+
+    /** OAuth でアクセス可能な Bitbucket リポのうち、未登録(=clone 済みでない)ものを返す。 */
+    suspend fun listClonableBitbucketRepos(account: OAuthAccount): List<RemoteRepo> =
+        withContext(ioDispatcher) {
+            val remote = bitbucketApi.listRepositories(account.accessToken).getOrThrow()
+            val cloned = observeRepos().first().map { normalizeRepoUrl(it.url) }.toSet()
+            remote.filter { normalizeRepoUrl(it.cloneUrl) !in cloned }
+        }
 
     suspend fun listBranches(repo: Repo): List<BranchInfo> = withContext(ioDispatcher) {
         jgit.listBranches(workDir(repo))

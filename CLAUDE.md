@@ -42,6 +42,8 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
   redirect `gitreader://oauth` を `OAuthRedirectActivity` が受け、`BitbucketOAuthService` が code 交換。access token 1h 失効→
   `RepoRepository.credentialsFor` が sync 直前に refresh(同一リポ Mutex 内)。交換は `OAuthTokenExchanger` interface に隔離
   (将来バックエンド代行へ差し替え可)。PKCE/Device Flow 非対応。設定手順は `android/DEVELOPMENT.md` §9。
+  OAuth ログイン後は URL 手入力でなく `BitbucketApi`(`/2.0/repositories?role=member`)で clone 可能リポを取得し
+  プルダウン選択(登録済みは `normalizeRepoUrl` で除外)。URL 手入力欄はトークン方式のときだけ。
 - **同期**: `fetch → reset --hard origin/<branch> → clean -fdx`(ローカル変更は破棄)。
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。

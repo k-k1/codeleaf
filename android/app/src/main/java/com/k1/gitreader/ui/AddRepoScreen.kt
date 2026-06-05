@@ -3,11 +3,13 @@ package com.k1.gitreader.ui
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,6 +19,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +55,7 @@ import com.k1.gitreader.data.db.AuthType
 import com.k1.gitreader.data.db.GitHost
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.data.oauth.OAuthAccount
+import com.k1.gitreader.data.oauth.RemoteRepo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -66,6 +72,7 @@ fun AddRepoScreen(
     bitbucketOAuthAvailable: Boolean = false,
     onStartBitbucketOAuth: () -> Unit = {},
     oauthResult: Flow<Result<OAuthAccount>> = emptyFlow(),
+    loadBitbucketRepos: suspend (OAuthAccount) -> Result<List<RemoteRepo>> = { Result.success(emptyList()) },
 ) {
     var host by remember { mutableStateOf(GitHost.GITHUB) }
     var url by remember { mutableStateOf("") }
@@ -78,6 +85,11 @@ fun AddRepoScreen(
     var oauthError by remember { mutableStateOf<String?>(null) }
     // 認証方法。OAuth が使える Bitbucket では既定 OAUTH、それ以外は TOKEN。
     var authMethod by remember { mutableStateOf(AuthMethod.OAUTH) }
+    // OAuth ログイン後に取得する clone 可能リポと選択状態。
+    var repoOptions by remember { mutableStateOf<List<RemoteRepo>>(emptyList()) }
+    var reposLoading by remember { mutableStateOf(false) }
+    var repoLoadError by remember { mutableStateOf<String?>(null) }
+    var selectedRepo by remember { mutableStateOf<RemoteRepo?>(null) }
 
     // redirect Activity が交換した OAuth 結果を受け取る。
     LaunchedEffect(Unit) {
@@ -89,13 +101,25 @@ fun AddRepoScreen(
         }
     }
 
+    // ログイン成功したら clone 可能リポ(未登録)を取得してプルダウンに出す。
+    LaunchedEffect(oauth) {
+        val account = oauth ?: return@LaunchedEffect
+        reposLoading = true; repoLoadError = null; selectedRepo = null; repoOptions = emptyList()
+        loadBitbucketRepos(account).fold(
+            onSuccess = { repoOptions = it },
+            onFailure = { repoLoadError = it.message ?: "リポジトリ一覧の取得に失敗しました" },
+        )
+        reposLoading = false
+    }
+
     // OAuth を選べる(=アコーディオン表示する)のは Bitbucket かつ OAuth 設定済みのときだけ。
     val showAccordion = host == GitHost.BITBUCKET && bitbucketOAuthAvailable
     val effectiveMethod = if (showAccordion) authMethod else AuthMethod.TOKEN
     val usernameRequired = host == GitHost.BITBUCKET && effectiveMethod == AuthMethod.TOKEN
-    val canSubmit = url.isNotBlank() && !status.busy && when (effectiveMethod) {
-        AuthMethod.OAUTH -> oauth != null
-        AuthMethod.TOKEN -> token.isNotBlank() && (!usernameRequired || username.isNotBlank())
+    val canSubmit = !status.busy && when (effectiveMethod) {
+        // OAuth はプルダウンで選んだリポを clone（URL 手入力不要）。
+        AuthMethod.OAUTH -> oauth != null && selectedRepo != null
+        AuthMethod.TOKEN -> url.isNotBlank() && token.isNotBlank() && (!usernameRequired || username.isNotBlank())
     }
 
     Scaffold(
@@ -145,10 +169,37 @@ fun AddRepoScreen(
                     method = authMethod,
                     onSelect = { authMethod = it },
                     oauthContent = {
-                        OAuthPanel(loggedIn = oauth != null, error = oauthError, onStart = onStartBitbucketOAuth)
+                        if (oauth == null) {
+                            OutlinedButton(onClick = onStartBitbucketOAuth, modifier = Modifier.fillMaxWidth()) {
+                                Text("Bitbucket でログイン")
+                            }
+                        } else {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("✓ ログイン済み", color = MaterialTheme.colorScheme.primary)
+                                TextButton(onClick = onStartBitbucketOAuth) { Text("再ログイン") }
+                            }
+                            RepoDropdown(
+                                options = repoOptions,
+                                selected = selectedRepo,
+                                loading = reposLoading,
+                                error = repoLoadError,
+                                onSelect = {
+                                    selectedRepo = it
+                                    if (!nameEdited) name = it.name // 表示名を自動補完
+                                },
+                            )
+                        }
+                        oauthError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
                     },
                     tokenContent = {
                         ManualAuthFields(
+                            url = url, onUrl = { url = it; if (!nameEdited) name = repoNameFromUrl(it) },
                             username = username, onUsername = { username = it },
                             token = token, onToken = { token = it },
                             usernameRequired = true, // token 方式の Bitbucket は username 必須
@@ -164,6 +215,7 @@ fun AddRepoScreen(
                     )
                 }
                 ManualAuthFields(
+                    url = url, onUrl = { url = it; if (!nameEdited) name = repoNameFromUrl(it) },
                     username = username, onUsername = { username = it },
                     token = token, onToken = { token = it },
                     usernameRequired = usernameRequired,
@@ -171,18 +223,9 @@ fun AddRepoScreen(
             }
 
             OutlinedTextField(
-                value = url,
-                onValueChange = {
-                    url = it
-                    if (!nameEdited) name = repoNameFromUrl(it) // 未編集なら表示名を自動補完
-                },
-                label = { Text("URL (https://...)") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
                 value = name,
                 onValueChange = { name = it; nameEdited = true },
-                label = { Text("表示名 (任意・URLから自動入力)") },
+                label = { Text("表示名 (任意・自動入力)") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
             Text("テーマ")
@@ -199,11 +242,12 @@ fun AddRepoScreen(
             Button(
                 onClick = {
                     val acct = oauth
+                    val picked = selectedRepo
                     onSubmit(
-                        if (effectiveMethod == AuthMethod.OAUTH && acct != null) {
+                        if (effectiveMethod == AuthMethod.OAUTH && acct != null && picked != null) {
                             NewRepo(
-                                name = name,
-                                url = url.trim(),
+                                name = name.ifBlank { picked.name },
+                                url = picked.cloneUrl,
                                 host = host,
                                 username = "",
                                 token = "",
@@ -289,37 +333,66 @@ private fun AccordionItem(
     }
 }
 
-/** OAuth パネル（未ログインはボタン、ログイン済みは状態＋再ログイン）。 */
+/** clone 可能リポのプルダウン。取得中/エラー/空/一覧 を出し分ける。 */
 @Composable
-private fun OAuthPanel(loggedIn: Boolean, error: String?, onStart: () -> Unit) {
-    if (!loggedIn) {
-        OutlinedButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
-            Text("Bitbucket でログイン")
+private fun RepoDropdown(
+    options: List<RemoteRepo>,
+    selected: RemoteRepo?,
+    loading: Boolean,
+    error: String?,
+    onSelect: (RemoteRepo) -> Unit,
+) {
+    when {
+        loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text("リポジトリを取得中...", style = MaterialTheme.typography.bodySmall)
         }
-    } else {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("✓ ログイン済み", color = MaterialTheme.colorScheme.primary)
-            TextButton(onClick = onStart) { Text("再ログイン") }
+        error != null -> Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        options.isEmpty() -> Text(
+            "clone できるリポジトリがありません（すべて登録済みか、アクセス可能なリポがありません）。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        else -> {
+            var expanded by remember { mutableStateOf(false) }
+            Box(Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        selected?.fullName ?: "リポジトリを選択",
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                    )
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    options.forEach { repo ->
+                        DropdownMenuItem(
+                            text = { Text(repo.fullName) },
+                            onClick = { onSelect(repo); expanded = false },
+                        )
+                    }
+                }
+            }
         }
-    }
-    error?.let {
-        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
 }
 
-/** 手入力の username/token フィールド（TOKEN 認証）。 */
+/** 手入力の URL / username / token フィールド（TOKEN 認証）。 */
 @Composable
 private fun ManualAuthFields(
+    url: String,
+    onUrl: (String) -> Unit,
     username: String,
     onUsername: (String) -> Unit,
     token: String,
     onToken: (String) -> Unit,
     usernameRequired: Boolean,
 ) {
+    OutlinedTextField(
+        value = url, onValueChange = onUrl,
+        label = { Text("URL (https://...)") },
+        singleLine = true, modifier = Modifier.fillMaxWidth(),
+    )
     OutlinedTextField(
         value = username, onValueChange = onUsername,
         label = { Text(if (usernameRequired) "ユーザー名 (Bitbucket: Atlassianメール・必須)" else "ユーザー名 (任意)") },
