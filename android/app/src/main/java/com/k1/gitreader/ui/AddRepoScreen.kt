@@ -83,6 +83,10 @@ fun AddRepoScreen(
     pollGitHubToken: suspend (GitHubDeviceCode) -> Result<OAuthAccount> = { Result.failure(IllegalStateException()) },
     onOpenUrl: (String) -> Unit = {},
     loadOAuthRepos: suspend (OAuthAccount) -> Result<List<RemoteRepo>> = { Result.success(emptyList()) },
+    /** 指定ホストの記憶済みログイン（あれば再ログイン不要）。 */
+    rememberedAccount: suspend (GitHost) -> OAuthAccount? = { null },
+    /** 新規ログイン成功時に呼ぶ（provider 単位で記憶する）。 */
+    onOAuthLogin: (OAuthAccount) -> Unit = {},
 ) {
     var host by remember { mutableStateOf(GitHost.GITHUB) }
     var url by remember { mutableStateOf("") }
@@ -105,11 +109,11 @@ fun AddRepoScreen(
     var repoLoadError by remember { mutableStateOf<String?>(null) }
     var selectedRepo by remember { mutableStateOf<RemoteRepo?>(null) }
 
-    // redirect Activity が交換した OAuth 結果を受け取る。
+    // redirect Activity が交換した OAuth 結果を受け取る（Bitbucket）。
     LaunchedEffect(Unit) {
         oauthResult.collect { result ->
             result.fold(
-                onSuccess = { oauth = it; oauthError = null },
+                onSuccess = { oauth = it; oauthError = null; onOAuthLogin(it) },
                 onFailure = { oauthError = it.message ?: "ログインに失敗しました" },
             )
         }
@@ -132,10 +136,10 @@ fun AddRepoScreen(
             githubLoggingIn = true; oauthError = null; oauth = null
             requestGitHubDeviceCode().fold(
                 onSuccess = { code ->
+                    // ブラウザは自動で開かない（コードが隠れるため）。ユーザがパネルの「ブラウザを開く」で開く。
                     deviceCode = code
-                    onOpenUrl(code.verificationUri)
                     pollGitHubToken(code).fold(
-                        onSuccess = { oauth = it },
+                        onSuccess = { oauth = it; onOAuthLogin(it) },
                         onFailure = { oauthError = it.message ?: "ログインに失敗しました" },
                     )
                 },
@@ -151,6 +155,14 @@ fun AddRepoScreen(
         GitHost.GITHUB -> githubOAuthAvailable
     }
     val showAccordion = oauthAvailableForHost
+
+    // 記憶済みログインがあれば自動でログイン状態にする（再ログイン省略）。
+    // ログイン操作中・既ログイン時は触らない。
+    LaunchedEffect(host, showAccordion) {
+        if (showAccordion && oauth == null && deviceCode == null && !githubLoggingIn) {
+            rememberedAccount(host)?.let { oauth = it }
+        }
+    }
     val effectiveMethod = if (showAccordion) authMethod else AuthMethod.TOKEN
     val usernameRequired = host == GitHost.BITBUCKET && effectiveMethod == AuthMethod.TOKEN
     val canSubmit = !status.busy && when (effectiveMethod) {
@@ -231,12 +243,13 @@ fun AddRepoScreen(
                                 Text("✓ ログイン済み", color = MaterialTheme.colorScheme.primary)
                                 TextButton(
                                     onClick = {
+                                        oauth = null; selectedRepo = null; repoOptions = emptyList()
                                         when (host) {
                                             GitHost.BITBUCKET -> onStartBitbucketOAuth()
                                             GitHost.GITHUB -> startGitHubLogin()
                                         }
                                     },
-                                ) { Text("再ログイン") }
+                                ) { Text("別のアカウント") }
                             }
                             RepoDropdown(
                                 options = repoOptions,

@@ -190,6 +190,8 @@ fun GitReaderApp() {
             pollGitHubToken = { code -> vm.pollGitHubToken(code) },
             onOpenUrl = { url -> CustomTabsIntent.Builder().build().launchUrl(context, url.toUri()) },
             loadOAuthRepos = { account -> vm.listClonableRepos(account) },
+            rememberedAccount = { host -> vm.rememberedOAuthAccount(host) },
+            onOAuthLogin = { account -> vm.rememberOAuthLogin(account) },
         )
 
         Screen.RepoEdit -> RepoEditScreen(

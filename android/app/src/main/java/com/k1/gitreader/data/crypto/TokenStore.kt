@@ -30,6 +30,12 @@ class TokenStore(context: Context) {
     fun getOAuth(repoId: Long): String? = get(oauthKey(repoId))
     fun removeOAuth(repoId: Long) = remove(oauthKey(repoId))
 
+    // --- provider 別の「記憶したログイン」(key prefix "oauth_session_") ---
+    // リポ追加時の再ログインを省くため、最後に成功したログインを provider 単位で保持する。
+    fun setOAuthSession(provider: String, json: String) = put(sessionKey(provider), json)
+    fun getOAuthSession(provider: String): String? = get(sessionKey(provider))
+    fun removeOAuthSession(provider: String) = remove(sessionKey(provider))
+
     private fun put(key: String, plain: String) {
         prefs.edit().putString(key, encrypt(plain)).apply()
     }
@@ -74,6 +80,7 @@ class TokenStore(context: Context) {
 
     private fun tokenKey(repoId: Long) = "repo_$repoId"
     private fun oauthKey(repoId: Long) = "oauth_$repoId"
+    private fun sessionKey(provider: String) = "oauth_session_$provider"
     private fun b64(b: ByteArray) = Base64.encodeToString(b, Base64.NO_WRAP)
     private fun unb64(s: String) = Base64.decode(s, Base64.NO_WRAP)
 

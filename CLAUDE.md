@@ -55,6 +55,9 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
   redirect/`OAuthRedirectActivity` 不使用 → user_code 表示＋`GitHubDeviceFlowService.pollForToken` でポーリング。
   scope=`repo`(read-only repo scope が無く write も付くトレードオフ)。user token は無期限扱い(refresh 無し・`expiresAt`遠未来)。
   リポ一覧は `GitHubApi`(`/user/repos`)。UI は AddRepoScreen の host 別アコーディオン。設定手順は `DEVELOPMENT.md` §10。
+  Device Flow のブラウザは**自動で開かない**(コードが隠れるため)→パネルの「ブラウザを開く」で開く。
+- **OAuth ログイン共有**: 成功ログインを provider 単位で `TokenStore.oauth_session_<P>` に記憶し、Add 画面で再利用(再ログイン不要)。
+  失効間近は `RepoRepository.rememberedOAuthSession` が refresh して保存し直す。各リポの git 認証は従来どおり clone 時に `oauth_<id>` へスナップショット。
 - **同期**: `fetch → reset --hard origin/<branch> → clean -fdx`(ローカル変更は破棄)。
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。

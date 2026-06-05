@@ -78,6 +78,20 @@ class RepoListViewModel(
         githubOAuthService?.pollForToken(code)
             ?: Result.failure(IllegalStateException("GitHub ログインは未設定です"))
 
+    /** 成功したログインを記憶（次回のリポ追加で再ログイン不要にする）。 */
+    fun rememberOAuthLogin(account: OAuthAccount) {
+        viewModelScope.launch { runCatching { repository.rememberOAuthSession(account) } }
+    }
+
+    /** 指定ホストの記憶済みログイン（失効間近なら refresh 済み）。無ければ null。 */
+    suspend fun rememberedOAuthAccount(host: com.k1.gitreader.data.db.GitHost): OAuthAccount? {
+        val provider = when (host) {
+            com.k1.gitreader.data.db.GitHost.GITHUB -> GitHubDeviceFlow.PROVIDER
+            com.k1.gitreader.data.db.GitHost.BITBUCKET -> BitbucketOAuthService.PROVIDER
+        }
+        return runCatching { repository.rememberedOAuthSession(provider) }.getOrNull()
+    }
+
     /** OAuth でアクセス可能かつ未登録のリモートリポ一覧（プルダウン選択用）。provider で振り分け。 */
     suspend fun listClonableRepos(account: OAuthAccount): Result<List<RemoteRepo>> = runCatching {
         when (account.provider) {
