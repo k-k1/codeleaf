@@ -4,8 +4,15 @@ import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -16,6 +23,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.GraphCommit
 
 private sealed interface Screen {
@@ -40,18 +49,21 @@ private sealed interface Screen {
     data class CommitDetail(val repo: Repo, val commit: GraphCommit) : Screen
 }
 
-/** 2ペイン化のしきい値(これ以上の幅で左=一覧/右=詳細)。 */
+/** 2ペイン(左=一覧/右=詳細)・3ペイン(左=リポ一覧/中=一覧/右=詳細)のしきい値。 */
 private val TWO_PANE_MIN_WIDTH = 600.dp
+private val THREE_PANE_MIN_WIDTH = 960.dp
 
 @Composable
 fun GitReaderApp() {
     val vm: RepoListViewModel = viewModel(factory = RepoListViewModel.Factory)
     val context = LocalContext.current
     val backStack = remember { mutableStateListOf<Screen>(Screen.List) }
-    // 開いているファイルは backStack と直交する別スタックで持つ(2ペインのため)。
+    // 開いているファイルは backStack と直交する別スタックで持つ(2/3ペインのため)。
     val detailStack = remember { mutableStateListOf<Screen.View>() }
-    // コミットグラフ2ペインで右に出す選択コミット。
+    // コミットグラフ2/3ペインで右に出す選択コミット。
     var graphSelected by remember { mutableStateOf<GraphCommit?>(null) }
+    // 3ペインの左レール(リポ一覧)を畳んでいるか。
+    var railCollapsed by rememberSaveable { mutableStateOf(false) }
 
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -94,8 +106,10 @@ fun GitReaderApp() {
     val status by vm.status.collectAsState()
     val settings by vm.settings.collectAsState()
 
-    when (val current = backStack.last()) {
-        Screen.List -> RepoListScreen(
+    // 左レール(リポ一覧)。List 全画面・3ペインの左で共有する。
+    @Composable
+    fun RailPane(selectedRepoId: Long?, onCollapse: (() -> Unit)? = null) {
+        RepoListScreen(
             repos = repos,
             status = status,
             onAddClick = { navigate(Screen.Add) },
@@ -104,7 +118,43 @@ fun GitReaderApp() {
             onOpen = { navigate(Screen.Browse(it, "")) },
             onSync = vm::sync,
             onMessageShown = vm::clearMessage,
+            selectedRepoId = selectedRepoId,
+            onCollapse = onCollapse,
         )
+    }
+
+    // 3ペインの枠: 左=レール(default テーマ) / 中右=content(repo テーマ)。レール畳み時は細い展開ストリップ。
+    @Composable
+    fun ThreePaneScaffold(selectedRepoId: Long?, repoTheme: ThemeMode, content: @Composable () -> Unit) {
+        Row(Modifier.fillMaxSize()) {
+            if (!railCollapsed) {
+                Box(Modifier.weight(0.25f)) {
+                    GitReaderTheme(settings.defaultTheme) {
+                        RailPane(selectedRepoId, onCollapse = { railCollapsed = true })
+                    }
+                }
+                VerticalDivider()
+                Box(Modifier.weight(0.75f)) { GitReaderTheme(repoTheme) { content() } }
+            } else {
+                RailExpandStrip(onExpand = { railCollapsed = false })
+                VerticalDivider()
+                Box(Modifier.weight(1f)) { GitReaderTheme(repoTheme) { content() } }
+            }
+        }
+    }
+
+    when (val current = backStack.last()) {
+        Screen.List -> BoxWithConstraints {
+            if (maxWidth >= THREE_PANE_MIN_WIDTH) {
+                Row(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(0.25f)) { RailPane(selectedRepoId = null) }
+                    VerticalDivider()
+                    Box(Modifier.weight(0.75f)) { SelectPlaceholder("リポジトリを選択") }
+                }
+            } else {
+                RailPane(selectedRepoId = null)
+            }
+        }
 
         Screen.Add -> AddRepoScreen(
             status = status,
@@ -144,7 +194,7 @@ fun GitReaderApp() {
             onBack = { pop() },
         )
 
-        is Screen.Browse -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.Browse -> {
             val repo = current.repo
 
             @Composable
@@ -161,7 +211,6 @@ fun GitReaderApp() {
                     onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
                     onOpenFile = {
-                        // 既に右に同じファイルが開いていれば重複追加しない。
                         if (detailStack.lastOrNull()?.filePath != it) detailStack.add(Screen.View(repo, it))
                     },
                     iconSet = settings.iconSet,
@@ -181,7 +230,6 @@ fun GitReaderApp() {
 
             @Composable
             fun ViewerPane(file: Screen.View) {
-                // filePath をキーに composable ごと作り直す(Mermaid WebView の前ファイル残留を防ぐ)。
                 key(file.repo.id, file.filePath) {
                     FileViewerScreen(
                         repo = file.repo,
@@ -203,18 +251,29 @@ fun GitReaderApp() {
             }
 
             BoxWithConstraints {
-                val expanded = maxWidth >= TWO_PANE_MIN_WIDTH
+                val three = maxWidth >= THREE_PANE_MIN_WIDTH
+                val two = maxWidth >= TWO_PANE_MIN_WIDTH
                 val file = detailStack.lastOrNull()
-                if (!expanded) {
-                    if (file != null) ViewerPane(file) else BrowserPane()
-                } else {
-                    Row(Modifier.fillMaxSize()) {
-                        Box(Modifier.weight(0.4f)) { BrowserPane() }
-                        VerticalDivider()
-                        Box(Modifier.weight(0.6f)) {
-                            if (file != null) ViewerPane(file) else SelectPlaceholder("ファイルを選択")
+
+                @Composable
+                fun ContentPanes() {
+                    if (!two) {
+                        if (file != null) ViewerPane(file) else BrowserPane()
+                    } else {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(0.4f)) { BrowserPane() }
+                            VerticalDivider()
+                            Box(Modifier.weight(0.6f)) {
+                                if (file != null) ViewerPane(file) else SelectPlaceholder("ファイルを選択")
+                            }
                         }
                     }
+                }
+
+                if (three) {
+                    ThreePaneScaffold(repo.id, repo.themeMode) { ContentPanes() }
+                } else {
+                    GitReaderTheme(repo.themeMode) { ContentPanes() }
                 }
             }
         }
@@ -231,7 +290,7 @@ fun GitReaderApp() {
             )
         }
 
-        is Screen.Graph -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.Graph -> {
             val repo = current.repo
 
             @Composable
@@ -246,26 +305,35 @@ fun GitReaderApp() {
             }
 
             BoxWithConstraints {
-                val expanded = maxWidth >= TWO_PANE_MIN_WIDTH
-                if (!expanded) {
-                    GraphPane(selectedSha = null, onSelect = { navigate(Screen.CommitDetail(repo, it)) })
-                } else {
-                    Row(Modifier.fillMaxSize()) {
-                        Box(Modifier.weight(0.45f)) {
-                            GraphPane(selectedSha = graphSelected?.sha, onSelect = { graphSelected = it })
-                        }
-                        VerticalDivider()
-                        Box(Modifier.weight(0.55f)) {
-                            val sel = graphSelected
-                            if (sel != null) {
-                                key(sel.sha) {
-                                    CommitDetailContent(sel) { vm.commitDiff(repo, sel.sha) }
+                val three = maxWidth >= THREE_PANE_MIN_WIDTH
+                val two = maxWidth >= TWO_PANE_MIN_WIDTH
+
+                @Composable
+                fun ContentPanes() {
+                    if (!two) {
+                        GraphPane(selectedSha = null, onSelect = { navigate(Screen.CommitDetail(repo, it)) })
+                    } else {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(0.45f)) {
+                                GraphPane(selectedSha = graphSelected?.sha, onSelect = { graphSelected = it })
+                            }
+                            VerticalDivider()
+                            Box(Modifier.weight(0.55f)) {
+                                val sel = graphSelected
+                                if (sel != null) {
+                                    key(sel.sha) { CommitDetailContent(sel) { vm.commitDiff(repo, sel.sha) } }
+                                } else {
+                                    SelectPlaceholder("コミットを選択")
                                 }
-                            } else {
-                                SelectPlaceholder("コミットを選択")
                             }
                         }
                     }
+                }
+
+                if (three) {
+                    ThreePaneScaffold(repo.id, repo.themeMode) { ContentPanes() }
+                } else {
+                    GitReaderTheme(repo.themeMode) { ContentPanes() }
                 }
             }
         }
@@ -300,10 +368,23 @@ fun GitReaderApp() {
     }
 }
 
-/** 右ペインが空のときのプレースホルダ。 */
+/** 中央が空のときのプレースホルダ。 */
 @Composable
 private fun SelectPlaceholder(text: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** レールを畳んだときの細い展開ストリップ(≡ で再表示)。 */
+@Composable
+private fun RailExpandStrip(onExpand: () -> Unit) {
+    Column(
+        Modifier.fillMaxHeight().width(48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IconButton(onClick = onExpand) {
+            Icon(Icons.Default.Menu, contentDescription = "リポ一覧を表示")
+        }
     }
 }

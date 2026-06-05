@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -53,6 +55,8 @@ fun RepoListScreen(
     onOpen: (Repo) -> Unit,
     onSync: (Repo) -> Unit,
     onMessageShown: () -> Unit,
+    selectedRepoId: Long? = null,
+    onCollapse: (() -> Unit)? = null,
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(status.message) {
@@ -66,6 +70,14 @@ fun RepoListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("git-reader") },
+                navigationIcon = {
+                    // 3ペインのレールのときだけ「畳む」アイコンを出す。
+                    if (onCollapse != null) {
+                        IconButton(onClick = onCollapse) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "リポ一覧を畳む")
+                        }
+                    }
+                },
                 actions = {
                     if (repos.isNotEmpty()) {
                         IconButton(onClick = onEdit) {
@@ -109,6 +121,7 @@ fun RepoListScreen(
                     items(repos, key = { it.id }) { repo ->
                         RepoCard(
                             repo,
+                            selected = repo.id == selectedRepoId,
                             onOpen = { onOpen(repo) },
                             onSync = { onSync(repo) },
                         )
@@ -121,9 +134,14 @@ fun RepoListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RepoCard(repo: Repo, onOpen: () -> Unit, onSync: () -> Unit) {
+private fun RepoCard(repo: Repo, selected: Boolean, onOpen: () -> Unit, onSync: () -> Unit) {
     val accent = repo.colorTag.accent()
-    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+    val colors = if (selected) {
+        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    } else {
+        CardDefaults.cardColors()
+    }
+    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth(), colors = colors) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // 左端のアクセント色バー(色なしは透明)
             Box(
