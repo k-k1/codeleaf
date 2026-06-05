@@ -106,6 +106,8 @@ fun GitReaderApp() {
     var listCollapsed by rememberSaveable { mutableStateOf(false) }
     // コミットグラフ2/3ペインでコミット一覧ペインを畳んで詳細を全幅にしているか。
     var graphListCollapsed by rememberSaveable { mutableStateOf(false) }
+    // ファイル履歴2/3ペインでコミット一覧ペインを畳んで差分を全幅にしているか。
+    var historyListCollapsed by rememberSaveable { mutableStateOf(false) }
 
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -523,17 +525,32 @@ fun GitReaderApp() {
                     if (!two) {
                         HistoryPane(selSha = null, onSelect = { navigate(Screen.Diff(repo, filePath, it)) })
                     } else {
+                        val sel = historySelected
+                        // コミット選択中だけ一覧を畳める(未選択時は一覧を出す)。
+                        val showList = sel == null || !historyListCollapsed
                         Row(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(0.45f)) {
-                                HistoryPane(selSha = historySelected?.sha, onSelect = { historySelected = it })
+                            if (showList) {
+                                Box(Modifier.weight(0.45f)) {
+                                    HistoryPane(selSha = sel?.sha, onSelect = { historySelected = it })
+                                }
+                                VerticalDivider()
                             }
-                            VerticalDivider()
                             Box(Modifier.weight(0.55f)) {
-                                val sel = historySelected
                                 if (sel != null) {
                                     key(sel.sha) { FileDiffPane(sel) { vm.fileDiff(repo, filePath, sel.sha) } }
                                 } else {
                                     SelectPlaceholder("コミットを選択")
+                                }
+                                // 区切り線下部の開閉ハンドル(片手でコミット一覧を畳む/戻す)。選択中のみ。
+                                if (sel != null) {
+                                    PaneToggleHandle(
+                                        collapsed = historyListCollapsed,
+                                        onToggle = { historyListCollapsed = !historyListCollapsed },
+                                        // diff 下部の折り返しバーと重ならないよう少し上に。
+                                        modifier = Modifier.align(Alignment.BottomStart)
+                                            .padding(bottom = 72.dp)
+                                            .offset(x = if (historyListCollapsed) 4.dp else (-20).dp),
+                                    )
                                 }
                             }
                         }
