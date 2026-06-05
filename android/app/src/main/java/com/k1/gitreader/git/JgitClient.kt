@@ -7,6 +7,7 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevSort
 import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.submodule.SubmoduleWalk
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
@@ -63,7 +64,7 @@ class JgitClient {
             UsernamePasswordCredentialsProvider(user, token)
         }
 
-    /** clone して全ブランチを取得。既に存在する場合は何もしない。 */
+    /** clone して全ブランチ + submodule を取得。 */
     fun clone(url: String, dir: File, cp: CredentialsProvider?) {
         Git.cloneRepository()
             .setURI(url)
@@ -72,12 +73,13 @@ class JgitClient {
             .call()
             .use { git ->
                 fetchAll(git, cp)
+                updateSubmodules(git, cp)
             }
     }
 
     /**
      * 指定ブランチを最新化し、ローカル変更を完全破棄する。
-     * fetch -> checkout -> reset --hard origin/<branch> -> clean -fdx
+     * fetch -> checkout -> reset --hard origin/<branch> -> clean -fdx -> submodule update
      */
     fun sync(dir: File, branch: String, cp: CredentialsProvider?) {
         Git.open(dir).use { git ->
@@ -85,8 +87,23 @@ class JgitClient {
             checkoutForced(git, branch)
             git.reset().setMode(ResetType.HARD).setRef("origin/$branch").call()
             git.clean().setCleanDirectories(true).setForce(true).setIgnore(false).call()
+            updateSubmodules(git, cp)
         }
     }
+
+    /**
+     * index 上の submodule の相対パス（'/'区切り）集合を返す。submodule 無し/エラー時は空。
+     * ファイル一覧で submodule ディレクトリを判別するために使う。
+     */
+    fun submodulePaths(dir: File): Set<String> = runCatching {
+        Git.open(dir).use { git ->
+            val paths = HashSet<String>()
+            SubmoduleWalk.forIndex(git.repository).use { walk ->
+                while (walk.next()) paths.add(walk.path)
+            }
+            paths
+        }
+    }.getOrDefault(emptySet())
 
     /** リモートブランチを直近コミット順（降順）で返す。 */
     fun listBranches(dir: File): List<BranchInfo> {
@@ -185,6 +202,20 @@ class JgitClient {
                     )
                 }
                 return out
+            }
+        }
+    }
+
+    /**
+     * submodule を init + update（取得）。public submodule のみ想定の最小対応（1階層）。
+     * 読み取り専用リーダーのため、submodule の取得失敗は致命にせず無視する
+     * （親リポは利用可能なまま、当該 submodule ディレクトリが空になるだけ）。
+     */
+    private fun updateSubmodules(git: Git, cp: CredentialsProvider?) {
+        runCatching {
+            val inited = git.submoduleInit().call()
+            if (inited.isNotEmpty()) {
+                git.submoduleUpdate().setCredentialsProvider(cp).call()
             }
         }
     }

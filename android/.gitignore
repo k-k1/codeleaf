@@ -10,3 +10,8 @@
 local.properties
 app/build/
 build/
+
+# 手動検証用のスクラッチ(スクリーンショット / uiautomator dump)
+.icons-check.png
+.icons-small.png
+.ui.xml

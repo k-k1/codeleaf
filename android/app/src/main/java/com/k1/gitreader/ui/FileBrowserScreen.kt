@@ -188,7 +188,14 @@ fun FileBrowserScreen(
                             EntryRow(e, onClick = {
                                 // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
                                 if (!locked) {
-                                    if (e.isDir) onOpenDir(e.relPath) else onOpenFile(e.relPath)
+                                    when {
+                                        // LFS は実体未取得のため Viewer では開かず、その旨を通知する
+                                        e.isLfs -> scope.launch {
+                                            snackbar.showSnackbar("Git LFS ファイルです（実体は未取得のため表示できません）")
+                                        }
+                                        e.isDir -> onOpenDir(e.relPath)
+                                        else -> onOpenFile(e.relPath)
+                                    }
                                 }
                             })
                             HorizontalDivider()
@@ -247,10 +254,26 @@ private val ICON_SIZE = 24.dp
 private fun FileEntryIcon(entry: FileEntry) {
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     when {
+        // submodule は git ロゴで「ネストした git リポジトリ」と分かるようにする
+        entry.isSubmodule -> AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(FileIcons.assetUri(DevIcon("git")))
+                .build(),
+            imageLoader = rememberDeviconLoader(),
+            contentDescription = "submodule",
+            modifier = Modifier.size(ICON_SIZE),
+        )
         entry.isDir -> Icon(
             painterResource(R.drawable.ic_folder),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(ICON_SIZE),
+        )
+        // LFS ポインタは「リモート保管(未取得)」を示すクラウドアイコン
+        entry.isLfs -> Icon(
+            painterResource(R.drawable.ic_lfs),
+            contentDescription = "Git LFS",
+            tint = tint,
             modifier = Modifier.size(ICON_SIZE),
         )
         else -> {

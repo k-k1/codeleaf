@@ -25,7 +25,17 @@ data class FileEntry(
     val name: String,
     val relPath: String,
     val isDir: Boolean,
+    /** git submodule のルートディレクトリ。 */
+    val isSubmodule: Boolean = false,
+    /** Git LFS のポインタファイル（実体は未取得・Viewer では開かない）。 */
+    val isLfs: Boolean = false,
 )
+
+/** LFS ポインタファイルの先頭シグネチャ。 */
+private const val LFS_POINTER_MAGIC = "version https://git-lfs.github.com/spec/v1"
+
+/** 先頭テキストが Git LFS ポインタかを判定する純粋関数（テスト用）。 */
+fun isLfsPointerHead(head: String): Boolean = head.startsWith(LFS_POINTER_MAGIC)
 
 /** 全文検索のヒット1件。relPath はリポルートからの相対パス、line は1始まりの行番号。 */
 data class SearchHit(
@@ -166,13 +176,34 @@ class RepoRepository(
         jgit.listBranches(workDir(repo))
     }
 
-    /** 作業ツリー内の relPath 配下を列挙（.git 除外・フォルダ優先→名前順）。 */
+    /** 作業ツリー内の relPath 配下を列挙（.git 除外・フォルダ優先→名前順）。
+     *  submodule のルートと LFS ポインタを判別フラグ付きで返す。 */
     suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> = withContext(ioDispatcher) {
-        val dir = if (relPath.isEmpty()) workDir(repo) else File(workDir(repo), relPath)
+        val root = workDir(repo)
+        val dir = if (relPath.isEmpty()) root else File(root, relPath)
+        // .gitmodules があるリポだけ index を読んで submodule パス集合を得る。
+        val subPaths = if (File(root, ".gitmodules").exists()) jgit.submodulePaths(root) else emptySet()
         val children = dir.listFiles().orEmpty().filterNot { it.name == ".git" }
         children
-            .map { FileEntry(it.name, joinRel(relPath, it.name), it.isDirectory) }
+            .map { f ->
+                val rel = joinRel(relPath, f.name)
+                FileEntry(
+                    name = f.name,
+                    relPath = rel,
+                    isDir = f.isDirectory,
+                    isSubmodule = f.isDirectory && rel in subPaths,
+                    isLfs = !f.isDirectory && isLfsPointer(f),
+                )
+            }
             .sortedWith(compareByDescending<FileEntry> { it.isDir }.thenBy { it.name.lowercase() })
+    }
+
+    /** 小さなファイルの先頭を読み、Git LFS ポインタかを判定する。 */
+    private fun isLfsPointer(f: File): Boolean {
+        val len = f.length()
+        if (len < 50L || len > 1024L) return false // LFS ポインタは概ね 120〜200B の小さなテキスト
+        val text = runCatching { f.readBytes().decodeToString() }.getOrNull() ?: return false
+        return isLfsPointerHead(text)
     }
 
     /** テキストファイルを UTF-8 で読み込む。 */
