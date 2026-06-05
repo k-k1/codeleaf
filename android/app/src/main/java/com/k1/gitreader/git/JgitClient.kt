@@ -31,12 +31,14 @@ data class BranchInfo(
 )
 
 /** コミット1件分の情報（履歴表示用）。 */
+@Parcelize
+@TypeParceler<Instant, InstantParceler>
 data class CommitInfo(
     val sha: String,
     val shortMessage: String,
     val author: String,
     val committedAt: Instant,
-)
+) : Parcelable
 
 /** Instant を epochMilli Long で Parcel に書き出す(プロセス死復元のため)。 */
 object InstantParceler : Parceler<Instant> {

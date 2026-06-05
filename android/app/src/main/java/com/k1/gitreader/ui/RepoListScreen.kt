@@ -136,7 +136,9 @@ fun RepoListScreen(
 private fun RepoCard(repo: Repo, selected: Boolean, onOpen: () -> Unit, onSync: () -> Unit) {
     val accent = repo.colorTag.accent()
     val colors = if (selected) {
-        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        // 選択パネルはリポ色で淡くハイライト(色なしは中立グレー)。primarycontainer(紫)固定は避ける。
+        val tint = (accent ?: MaterialTheme.colorScheme.outline).copy(alpha = 0.22f)
+        CardDefaults.cardColors(containerColor = tint)
     } else {
         CardDefaults.cardColors()
     }

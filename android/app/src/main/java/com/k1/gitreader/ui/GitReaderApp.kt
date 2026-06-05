@@ -64,7 +64,7 @@ private sealed interface Screen : Parcelable {
     @Parcelize data class Graph(val repo: Repo) : Screen
     @Parcelize data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
     @Parcelize data class History(val repo: Repo, val filePath: String) : Screen
-    @Parcelize data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
+    @Parcelize data class Diff(val repo: Repo, val filePath: String, val commit: CommitInfo) : Screen
     @Parcelize data class CommitDetail(val repo: Repo, val commit: GraphCommit) : Screen
 }
 
@@ -315,6 +315,17 @@ fun GitReaderApp() {
                         }
                     },
                     onBack = { handleBack() },
+                    onUp = {
+                        val parent = current.path.substringBeforeLast('/', "")
+                        val below = backStack.getOrNull(backStack.lastIndex - 1)
+                        if (below is Screen.Browse && below.repo.id == repo.id && below.path == parent) {
+                            // 直下が親ディレクトリならそのまま戻る(スタックを汚さない)。
+                            backStack.removeAt(backStack.lastIndex)
+                        } else {
+                            // それ以外(非線形に来た場合)は現在の Browse を親に置換する。
+                            backStack[backStack.lastIndex] = Screen.Browse(repo, parent)
+                        }
+                    },
                 )
             }
 
@@ -450,7 +461,7 @@ fun GitReaderApp() {
                 @Composable
                 fun ContentPanes() {
                     if (!two) {
-                        HistoryPane(selSha = null, onSelect = { navigate(Screen.Diff(repo, filePath, it.sha)) })
+                        HistoryPane(selSha = null, onSelect = { navigate(Screen.Diff(repo, filePath, it)) })
                     } else {
                         Row(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(0.45f)) {
@@ -479,8 +490,8 @@ fun GitReaderApp() {
 
         is Screen.Diff -> GitReaderTheme(current.repo.themeMode) {
             DiffScreen(
-                sha = current.sha,
-                loadDiff = { vm.fileDiff(current.repo, current.filePath, current.sha) },
+                commit = current.commit,
+                loadDiff = { vm.fileDiff(current.repo, current.filePath, current.commit.sha) },
                 onBack = { pop() },
             )
         }

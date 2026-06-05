@@ -85,6 +85,8 @@ fun FileBrowserScreen(
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
     onBack: () -> Unit,
+    /** ひとつ上のディレクトリへ(パスから親を算出して遷移)。ルートでは無効。 */
+    onUp: () -> Unit,
     iconSet: IconSet = IconSet.MATERIAL,
 ) {
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
@@ -157,7 +159,8 @@ fun FileBrowserScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             SlimBottomBar {
-                IconButton(onClick = onBack) {
+                // ルート(path 空)では親が無いので無効化。
+                IconButton(onClick = onUp, enabled = path.isNotEmpty()) {
                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "ひとつ上へ")
                 }
                 Text(

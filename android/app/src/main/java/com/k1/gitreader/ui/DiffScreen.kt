@@ -2,6 +2,7 @@ package com.k1.gitreader.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,26 +41,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.k1.gitreader.git.CommitInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiffScreen(
-    sha: String,
+    commit: CommitInfo,
     loadDiff: suspend () -> String,
     onBack: () -> Unit,
 ) {
-    var diff by remember(sha) { mutableStateOf<String?>(null) }
-    var error by remember(sha) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(sha) {
-        error = null
-        diff = runCatching { loadDiff() }.getOrElse { error = it.message; "" }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("diff ${sha.take(7)}") },
+                title = { Text("diff ${commit.sha.take(7)}") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
@@ -68,14 +62,9 @@ fun DiffScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            val text = diff
-            when {
-                error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
-                text == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                text.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-                else -> DiffText(text, Modifier.fillMaxSize())
-            }
+        // コミットメッセージ見出し＋ファイル diff(2/3ペインの右と共通の FileDiffPane)。
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            FileDiffPane(commit, loadDiff)
         }
     }
 }
