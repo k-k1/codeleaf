@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
@@ -161,7 +162,26 @@ fun FileViewerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(fileName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Column {
+                        // どのフォルダのファイルか分かるよう、ファイル名の上にパスのパンくずを出す。
+                        if (parent.isNotEmpty()) {
+                            Text(
+                                parent.replace("/", " / "),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Text(
+                            fileName,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
                 navigationIcon = {
                     if (showBack) {
                         IconButton(onClick = onBack) {
@@ -472,6 +492,7 @@ private fun MarkdownTableView(
     }
     val hScroll = rememberScrollState()
     val headerBg = MaterialTheme.colorScheme.surfaceVariant
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
     val fontSize = (14f * fontScale).sp
 
     var tableTopPx by remember { mutableFloatStateOf(0f) }
@@ -485,7 +506,10 @@ private fun MarkdownTableView(
     fun cell(text: String, isHeader: Boolean, col: Int) {
         Text(
             text = text,
-            modifier = Modifier.width(colWidths[col]).padding(horizontal = 8.dp, vertical = 6.dp),
+            // セル毎にボーダーを引いて表のグリッドを見せる(横スクロールモード)。
+            modifier = Modifier.width(colWidths[col])
+                .border(0.5.dp, borderColor)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             fontSize = fontSize,
             fontWeight = if (isHeader) FontWeight.Bold else null,
             maxLines = 3,
@@ -511,10 +535,8 @@ private fun MarkdownTableView(
         ) {
             for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true, c)
         }
-        HorizontalDivider()
         rows.forEach { row ->
             Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false, c) }
-            HorizontalDivider()
         }
     }
 }
