@@ -2,12 +2,23 @@ package com.k1.gitreader.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.k1.gitreader.data.db.Repo
@@ -25,15 +36,52 @@ private sealed interface Screen {
     data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
 }
 
+/** 2ペイン化のしきい値(これ以上の幅で左=一覧/右=詳細)。 */
+private val TWO_PANE_MIN_WIDTH = 600.dp
+
 @Composable
 fun GitReaderApp() {
     val vm: RepoListViewModel = viewModel(factory = RepoListViewModel.Factory)
     val context = LocalContext.current
     val backStack = remember { mutableStateListOf<Screen>(Screen.List) }
+    // 開いているファイルは backStack と直交する別スタックで持つ(2ペインのため)。
+    val detailStack = remember { mutableStateListOf<Screen.View>() }
+
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
 
-    BackHandler(enabled = backStack.size > 1) { pop() }
+    // System Back と Viewer の戻る矢印を一本化する。
+    fun handleBack() {
+        val top = backStack.last()
+        if (top is Screen.Browse && detailStack.isNotEmpty()) {
+            detailStack.removeAt(detailStack.lastIndex) // まず開いているファイルを1つ戻す
+            return
+        }
+        val before = top
+        pop()
+        // リポ閲覧から抜けたら開いていたファイルを掃除する。
+        if (before is Screen.Browse && backStack.last() !is Screen.Browse) detailStack.clear()
+    }
+
+    // リポ毎テーマ変更を backStack / detailStack 内の同一リポ全画面へ反映する。
+    fun applyThemeUpdate(updated: Repo) {
+        for (idx in backStack.indices) {
+            when (val s = backStack[idx]) {
+                is Screen.Browse -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                is Screen.Graph -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                is Screen.Search -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                is Screen.History -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                is Screen.Diff -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                else -> {}
+            }
+        }
+        for (idx in detailStack.indices) {
+            val s = detailStack[idx]
+            if (s.repo.id == updated.id) detailStack[idx] = s.copy(repo = updated)
+        }
+    }
+
+    BackHandler(enabled = backStack.size > 1 || detailStack.isNotEmpty()) { handleBack() }
 
     val repos by vm.repos.collectAsState()
     val status by vm.status.collectAsState()
@@ -90,50 +138,88 @@ fun GitReaderApp() {
         )
 
         is Screen.Browse -> GitReaderTheme(current.repo.themeMode) {
-            FileBrowserScreen(
-                repo = current.repo,
-                path = current.path,
-                busy = status.busy,
-                loadDir = { vm.listDir(current.repo, it) },
-                loadBranches = { vm.listBranches(current.repo) },
-                onSync = { vm.syncNow(current.repo) },
-                onSearch = { navigate(Screen.Search(current.repo)) },
-                onGraph = { navigate(Screen.Graph(current.repo)) },
-                onSetTheme = { mode ->
-                    vm.setRepoTheme(current.repo, mode) { updated ->
-                        // 開いている同一リポの全画面に新テーマを反映する
-                        for (idx in backStack.indices) {
-                            when (val s = backStack[idx]) {
-                                is Screen.Browse -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                                is Screen.View -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                                is Screen.Graph -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                                is Screen.Search -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                                else -> {}
+            val repo = current.repo
+
+            @Composable
+            fun BrowserPane() {
+                FileBrowserScreen(
+                    repo = repo,
+                    path = current.path,
+                    busy = status.busy,
+                    loadDir = { vm.listDir(repo, it) },
+                    loadBranches = { vm.listBranches(repo) },
+                    onSync = { vm.syncNow(repo) },
+                    onSearch = { navigate(Screen.Search(repo)) },
+                    onGraph = { navigate(Screen.Graph(repo)) },
+                    onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
+                    onOpenDir = { navigate(Screen.Browse(repo, it)) },
+                    onOpenFile = {
+                        // 既に右に同じファイルが開いていれば重複追加しない。
+                        if (detailStack.lastOrNull()?.filePath != it) detailStack.add(Screen.View(repo, it))
+                    },
+                    iconSet = settings.iconSet,
+                    onSwitchBranch = { branch ->
+                        vm.switchBranch(repo, branch) { updated ->
+                            val i = backStack.indexOfLast { it is Screen.Browse }
+                            if (i >= 0) {
+                                while (backStack.lastIndex > i) backStack.removeAt(backStack.lastIndex)
+                                backStack[i] = Screen.Browse(updated, "")
                             }
+                            detailStack.clear() // 作業ツリー書換でファイルが変化/消滅しうる
+                        }
+                    },
+                    onBack = { handleBack() },
+                )
+            }
+
+            @Composable
+            fun ViewerPane(file: Screen.View) {
+                // filePath をキーに composable ごと作り直す(Mermaid WebView の前ファイル残留を防ぐ)。
+                key(file.repo.id, file.filePath) {
+                    FileViewerScreen(
+                        repo = file.repo,
+                        filePath = file.filePath,
+                        workDir = vm.workDirOf(file.repo),
+                        loadText = { vm.readFile(file.repo, file.filePath) },
+                        fontScale = settings.fontScale.scale,
+                        defaultWrap = settings.wrapByDefault,
+                        linkOpenMode = settings.linkOpenMode,
+                        showLineNumbers = settings.showLineNumbers,
+                        tableMode = settings.tableMode,
+                        stickyHeadings = settings.stickyHeadings,
+                        targetLine = file.line,
+                        onHistory = { navigate(Screen.History(file.repo, file.filePath)) },
+                        onNavigateToFile = { path -> detailStack.add(Screen.View(file.repo, path)) },
+                        onBack = { handleBack() },
+                    )
+                }
+            }
+
+            BoxWithConstraints {
+                val expanded = maxWidth >= TWO_PANE_MIN_WIDTH
+                val file = detailStack.lastOrNull()
+                if (!expanded) {
+                    if (file != null) ViewerPane(file) else BrowserPane()
+                } else {
+                    Row(Modifier.fillMaxSize()) {
+                        Box(Modifier.weight(0.4f)) { BrowserPane() }
+                        VerticalDivider()
+                        Box(Modifier.weight(0.6f)) {
+                            if (file != null) ViewerPane(file) else SelectPlaceholder("ファイルを選択")
                         }
                     }
-                },
-                onOpenDir = { navigate(Screen.Browse(current.repo, it)) },
-                onOpenFile = { navigate(Screen.View(current.repo, it)) },
-                iconSet = settings.iconSet,
-                onSwitchBranch = { branch ->
-                    vm.switchBranch(current.repo, branch) { updated ->
-                        val i = backStack.indexOfLast { it is Screen.Browse }
-                        if (i >= 0) {
-                            while (backStack.lastIndex > i) backStack.removeAt(backStack.lastIndex)
-                            backStack[i] = Screen.Browse(updated, "")
-                        }
-                    }
-                },
-                onBack = { pop() },
-            )
+                }
+            }
         }
 
         is Screen.Search -> GitReaderTheme(current.repo.themeMode) {
             SearchScreen(
                 repoName = current.repo.name,
                 loadCorpus = { vm.loadSearchCorpus(current.repo) },
-                onOpenFile = { path, line -> navigate(Screen.View(current.repo, path, line)) },
+                onOpenFile = { path, line ->
+                    detailStack.add(Screen.View(current.repo, path, line))
+                    pop() // Search を閉じて Browse(+右ペイン) に戻る
+                },
                 onBack = { pop() },
             )
         }
@@ -142,25 +228,6 @@ fun GitReaderApp() {
             CommitGraphScreen(
                 repoName = current.repo.name,
                 loadGraph = { vm.commitGraph(current.repo) },
-                onBack = { pop() },
-            )
-        }
-
-        is Screen.View -> GitReaderTheme(current.repo.themeMode) {
-            FileViewerScreen(
-                repo = current.repo,
-                filePath = current.filePath,
-                workDir = vm.workDirOf(current.repo),
-                loadText = { vm.readFile(current.repo, current.filePath) },
-                fontScale = settings.fontScale.scale,
-                defaultWrap = settings.wrapByDefault,
-                linkOpenMode = settings.linkOpenMode,
-                showLineNumbers = settings.showLineNumbers,
-                tableMode = settings.tableMode,
-                stickyHeadings = settings.stickyHeadings,
-                targetLine = current.line,
-                onHistory = { navigate(Screen.History(current.repo, current.filePath)) },
-                onNavigateToFile = { path -> navigate(Screen.View(current.repo, path)) },
                 onBack = { pop() },
             )
         }
@@ -181,5 +248,16 @@ fun GitReaderApp() {
                 onBack = { pop() },
             )
         }
+
+        // View は backStack ではなく detailStack で扱う(Browse 分岐内で描画)。到達不能。
+        is Screen.View -> Unit
+    }
+}
+
+/** 右ペインが空のときのプレースホルダ。 */
+@Composable
+private fun SelectPlaceholder(text: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
