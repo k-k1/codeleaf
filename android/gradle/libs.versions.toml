@@ -10,6 +10,8 @@ composeBom = "2024.12.01"
 room = "2.6.1"
 coroutines = "1.9.0"
 markwon = "4.6.2"
+# Markwon 4.6.2 が引き込む commonmark に合わせる(autolink 拡張のバージョン整合)。
+commonmark = "0.13.0"
 prism4j = "2.0.0"
 emojiJava = "5.1.1"
 coil = "2.7.0"
@@ -43,6 +45,7 @@ markwon-html = { group = "io.noties.markwon", name = "html", version.ref = "mark
 markwon-linkify = { group = "io.noties.markwon", name = "linkify", version.ref = "markwon" }
 markwon-image = { group = "io.noties.markwon", name = "image", version.ref = "markwon" }
 markwon-syntax-highlight = { group = "io.noties.markwon", name = "syntax-highlight", version.ref = "markwon" }
+commonmark-ext-autolink = { group = "com.atlassian.commonmark", name = "commonmark-ext-autolink", version.ref = "commonmark" }
 prism4j = { group = "io.noties", name = "prism4j", version.ref = "prism4j" }
 prism4j-bundler = { group = "io.noties", name = "prism4j-bundler", version.ref = "prism4j" }
 emoji-java = { group = "com.vdurmont", name = "emoji-java", version.ref = "emojiJava" }

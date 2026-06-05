@@ -125,6 +125,7 @@ dependencies {
     implementation(libs.markwon.linkify)
     implementation(libs.markwon.image)
     implementation(libs.markwon.syntax.highlight)
+    implementation(libs.commonmark.ext.autolink)
     implementation(libs.prism4j)
     kapt(libs.prism4j.bundler)
     implementation(libs.emoji.java)

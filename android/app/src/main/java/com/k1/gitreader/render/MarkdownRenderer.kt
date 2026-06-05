@@ -48,12 +48,13 @@ import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.ImagesPlugin
 import io.noties.markwon.image.file.FileSchemeHandler
 import io.noties.markwon.image.network.NetworkSchemeHandler
-import io.noties.markwon.linkify.LinkifyPlugin
 import io.noties.markwon.syntax.Prism4jSyntaxHighlight
 import io.noties.markwon.syntax.Prism4jTheme
 import io.noties.markwon.syntax.Prism4jThemeDarkula
 import io.noties.markwon.syntax.Prism4jThemeDefault
 import io.noties.markwon.syntax.SyntaxHighlightPlugin
+import org.commonmark.ext.autolink.AutolinkExtension
+import org.commonmark.parser.Parser
 import io.noties.prism4j.Prism4j
 import java.io.File
 
@@ -90,7 +91,9 @@ data class MarkdownColors(
 
 /**
  * Markwon ベースの Markdown レンダラ。
- * GFM(テーブル/打消し/タスクリスト)・HTML・リンク自動化・画像表示・絵文字(:smile:)に対応。
+ * GFM(テーブル/打消し/タスクリスト)・HTML・画像表示・絵文字(:smile:)に対応。
+ * 自動リンクは CommonMark autolink 拡張(scheme 付き URL/www./メールのみ)を使い、
+ * Linkify による誤リンク(日付/"*.md"/日本語巻き込み)を避ける。
  * リポジトリ内の相対画像は file:// 絶対パスへ解決する。
  * ```mermaid ブロックは splitBlocks で切り出し、MermaidWebView 側で描画する。
  * コードフェンス(```lang)は Prism4j(SyntaxHighlightPlugin)でハイライトする。
@@ -113,8 +116,16 @@ object MarkdownRenderer {
             .usePlugin(StrikethroughPlugin.create())
             .usePlugin(TaskListPlugin.create(context))
             .usePlugin(HtmlPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
             .usePlugin(SyntaxHighlightPlugin.create(CodeHighlight.prism4j, CodeHighlight.theme(dark)))
+            // 自動リンクは Android Linkify(ALL)ではなく CommonMark の autolink 拡張を使う。
+            // Linkify は日付っぽい数字を電話番号、"CLAUDE.md"(.md は実在 TLD)を Web URL とみなし
+            // 日本語まで巻き込んで誤リンク化した。autolink 拡張は scheme 付き URL / www. / メールだけを
+            // 対象にするため誤検出しない(相対 .md 等は明示 [text](url) のときだけ RepoLinkResolver で遷移)。
+            .usePlugin(object : AbstractMarkwonPlugin() {
+                override fun configureParser(builder: Parser.Builder) {
+                    builder.extensions(listOf(AutolinkExtension.create()))
+                }
+            })
             .usePlugin(
                 ImagesPlugin.create { plugin ->
                     plugin.addSchemeHandler(FileSchemeHandler.create())
