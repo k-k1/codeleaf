@@ -8,7 +8,11 @@ data class HttpResult(val status: Int, val body: String)
 
 /** トークンエンドポイントへの form POST を抽象化（テストでフェイクに差し替える）。 */
 interface TokenHttp {
-    /** @throws IOException ネットワーク失敗時。 */
+    /**
+     * @param basicAuth Base64 値。空文字なら Authorization ヘッダを付けない
+     *   （GitHub Device Flow は client_id を body に載せ、認証ヘッダ無しで叩く）。
+     * @throws IOException ネットワーク失敗時。
+     */
     fun postForm(url: String, basicAuth: String, form: Map<String, String>): HttpResult
 }
 
@@ -20,7 +24,7 @@ class HttpUrlConnectionTokenHttp : TokenHttp {
             connectTimeout = 15_000
             readTimeout = 15_000
             doOutput = true
-            setRequestProperty("Authorization", "Basic $basicAuth")
+            if (basicAuth.isNotEmpty()) setRequestProperty("Authorization", "Basic $basicAuth")
             setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
             setRequestProperty("Accept", "application/json")
         }

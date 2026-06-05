@@ -51,6 +51,10 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
   (将来バックエンド代行へ差し替え可)。PKCE/Device Flow 非対応。設定手順は `android/DEVELOPMENT.md` §9。
   OAuth ログイン後は URL 手入力でなく `BitbucketApi`(`/2.0/repositories?role=member`)で clone 可能リポを取得し
   プルダウン選択(登録済みは `normalizeRepoUrl` で除外)。URL 手入力欄はトークン方式のときだけ。
+- **GitHub OAuth**(`data/oauth/GitHubDeviceFlow*`): **Device Flow**。**client_secret 不要**(client_id のみ・`GITHUB_OAUTH_CLIENT_ID`)。
+  redirect/`OAuthRedirectActivity` 不使用 → user_code 表示＋`GitHubDeviceFlowService.pollForToken` でポーリング。
+  scope=`repo`(read-only repo scope が無く write も付くトレードオフ)。user token は無期限扱い(refresh 無し・`expiresAt`遠未来)。
+  リポ一覧は `GitHubApi`(`/user/repos`)。UI は AddRepoScreen の host 別アコーディオン。設定手順は `DEVELOPMENT.md` §10。
 - **同期**: `fetch → reset --hard origin/<branch> → clean -fdx`(ローカル変更は破棄)。
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。

@@ -185,7 +185,11 @@ fun GitReaderApp() {
                 }
             },
             oauthResult = vm.oauthResult,
-            loadBitbucketRepos = { account -> vm.listClonableBitbucketRepos(account) },
+            githubOAuthAvailable = vm.githubOAuthAvailable,
+            requestGitHubDeviceCode = { vm.requestGitHubDeviceCode() },
+            pollGitHubToken = { code -> vm.pollGitHubToken(code) },
+            onOpenUrl = { url -> CustomTabsIntent.Builder().build().launchUrl(context, url.toUri()) },
+            loadOAuthRepos = { account -> vm.listClonableRepos(account) },
         )
 
         Screen.RepoEdit -> RepoEditScreen(

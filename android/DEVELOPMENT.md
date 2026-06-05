@@ -98,3 +98,29 @@ OAuth は `local.properties` に client_id/secret がある時だけ有効化さ
 仕組み: 3-legged Authorization Code Grant。`gitreader://oauth` を `OAuthRedirectActivity` が受け、
 `BitbucketOAuthService` が code をトークンに交換（`data/oauth/`）。token 交換は `OAuthTokenExchanger`
 interface に隔離してあり、将来「バックエンド代行」へ差し替え可能（公開配布時の secret 同梱対策）。
+
+## 10. GitHub OAuth（任意・「GitHub でログイン」を使う場合）
+GitHub は **OAuth 2.0 Device Flow**（RFC 8628）を採用。**client_secret 不要**（公開クライアント）なので
+`local.properties` には **client_id だけ**置けば有効化される（無くてもビルド可・fine-grained PAT は常用可）。
+
+1. GitHub → Settings → Developer settings → **OAuth Apps** → **New OAuth App**
+   - Application name: `git-reader`
+   - Homepage URL: 任意（例 `https://example.com`）
+   - Authorization callback URL: 任意（Device Flow では未使用。例 `https://example.com/callback`）
+   - 作成後、アプリ設定で **「Enable Device Flow」にチェック**。
+2. 発行された **Client ID** を `android/local.properties` に追記（git 管理外・**Secret は不要**）:
+   ```
+   GITHUB_OAUTH_CLIENT_ID=<Client ID>
+   ```
+3. 再ビルドすると GitHub タブの認証方法に「GitHub でログイン（OAuth）」が出る。
+   ボタン押下 → 表示された **user_code** を控え、開いたブラウザ（`https://github.com/login/device`）で入力・承認
+   → アプリが自動でトークンを取得 → 未登録リポをプルダウンから選んで clone。
+
+**権限のトレードオフ（重要）**: classic OAuth App には read-only な repo scope が無く、private を読むには
+scope `repo`（read+**write** 全権）が必要。本アプリは読むだけだがトークンには書き込み権限も付く。最小権限を
+厳密に求めるなら GitHub App（Contents: Read-only）化が必要だがインストール手順が増えるため、個人利用前提で
+OAuth App を採用した。user token は既定で無期限（`OAuthAccount.expiresAt` を遠未来に設定し refresh しない）。
+
+仕組み: `GitHubDeviceFlowService` が `device/code` 取得 → `access_token` をポーリング（`data/oauth/GitHubDeviceFlow*`）。
+redirect/Custom Tabs deep link は使わない（user_code 表示＋ポーリング方式）ので `OAuthRedirectActivity` は不要。
+clone 時の git username は `x-access-token`（`gitUsernameFor`）。リポ一覧は `GitHubApi`(`/user/repos`)。

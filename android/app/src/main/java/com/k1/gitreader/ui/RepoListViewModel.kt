@@ -19,6 +19,9 @@ import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.data.oauth.AuthorizationRequest
 import com.k1.gitreader.data.oauth.BitbucketOAuthService
+import com.k1.gitreader.data.oauth.GitHubDeviceCode
+import com.k1.gitreader.data.oauth.GitHubDeviceFlow
+import com.k1.gitreader.data.oauth.GitHubDeviceFlowService
 import com.k1.gitreader.data.oauth.OAuthAccount
 import com.k1.gitreader.data.oauth.RemoteRepo
 import com.k1.gitreader.git.BranchInfo
@@ -44,6 +47,7 @@ class RepoListViewModel(
     private val repository: RepoRepository,
     private val settingsStore: SettingsStore,
     private val oauthService: BitbucketOAuthService? = null,
+    private val githubOAuthService: GitHubDeviceFlowService? = null,
     oauthResults: Channel<Result<OAuthAccount>>? = null,
 ) : ViewModel() {
 
@@ -61,9 +65,26 @@ class RepoListViewModel(
     /** 認可を開始（state 保存）。UI は返り値の url を Custom Tabs で開く。未設定なら null。 */
     fun startBitbucketOAuth(): AuthorizationRequest? = oauthService?.startAuthorization()
 
-    /** OAuth でアクセス可能かつ未登録の Bitbucket リポ一覧（プルダウン選択用）。 */
-    suspend fun listClonableBitbucketRepos(account: OAuthAccount): Result<List<RemoteRepo>> =
-        runCatching { repository.listClonableBitbucketRepos(account) }
+    /** GitHub Device Flow が利用可能か（BuildConfig に client_id がある）。 */
+    val githubOAuthAvailable: Boolean = githubOAuthService != null
+
+    /** GitHub: device/code を要求（UI は user_code 表示＋verification_uri を開く）。未設定なら失敗。 */
+    suspend fun requestGitHubDeviceCode(): Result<GitHubDeviceCode> =
+        githubOAuthService?.requestDeviceCode()
+            ?: Result.failure(IllegalStateException("GitHub ログインは未設定です"))
+
+    /** GitHub: ユーザ承認をポーリングし、成功で OAuthAccount を返す。 */
+    suspend fun pollGitHubToken(code: GitHubDeviceCode): Result<OAuthAccount> =
+        githubOAuthService?.pollForToken(code)
+            ?: Result.failure(IllegalStateException("GitHub ログインは未設定です"))
+
+    /** OAuth でアクセス可能かつ未登録のリモートリポ一覧（プルダウン選択用）。provider で振り分け。 */
+    suspend fun listClonableRepos(account: OAuthAccount): Result<List<RemoteRepo>> = runCatching {
+        when (account.provider) {
+            GitHubDeviceFlow.PROVIDER -> repository.listClonableGitHubRepos(account)
+            else -> repository.listClonableBitbucketRepos(account)
+        }
+    }
 
     private val _status = MutableStateFlow(UiStatus())
     val status: StateFlow<UiStatus> = _status
@@ -198,6 +219,7 @@ class RepoListViewModel(
                     app.container.repoRepository,
                     app.container.settingsStore,
                     app.container.bitbucketOAuthService,
+                    app.container.githubOAuthService,
                     app.container.oauthResults,
                 )
             }

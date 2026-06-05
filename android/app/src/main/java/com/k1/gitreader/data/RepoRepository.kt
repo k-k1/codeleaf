@@ -8,6 +8,7 @@ import com.k1.gitreader.data.db.RepoColor
 import com.k1.gitreader.data.db.RepoDao
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.data.oauth.BitbucketApi
+import com.k1.gitreader.data.oauth.GitHubApi
 import com.k1.gitreader.data.oauth.OAuthAccount
 import com.k1.gitreader.data.oauth.RemoteRepo
 import com.k1.gitreader.data.oauth.gitUsernameFor
@@ -133,6 +134,7 @@ class RepoRepository(
     /** OAuth access token 失効時の更新。未設定(手動トークンのみ運用)なら null。 */
     private val refreshOAuth: (suspend (OAuthAccount) -> Result<OAuthAccount>)? = null,
     private val bitbucketApi: BitbucketApi = BitbucketApi(),
+    private val githubApi: GitHubApi = GitHubApi(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     fun observeRepos(): Flow<List<Repo>> = dao.observeAll()
@@ -213,9 +215,21 @@ class RepoRepository(
     suspend fun listClonableBitbucketRepos(account: OAuthAccount): List<RemoteRepo> =
         withContext(ioDispatcher) {
             val remote = bitbucketApi.listRepositories(account.accessToken).getOrThrow()
-            val cloned = observeRepos().first().map { normalizeRepoUrl(it.url) }.toSet()
-            remote.filter { normalizeRepoUrl(it.cloneUrl) !in cloned }
+            unregistered(remote)
         }
+
+    /** OAuth でアクセス可能な GitHub リポのうち、未登録(=clone 済みでない)ものを返す。 */
+    suspend fun listClonableGitHubRepos(account: OAuthAccount): List<RemoteRepo> =
+        withContext(ioDispatcher) {
+            val remote = githubApi.listRepositories(account.accessToken).getOrThrow()
+            unregistered(remote)
+        }
+
+    /** リモートリポ一覧から、URL 正規化で既存登録と重複するものを除く。 */
+    private suspend fun unregistered(remote: List<RemoteRepo>): List<RemoteRepo> {
+        val cloned = observeRepos().first().map { normalizeRepoUrl(it.url) }.toSet()
+        return remote.filter { normalizeRepoUrl(it.cloneUrl) !in cloned }
+    }
 
     suspend fun listBranches(repo: Repo): List<BranchInfo> = withContext(ioDispatcher) {
         jgit.listBranches(workDir(repo))

@@ -34,6 +34,8 @@ android {
 
         buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_ID", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_ID", "BITBUCKET_OAUTH_ID")}\"")
         buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_SECRET", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_SECRET", "BITBUCKET_OAUTH_SECRET")}\"")
+        // GitHub Device Flow は client_id のみ（secret 不要・失効しない user token を使う）。
+        buildConfigField("String", "GITHUB_OAUTH_CLIENT_ID", "\"${secretProp("GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_ID")}\"")
     }
 
     buildTypes {

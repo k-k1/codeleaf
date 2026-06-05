@@ -47,17 +47,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.k1.gitreader.data.NewRepo
 import com.k1.gitreader.data.db.AuthType
 import com.k1.gitreader.data.db.GitHost
 import com.k1.gitreader.data.db.ThemeMode
+import com.k1.gitreader.data.oauth.GitHubDeviceCode
 import com.k1.gitreader.data.oauth.OAuthAccount
 import com.k1.gitreader.data.oauth.RemoteRepo
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 
 /** 認証方法（アコーディオンの選択肢）。 */
 private enum class AuthMethod { OAUTH, TOKEN }
@@ -72,7 +78,11 @@ fun AddRepoScreen(
     bitbucketOAuthAvailable: Boolean = false,
     onStartBitbucketOAuth: () -> Unit = {},
     oauthResult: Flow<Result<OAuthAccount>> = emptyFlow(),
-    loadBitbucketRepos: suspend (OAuthAccount) -> Result<List<RemoteRepo>> = { Result.success(emptyList()) },
+    githubOAuthAvailable: Boolean = false,
+    requestGitHubDeviceCode: suspend () -> Result<GitHubDeviceCode> = { Result.failure(IllegalStateException()) },
+    pollGitHubToken: suspend (GitHubDeviceCode) -> Result<OAuthAccount> = { Result.failure(IllegalStateException()) },
+    onOpenUrl: (String) -> Unit = {},
+    loadOAuthRepos: suspend (OAuthAccount) -> Result<List<RemoteRepo>> = { Result.success(emptyList()) },
 ) {
     var host by remember { mutableStateOf(GitHost.GITHUB) }
     var url by remember { mutableStateOf("") }
@@ -83,6 +93,10 @@ fun AddRepoScreen(
     var theme by remember { mutableStateOf(defaultTheme) }
     var oauth by remember { mutableStateOf<OAuthAccount?>(null) }
     var oauthError by remember { mutableStateOf<String?>(null) }
+    // GitHub Device Flow: device/code 取得後〜承認待ちの間だけ非 null。
+    var deviceCode by remember { mutableStateOf<GitHubDeviceCode?>(null) }
+    var githubLoggingIn by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     // 認証方法。OAuth が使える Bitbucket では既定 OAUTH、それ以外は TOKEN。
     var authMethod by remember { mutableStateOf(AuthMethod.OAUTH) }
     // OAuth ログイン後に取得する clone 可能リポと選択状態。
@@ -105,15 +119,38 @@ fun AddRepoScreen(
     LaunchedEffect(oauth) {
         val account = oauth ?: return@LaunchedEffect
         reposLoading = true; repoLoadError = null; selectedRepo = null; repoOptions = emptyList()
-        loadBitbucketRepos(account).fold(
+        loadOAuthRepos(account).fold(
             onSuccess = { repoOptions = it },
             onFailure = { repoLoadError = it.message ?: "リポジトリ一覧の取得に失敗しました" },
         )
         reposLoading = false
     }
 
-    // OAuth を選べる(=アコーディオン表示する)のは Bitbucket かつ OAuth 設定済みのときだけ。
-    val showAccordion = host == GitHost.BITBUCKET && bitbucketOAuthAvailable
+    // GitHub Device Flow を開始：device/code 取得 → ブラウザを開く → 承認をポーリング。
+    fun startGitHubLogin() {
+        scope.launch {
+            githubLoggingIn = true; oauthError = null; oauth = null
+            requestGitHubDeviceCode().fold(
+                onSuccess = { code ->
+                    deviceCode = code
+                    onOpenUrl(code.verificationUri)
+                    pollGitHubToken(code).fold(
+                        onSuccess = { oauth = it },
+                        onFailure = { oauthError = it.message ?: "ログインに失敗しました" },
+                    )
+                },
+                onFailure = { oauthError = it.message ?: "ログインの開始に失敗しました" },
+            )
+            deviceCode = null; githubLoggingIn = false
+        }
+    }
+
+    // OAuth を選べる(=アコーディオン表示する)のは OAuth 設定済みのホストのとき。
+    val oauthAvailableForHost = when (host) {
+        GitHost.BITBUCKET -> bitbucketOAuthAvailable
+        GitHost.GITHUB -> githubOAuthAvailable
+    }
+    val showAccordion = oauthAvailableForHost
     val effectiveMethod = if (showAccordion) authMethod else AuthMethod.TOKEN
     val usernameRequired = host == GitHost.BITBUCKET && effectiveMethod == AuthMethod.TOKEN
     val canSubmit = !status.busy && when (effectiveMethod) {
@@ -147,31 +184,43 @@ fun AddRepoScreen(
                         selected = host == h,
                         onClick = {
                             host = h
-                            // ホストを離れたら OAuth ログイン状態を破棄（host とトークンの不整合を防ぐ）
-                            if (h != GitHost.BITBUCKET) { oauth = null; oauthError = null }
-                            // Bitbucket(OAuth 可)に入ったら既定 OAuth、それ以外はトークン。
-                            authMethod = if (h == GitHost.BITBUCKET && bitbucketOAuthAvailable) {
-                                AuthMethod.OAUTH
-                            } else {
-                                AuthMethod.TOKEN
+                            // ホストを切り替えたら OAuth ログイン状態を破棄（host とトークンの不整合を防ぐ）
+                            oauth = null; oauthError = null; deviceCode = null
+                            selectedRepo = null; repoOptions = emptyList()
+                            // OAuth が使えるホストは既定 OAuth、それ以外はトークン。
+                            val oauthForHost = when (h) {
+                                GitHost.BITBUCKET -> bitbucketOAuthAvailable
+                                GitHost.GITHUB -> githubOAuthAvailable
                             }
+                            authMethod = if (oauthForHost) AuthMethod.OAUTH else AuthMethod.TOKEN
                         },
                         shape = SegmentedButtonDefaults.itemShape(i, GitHost.entries.size),
                     ) { Text(h.name.lowercase()) }
                 }
             }
 
-            // 認証方法（ホストのタブ直下・上部に配置）。Bitbucket かつ OAuth 設定済みのときだけ
+            // 認証方法（ホストのタブ直下・上部に配置）。OAuth 設定済みホストのときだけ
             // アコーディオンで OAuth / トークンを選ばせる。それ以外はトークン入力のみ。
             Text("認証方法")
             if (showAccordion) {
                 AuthMethodAccordion(
                     method = authMethod,
                     onSelect = { authMethod = it },
+                    oauthTitle = "${host.name.lowercase().replaceFirstChar { it.uppercase() }} でログイン（OAuth）",
                     oauthContent = {
                         if (oauth == null) {
-                            OutlinedButton(onClick = onStartBitbucketOAuth, modifier = Modifier.fillMaxWidth()) {
-                                Text("Bitbucket でログイン")
+                            // 未ログイン：Bitbucket は Custom Tabs リダイレクト、GitHub は Device Flow。
+                            when (host) {
+                                GitHost.BITBUCKET ->
+                                    OutlinedButton(onClick = onStartBitbucketOAuth, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Bitbucket でログイン")
+                                    }
+                                GitHost.GITHUB -> GitHubLoginPanel(
+                                    deviceCode = deviceCode,
+                                    loggingIn = githubLoggingIn,
+                                    onStart = { startGitHubLogin() },
+                                    onOpenUrl = onOpenUrl,
+                                )
                             }
                         } else {
                             Row(
@@ -180,7 +229,14 @@ fun AddRepoScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text("✓ ログイン済み", color = MaterialTheme.colorScheme.primary)
-                                TextButton(onClick = onStartBitbucketOAuth) { Text("再ログイン") }
+                                TextButton(
+                                    onClick = {
+                                        when (host) {
+                                            GitHost.BITBUCKET -> onStartBitbucketOAuth()
+                                            GitHost.GITHUB -> startGitHubLogin()
+                                        }
+                                    },
+                                ) { Text("再ログイン") }
                             }
                             RepoDropdown(
                                 options = repoOptions,
@@ -202,7 +258,7 @@ fun AddRepoScreen(
                             url = url, onUrl = { url = it; if (!nameEdited) name = repoNameFromUrl(it) },
                             username = username, onUsername = { username = it },
                             token = token, onToken = { token = it },
-                            usernameRequired = true, // token 方式の Bitbucket は username 必須
+                            usernameRequired = host == GitHost.BITBUCKET, // token 方式の Bitbucket は username 必須
                         )
                     },
                 )
@@ -281,6 +337,7 @@ fun AddRepoScreen(
 private fun AuthMethodAccordion(
     method: AuthMethod,
     onSelect: (AuthMethod) -> Unit,
+    oauthTitle: String,
     oauthContent: @Composable () -> Unit,
     tokenContent: @Composable () -> Unit,
 ) {
@@ -290,7 +347,7 @@ private fun AuthMethodAccordion(
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
     ) {
         AccordionItem(
-            title = "Bitbucket でログイン（OAuth）",
+            title = oauthTitle,
             selected = method == AuthMethod.OAUTH,
             onClick = { onSelect(AuthMethod.OAUTH) },
             content = oauthContent,
@@ -373,6 +430,61 @@ private fun RepoDropdown(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * GitHub Device Flow のログインパネル。
+ * 初期はボタン → 押下で device/code を取得し user_code を表示 → ブラウザで入力させ承認をポーリング。
+ */
+@Composable
+private fun GitHubLoginPanel(
+    deviceCode: GitHubDeviceCode?,
+    loggingIn: Boolean,
+    onStart: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+) {
+    val clipboard = LocalClipboardManager.current
+    when {
+        deviceCode != null -> {
+            Text(
+                "ブラウザで下のコードを入力してログインを承認してください。",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Box(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                    .clickable { clipboard.setText(AnnotatedString(deviceCode.userCode)) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    deviceCode.userCode,
+                    style = MaterialTheme.typography.headlineSmall,
+                    letterSpacing = 4.sp,
+                )
+            }
+            Text(
+                "タップでコピー / 入力先: ${deviceCode.verificationUri}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = { onOpenUrl(deviceCode.verificationUri) }, modifier = Modifier.fillMaxWidth()) {
+                Text("ブラウザを開く")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text("承認を待っています...", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        loggingIn -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text("コードを取得中...", style = MaterialTheme.typography.bodySmall)
+        }
+        else -> OutlinedButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
+            Text("GitHub でログイン")
         }
     }
 }

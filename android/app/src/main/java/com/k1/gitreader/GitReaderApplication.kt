@@ -10,6 +10,7 @@ import com.k1.gitreader.data.db.MIGRATION_1_2
 import com.k1.gitreader.data.db.MIGRATION_2_3
 import com.k1.gitreader.data.oauth.BitbucketOAuthService
 import com.k1.gitreader.data.oauth.BitbucketOAuthTokenExchanger
+import com.k1.gitreader.data.oauth.GitHubDeviceFlowService
 import com.k1.gitreader.data.oauth.OAuthAccount
 import com.k1.gitreader.data.oauth.OAuthSessionStore
 import com.k1.gitreader.git.JgitClient
@@ -37,6 +38,14 @@ class AppContainer(app: Application) {
                 session = OAuthSessionStore(app),
                 clientId = BuildConfig.BITBUCKET_OAUTH_CLIENT_ID,
             )
+        } else {
+            null
+        }
+
+    // GitHub: client_id が BuildConfig にあれば Device Flow を有効化（secret 不要）。
+    val githubOAuthService: GitHubDeviceFlowService? =
+        if (BuildConfig.GITHUB_OAUTH_CLIENT_ID.isNotBlank()) {
+            GitHubDeviceFlowService(clientId = BuildConfig.GITHUB_OAUTH_CLIENT_ID)
         } else {
             null
         }
