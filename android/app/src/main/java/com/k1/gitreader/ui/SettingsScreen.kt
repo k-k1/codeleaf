@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.k1.gitreader.data.AppSettings
 import com.k1.gitreader.data.FontScale
+import com.k1.gitreader.data.IconSet
 import com.k1.gitreader.data.LinkOpenMode
 import com.k1.gitreader.data.TableMode
 import com.k1.gitreader.data.db.ThemeMode
@@ -42,6 +43,13 @@ private fun themeLabel(m: ThemeMode) = when (m) {
     ThemeMode.SYSTEM -> "システム"
     ThemeMode.LIGHT -> "ライト"
     ThemeMode.DARK -> "ダーク"
+}
+
+private fun iconSetLabel(s: IconSet) = when (s) {
+    IconSet.DEVICON -> "Devicon"
+    IconSet.MATERIAL -> "Material"
+    IconSet.VSCODE -> "VS Code"
+    IconSet.SETI -> "Seti"
 }
 
 private fun fontLabel(f: FontScale) = when (f) {
@@ -62,6 +70,7 @@ fun SettingsScreen(
     onSetShowLineNumbers: (Boolean) -> Unit,
     onSetTableMode: (TableMode) -> Unit,
     onSetStickyHeadings: (Boolean) -> Unit,
+    onSetIconSet: (IconSet) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -113,6 +122,23 @@ fun SettingsScreen(
                             onClick = { onSetFontScale(f) },
                             shape = SegmentedButtonDefaults.itemShape(i, FontScale.entries.size),
                         ) { Text(fontLabel(f)) }
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("ファイルアイコン", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "ファイル一覧の拡張子アイコンの見た目。Material/VS Code はフルカラー、Seti は単色グリフ。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    IconSet.entries.forEachIndexed { i, s ->
+                        SegmentedButton(
+                            selected = settings.iconSet == s,
+                            onClick = { onSetIconSet(s) },
+                            shape = SegmentedButtonDefaults.itemShape(i, IconSet.entries.size),
+                        ) { Text(iconSetLabel(s)) }
                     }
                 }
             }

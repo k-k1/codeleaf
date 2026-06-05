@@ -58,6 +58,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.k1.gitreader.R
 import com.k1.gitreader.data.FileEntry
+import com.k1.gitreader.data.IconSet
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
 
@@ -77,6 +78,7 @@ fun FileBrowserScreen(
     onOpenFile: (String) -> Unit,
     onSwitchBranch: (String) -> Unit,
     onBack: () -> Unit,
+    iconSet: IconSet = IconSet.DEVICON,
 ) {
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
@@ -185,7 +187,7 @@ fun FileBrowserScreen(
                     entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.fillMaxSize()) {
                         items(entries!!, key = { it.relPath }) { e ->
-                            EntryRow(e, onClick = {
+                            EntryRow(e, iconSet, onClick = {
                                 // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
                                 if (!locked) {
                                     when {
@@ -237,13 +239,13 @@ fun FileBrowserScreen(
 }
 
 @Composable
-private fun EntryRow(entry: FileEntry, onClick: () -> Unit) {
+private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        FileEntryIcon(entry)
+        FileEntryIcon(entry, iconSet)
         Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -251,18 +253,11 @@ private fun EntryRow(entry: FileEntry, onClick: () -> Unit) {
 private val ICON_SIZE = 24.dp
 
 @Composable
-private fun FileEntryIcon(entry: FileEntry) {
+private fun FileEntryIcon(entry: FileEntry, iconSet: IconSet) {
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     when {
         // submodule は git ロゴで「ネストした git リポジトリ」と分かるようにする
-        entry.isSubmodule -> AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(FileIcons.assetUri(DevIcon("git")))
-                .build(),
-            imageLoader = rememberDeviconLoader(),
-            contentDescription = "submodule",
-            modifier = Modifier.size(ICON_SIZE),
-        )
+        entry.isSubmodule -> BrandIcon(FileIcons.forKey(iconSet, "git"), "submodule", tint)
         entry.isDir -> Icon(
             painterResource(R.drawable.ic_folder),
             contentDescription = null,
@@ -276,37 +271,45 @@ private fun FileEntryIcon(entry: FileEntry) {
             tint = tint,
             modifier = Modifier.size(ICON_SIZE),
         )
-        else -> {
-            val icon = FileIcons.forFile(entry.name)
-            if (icon != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(FileIcons.assetUri(icon))
-                        .build(),
-                    imageLoader = rememberDeviconLoader(),
-                    contentDescription = null,
-                    // 塗り色を持たない黒ロゴはテーマ色にティントして両テーマで視認させる
-                    colorFilter = if (icon.monochrome) ColorFilter.tint(tint) else null,
-                    modifier = Modifier.size(ICON_SIZE),
-                )
-            } else {
-                Icon(
-                    painterResource(R.drawable.ic_file_generic),
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(ICON_SIZE),
-                )
-            }
-        }
+        else -> BrandIcon(FileIcons.forFile(iconSet, entry.name), null, tint)
     }
 }
 
 /**
- * SVG をデコードできる Coil ImageLoader。Devicon のアセットは数十KB と小さいため
+ * ブランドアイコン(SVG)を描画する。spec が null(未対応 or セット未収録)のときは
+ * 汎用ファイルアイコンにフォールバックする。
+ */
+@Composable
+private fun BrandIcon(spec: FileIconSpec?, contentDescription: String?, fallbackTint: Color) {
+    if (spec == null) {
+        Icon(
+            painterResource(R.drawable.ic_file_generic),
+            contentDescription = contentDescription,
+            tint = fallbackTint,
+            modifier = Modifier.size(ICON_SIZE),
+        )
+        return
+    }
+    val colorFilter = when (spec.tint) {
+        IconTint.NONE -> null
+        IconTint.ON_SURFACE -> ColorFilter.tint(fallbackTint)
+        IconTint.FIXED -> ColorFilter.tint(Color(spec.color))
+    }
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current).data(spec.uri).build(),
+        imageLoader = rememberSvgLoader(),
+        contentDescription = contentDescription,
+        colorFilter = colorFilter,
+        modifier = Modifier.size(ICON_SIZE),
+    )
+}
+
+/**
+ * SVG をデコードできる Coil ImageLoader。アイコンのアセットは数十KB と小さいため
  * Application 単位で 1 つあれば十分。Activity の context から remember する。
  */
 @Composable
-private fun rememberDeviconLoader(): ImageLoader {
+private fun rememberSvgLoader(): ImageLoader {
     val context = LocalContext.current
     return remember(context.applicationContext) {
         ImageLoader.Builder(context.applicationContext)

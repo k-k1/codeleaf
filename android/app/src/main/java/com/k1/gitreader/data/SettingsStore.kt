@@ -14,6 +14,14 @@ enum class LinkOpenMode { BROWSER, IN_APP }
 /** Markdown テーブルの表示形式。INLINE=Markwon 既定の本文埋込、SCROLLABLE=横スクロール＋ヘッダ固定。 */
 enum class TableMode { INLINE, SCROLLABLE }
 
+/** ファイル一覧のアイコンセット。dir は assets 配下のフォルダ名(<dir>/<種別キー>.svg)。 */
+enum class IconSet(val dir: String) {
+    DEVICON("devicon"),
+    MATERIAL("material"),
+    VSCODE("vscode_icons"),
+    SETI("seti"),
+}
+
 /** アプリ全体のデフォルト設定。 */
 data class AppSettings(
     val defaultTheme: ThemeMode = ThemeMode.SYSTEM,
@@ -23,6 +31,7 @@ data class AppSettings(
     val showLineNumbers: Boolean = false,
     val tableMode: TableMode = TableMode.INLINE,
     val stickyHeadings: Boolean = true,
+    val iconSet: IconSet = IconSet.DEVICON,
 )
 
 /**
@@ -44,6 +53,7 @@ class SettingsStore(context: Context) {
         showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
         tableMode = enumOrDefault(prefs.getString(KEY_TABLE, null), TableMode.INLINE),
         stickyHeadings = prefs.getBoolean(KEY_STICKY, true),
+        iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.DEVICON),
     )
 
     fun setDefaultTheme(mode: ThemeMode) {
@@ -81,6 +91,11 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(stickyHeadings = on)
     }
 
+    fun setIconSet(set: IconSet) {
+        prefs.edit().putString(KEY_ICONSET, set.name).apply()
+        _settings.value = _settings.value.copy(iconSet = set)
+    }
+
     private companion object {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
@@ -89,6 +104,7 @@ class SettingsStore(context: Context) {
         const val KEY_LINENUM = "show_line_numbers"
         const val KEY_TABLE = "table_mode"
         const val KEY_STICKY = "sticky_headings"
+        const val KEY_ICONSET = "icon_set"
 
         inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default

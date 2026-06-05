@@ -40,8 +40,10 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。
   表ヘッダ・見出しの固定は `graphicsLayer.translationY + zIndex + positionInRoot` による擬似スティッキー。
-- **ファイルアイコン**: 拡張子 → Devicon SVG(`assets/devicon`, Coil で描画)。黒系ロゴは onSurface にティント。
-  フォルダ/未対応拡張子は `res/drawable` のベクターにフォールバック(`ui/FileIcons.kt`)。
+- **ファイルアイコン**: 拡張子 → 種別キー → `assets/<セット>/<キー>.svg` を Coil で描画(`ui/FileIcons.kt`)。
+  セットは設定で切替(Devicon/Material/VS Code/Seti, `SettingsStore.IconSet`)。Devicon の黒ロゴと Seti 全体は
+  ティント(Seti はタイプ別 `SETI_COLOR`)。セット未収録キー(Seti の groovy/nodejs)・フォルダ・未対応は
+  `res/drawable` ベクターにフォールバック。出典/License は `assets/ICON_ATTRIBUTION.md`。
 - **E2E**: `Git.init().setInitialBranch("main")` で端末上にローカルリポを作り `file パス`で clone(NW 不要・credentials 無視)。
   @Before で `container.repoRepository` の既存リポを一掃して決定論化。
 

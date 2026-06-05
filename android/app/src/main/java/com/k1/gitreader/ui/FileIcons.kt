@@ -1,71 +1,155 @@
 package com.k1.gitreader.ui
 
+import com.k1.gitreader.data.IconSet
+
 /**
- * 拡張子(または特定ファイル名)から Devicon のブランドロゴ(assets/devicon 配下の svg)を引く。
- * 対応しない拡張子は null を返し、呼び出し側で汎用ファイルアイコンにフォールバックする。
+ * 拡張子(または特定ファイル名)からブランドアイコンを引く。アイコンは複数セットから選べ
+ * (Devicon / Material / VS Code / Seti)、共通の「種別キー(typeKey, 例: "kotlin")」を
+ * 各セットの assets/<dir>/<種別キー>.svg に対応付ける。
  *
- * monochrome=true のロゴ(塗り色を持たず黒で描画される markdown/rust など)は、
- * ダーク/ライト両テーマで視認できるよう描画側で onSurface 色にティントする。
+ * セットが未収録の種別キー(例: Seti には groovy/nodejs が無い)は null を返し、
+ * 呼び出し側で汎用ファイルアイコンにフォールバックする。
  */
-data class DevIcon(val asset: String, val monochrome: Boolean = false)
+
+/** アイコンへ適用するティント方針。 */
+enum class IconTint {
+    /** ティントしない(セット同梱の色をそのまま描画)。 */
+    NONE,
+
+    /** テーマの onSurface 系色でティント(塗り色を持たない黒ロゴ用)。 */
+    ON_SURFACE,
+
+    /** [FileIconSpec.color] の固定色でティント(Seti のタイプ別カラー用)。 */
+    FIXED,
+}
+
+/** 解決済みアイコン。[uri] は Coil に渡す asset URI。[color] は tint=FIXED のとき使う ARGB。 */
+data class FileIconSpec(val uri: String, val tint: IconTint, val color: Long = 0L)
 
 object FileIcons {
-    private const val DIR = "file:///android_asset/devicon"
 
-    /** Devicon の asset へのフル URI(Coil のモデルに渡す)。 */
-    fun assetUri(icon: DevIcon): String = "$DIR/${icon.asset}.svg"
+    /** 拡張子 → 種別キー(セット非依存)。 */
+    private val byExt: Map<String, String> = buildMap {
+        fun reg(key: String, vararg exts: String) = exts.forEach { this[it] = key }
 
-    /** 拡張子マップ。値は assets/devicon/<asset>.svg に対応。 */
-    private val byExt: Map<String, DevIcon> = buildMap {
-        fun put(icon: DevIcon, vararg exts: String) = exts.forEach { put(it, icon) }
-
-        put(DevIcon("kotlin"), "kt", "kts")
-        put(DevIcon("java"), "java", "jar", "class")
-        put(DevIcon("groovy"), "groovy")
-        put(DevIcon("gradle"), "gradle")
-        put(DevIcon("scala"), "scala", "sc")
-        put(DevIcon("c"), "c", "h")
-        put(DevIcon("cplusplus"), "cpp", "cc", "cxx", "hpp", "hh")
-        put(DevIcon("csharp"), "cs")
-        put(DevIcon("javascript"), "js", "mjs", "cjs")
-        put(DevIcon("typescript"), "ts", "mts", "cts")
-        put(DevIcon("react"), "jsx", "tsx")
-        put(DevIcon("css3"), "css")
-        put(DevIcon("sass"), "scss", "sass")
-        put(DevIcon("less"), "less")
-        put(DevIcon("html5"), "html", "htm", "xhtml")
-        put(DevIcon("xml"), "xml", "svg", "plist")
-        put(DevIcon("python"), "py", "pyw", "pyi")
-        put(DevIcon("go"), "go")
-        put(DevIcon("swift"), "swift")
-        put(DevIcon("dart"), "dart")
-        put(DevIcon("markdown", monochrome = true), "md", "markdown", "mdx")
-        put(DevIcon("ruby"), "rb", "gemspec")
-        put(DevIcon("php"), "php")
-        put(DevIcon("rust", monochrome = true), "rs")
-        put(DevIcon("bash"), "sh", "bash", "zsh")
-        put(DevIcon("vuejs"), "vue")
-        put(DevIcon("nodejs"), "node")
-        put(DevIcon("json", monochrome = true), "json")
-        put(DevIcon("yaml", monochrome = true), "yml", "yaml")
-        put(DevIcon("docker"), "dockerfile")
+        reg("kotlin", "kt", "kts")
+        reg("java", "java", "jar", "class")
+        reg("groovy", "groovy")
+        reg("gradle", "gradle")
+        reg("scala", "scala", "sc")
+        reg("c", "c", "h")
+        reg("cplusplus", "cpp", "cc", "cxx", "hpp", "hh")
+        reg("csharp", "cs")
+        reg("javascript", "js", "mjs", "cjs")
+        reg("typescript", "ts", "mts", "cts")
+        reg("react", "jsx", "tsx")
+        reg("css3", "css")
+        reg("sass", "scss", "sass")
+        reg("less", "less")
+        reg("html5", "html", "htm", "xhtml")
+        reg("xml", "xml", "svg", "plist")
+        reg("python", "py", "pyw", "pyi")
+        reg("go", "go")
+        reg("swift", "swift")
+        reg("dart", "dart")
+        reg("markdown", "md", "markdown", "mdx")
+        reg("ruby", "rb", "gemspec")
+        reg("php", "php")
+        reg("rust", "rs")
+        reg("bash", "sh", "bash", "zsh")
+        reg("vuejs", "vue")
+        reg("nodejs", "node")
+        reg("json", "json")
+        reg("yaml", "yml", "yaml")
+        reg("docker", "dockerfile")
     }
 
-    /** 拡張子に依存しない特定ファイル名(完全一致, 小文字)。 */
-    private val byName: Map<String, DevIcon> = mapOf(
-        "dockerfile" to DevIcon("docker"),
-        ".gitignore" to DevIcon("git"),
-        ".gitattributes" to DevIcon("git"),
-        ".gitmodules" to DevIcon("git"),
-        "build.gradle" to DevIcon("gradle"),
-        "build.gradle.kts" to DevIcon("gradle"),
-        "settings.gradle.kts" to DevIcon("gradle"),
+    /** 拡張子に依存しない特定ファイル名(完全一致, 小文字) → 種別キー。 */
+    private val byName: Map<String, String> = mapOf(
+        "dockerfile" to "docker",
+        ".gitignore" to "git",
+        ".gitattributes" to "git",
+        ".gitmodules" to "git",
+        "build.gradle" to "gradle",
+        "build.gradle.kts" to "gradle",
+        "settings.gradle.kts" to "gradle",
     )
 
-    /** ファイル名からアイコンを推定する。未対応は null。 */
-    fun forFile(name: String): DevIcon? {
+    /** 全種別キー(どのセットも基本これを収録。Seti のみ一部欠落)。 */
+    private val allKeys: Set<String> = (byExt.values + byName.values).toSet()
+
+    /** ファイル名から種別キーを引く(セット非依存)。未対応は null。 */
+    fun typeKey(name: String): String? {
         byName[name.lowercase()]?.let { return it }
         val ext = name.substringAfterLast('.', "").lowercase()
         return byExt[ext]
     }
+
+    /** 指定セットでファイル用アイコンを解決。未対応 or セット未収録は null。 */
+    fun forFile(set: IconSet, name: String): FileIconSpec? =
+        typeKey(name)?.let { spec(set, it) }
+
+    /** 種別キーを直接指定して解決(submodule の "git" 等)。セット未収録は null。 */
+    fun forKey(set: IconSet, key: String): FileIconSpec? = spec(set, key)
+
+    private fun spec(set: IconSet, key: String): FileIconSpec? {
+        if (key !in coverage(set)) return null
+        val uri = "file:///android_asset/${set.dir}/$key.svg"
+        return when (set) {
+            // Devicon: 塗り色を持たない黒ロゴだけテーマ色にティント。
+            IconSet.DEVICON ->
+                FileIconSpec(uri, if (key in DEVICON_MONO) IconTint.ON_SURFACE else IconTint.NONE)
+            // Material / VS Code: すべてフルカラー同梱なのでティント不要。
+            IconSet.MATERIAL, IconSet.VSCODE ->
+                FileIconSpec(uri, IconTint.NONE)
+            // Seti: 単色グリフをタイプ別の Seti カラーで一律ティント(黒デフォルトのアイコンも可視化)。
+            IconSet.SETI ->
+                FileIconSpec(uri, IconTint.FIXED, SETI_COLOR[key] ?: SETI_DEFAULT)
+        }
+    }
+
+    /** セットが収録する種別キー集合。Seti は groovy/nodejs を欠くため除外。 */
+    private fun coverage(set: IconSet): Set<String> = when (set) {
+        IconSet.SETI -> allKeys - "groovy" - "nodejs"
+        else -> allKeys
+    }
+
+    /** Devicon で塗り色を持たず黒で描画される(=ティントが要る)種別キー。 */
+    private val DEVICON_MONO = setOf("markdown", "rust", "json", "yaml")
+
+    /** Seti のデフォルト色(@white)。マップに無いキーはこれを使う。 */
+    private const val SETI_DEFAULT = 0xFFD4D7D6
+
+    /** Seti のタイプ別カラー(seti-ui mapping.less のパレットに準拠)。 */
+    private val SETI_COLOR: Map<String, Long> = mapOf(
+        "kotlin" to 0xFFE37933,     // orange
+        "java" to 0xFFCC3E44,       // red
+        "gradle" to 0xFF519ABA,     // blue
+        "scala" to 0xFFCC3E44,      // red
+        "c" to 0xFF519ABA,          // blue
+        "cplusplus" to 0xFF519ABA,  // blue
+        "csharp" to 0xFF519ABA,     // blue
+        "javascript" to 0xFFCBCB41, // yellow
+        "typescript" to 0xFF519ABA, // blue
+        "react" to 0xFF519ABA,      // blue
+        "css3" to 0xFF519ABA,       // blue
+        "sass" to 0xFFF55385,       // pink
+        "less" to 0xFF519ABA,       // blue
+        "html5" to 0xFFE37933,      // orange
+        "xml" to 0xFFE37933,        // orange
+        "python" to 0xFF519ABA,     // blue
+        "go" to 0xFF519ABA,         // blue
+        "swift" to 0xFFE37933,      // orange
+        "dart" to 0xFF519ABA,       // blue
+        "markdown" to 0xFF519ABA,   // blue
+        "ruby" to 0xFFCC3E44,       // red
+        "php" to 0xFFA074C4,        // purple
+        "rust" to 0xFFD4D7D6,       // grey-light
+        "bash" to 0xFF8DC149,       // green
+        "vuejs" to 0xFF8DC149,      // green
+        "json" to 0xFFCBCB41,       // yellow
+        "docker" to 0xFF519ABA,     // blue
+        "git" to 0xFF687D8A,        // muted slate (@ignore 相当)
+        // yaml は Seti 未マッピング → SETI_DEFAULT(white)
+    )
 }
