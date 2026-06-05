@@ -30,7 +30,8 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
 ## ハマりどころ(コードから読み取りにくい点)
 - **ナビ/多ペイン**(`ui/GitReaderApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
   幅 `BoxWithConstraints` で `>=600dp`=2ペイン / `>=960dp`=3ペイン(左=リポ一覧レール｜中=一覧｜右=詳細)、未満は全画面。
-  3ペインのレールは `RepoListScreen` 再利用＋`railCollapsed`(rememberSaveable)で開閉、テーマは レール=default/中右=repo に分割。
+  3ペインのレールは `RepoListScreen` 再利用＋`railCollapsed`(rememberSaveable)で開閉、畳むと `IconRail`(リポ=`RepoAvatar` 2文字+色/下に編集or＋・設定)。テーマは レール=default/中右=repo に分割。
+  履歴(`Screen.History`)もグラフ同様に2/3ペイン(左=一覧/右=`FileDiffPane`、`historySelected`)。リポ追加の＋は一覧0件時のみ右上、1件以上は `RepoEditScreen` の右上。
   戻るは `handleBack` に一本化(先に detailStack を戻す)。`MainActivity` の `configChanges` で回転は状態保持。
   **状態永続化**: `Screen`/`Repo`/`GraphCommit` を `@Parcelize`(`kotlin("plugin.parcelize")`, Instant は `InstantParceler`)、
   `backStack`/`detailStack`/`graphSelected` を `rememberSaveable` でプロセス死から復元。
@@ -60,6 +61,8 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
   失効間近は `RepoRepository.rememberedOAuthSession` が refresh して保存し直す。各リポの git 認証は従来どおり clone 時に `oauth_<id>` へスナップショット。
 - **同期**: `fetch → reset --hard origin/<branch> → clean -fdx`(ローカル変更は破棄)。
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
+- **diff 表示**(`DiffScreen.kt` `DiffText`/`parseDiffRows`): `diff --git`/index/---/+++ 等のノイズ行を畳みファイル名ヘッダ帯に
+  (非ASCIIは `gitUnquotePath` で8進復元)。ファイル毎に折りたたみ(`groupDiffByFile`)、追加緑/削除赤背景、@@ から行番号ガター、長行は自動改行。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。
   表ヘッダ・見出しの固定は `graphicsLayer.translationY + zIndex + positionInRoot` による擬似スティッキー。
 - **ファイルアイコン**: 拡張子 → 種別キー → `assets/<セット>/<キー>.svg` を Coil で描画(`ui/FileIcons.kt`)。
