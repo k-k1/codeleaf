@@ -313,14 +313,14 @@ fun GitReaderApp() {
             }
 
             @Composable
-            fun BrowserPane(multiPane: Boolean) {
+            fun BrowserPane(threePane: Boolean) {
                 // ← の挙動:
-                //  1ペイン: 常に表示。ルート=リポ一覧へ / それ以外=ひとつ上の階層へ。
-                //  2/3ペイン: ルートでは非表示 / それ以外=ひとつ上の階層へ。
+                //  サブフォルダ: どのペインでもひとつ上の階層へ。
+                //  ルート: 3ペインのみ非表示(レールがリポ切替/退出を担う)、1/2ペインはリポ一覧へ。
                 val backAction: (() -> Unit)? = when {
-                    !multiPane -> ({ if (current.path.isEmpty()) leaveRepo() else goUp() })
                     current.path.isNotEmpty() -> ({ goUp() })
-                    else -> null
+                    threePane -> null
+                    else -> ({ leaveRepo() })
                 }
                 FileBrowserScreen(
                     repo = repo,
@@ -384,7 +384,7 @@ fun GitReaderApp() {
                 fun ContentPanes() {
                     if (!two) {
                         // 1ペイン: ビューア←=ファイルを閉じる / ブラウザ←=上の階層 or リポ退出。
-                        if (file != null) ViewerPane(file, showBack = true) else BrowserPane(multiPane = false)
+                        if (file != null) ViewerPane(file, showBack = true) else BrowserPane(threePane = false)
                     } else {
                         // ファイルを開いている時だけ一覧を畳める(未選択時は一覧を出す)。
                         val showList = file == null || !listCollapsed
@@ -392,7 +392,7 @@ fun GitReaderApp() {
                         val browserWeight = if (three) 0.3f else 0.4f
                         Row(Modifier.fillMaxSize()) {
                             if (showList) {
-                                Box(Modifier.weight(browserWeight)) { BrowserPane(multiPane = true) }
+                                Box(Modifier.weight(browserWeight)) { BrowserPane(threePane = three) }
                                 VerticalDivider()
                             }
                             Box(Modifier.weight(1f - browserWeight)) {
