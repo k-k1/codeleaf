@@ -12,7 +12,7 @@
 ## 技術スタック
 Kotlin + Jetpack Compose(Material3) / MVVM + StateFlow / 手動DI(`GitReaderApplication.container = AppContainer`)。
 JGit 7.6 / Markwon 4.6.2(+WebView で Mermaid) / Prism4j(kapt) / Room / token は AndroidKeystore 暗号化。
-package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/app/src/main/java/com/k1/gitreader/`(data/git/render/ui)。
+package `jp.lazmix.codeleaf` / minSdk 33 / targetSdk 35。ソースは `android/app/src/main/java/jp/lazmix/codeleaf/`(data/git/render/ui)。
 
 ## ビルド / テスト (PowerShell・cd android 前提)
 - 環境: `$env:JAVA_HOME="C:\programs\java\jdk-21.0.9+10"; $env:ANDROID_SDK_ROOT="C:\Android\Sdk"`
@@ -47,7 +47,7 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
 - **認証種別**: `Repo.authType` = TOKEN(手入力 PAT/API token) / OAUTH。OAuth token は `TokenStore` の `oauth_<id>` に
   JSON 暗号化保存。git の username はホスト/種別で分岐(`gitUsernameFor`): Bitbucket OAuth=`x-token-auth`、GitHub=`x-access-token`。
 - **Bitbucket OAuth**(`data/oauth/`): Authorization Code Grant。client_id/secret は local.properties→BuildConfig(git管理外)。
-  redirect `gitreader://oauth` を `OAuthRedirectActivity` が受け、`BitbucketOAuthService` が code 交換。access token 1h 失効→
+  redirect `codeleaf://oauth` を `OAuthRedirectActivity` が受け、`BitbucketOAuthService` が code 交換。access token 1h 失効→
   `RepoRepository.credentialsFor` が sync 直前に refresh(同一リポ Mutex 内)。交換は `OAuthTokenExchanger` interface に隔離
   (将来バックエンド代行へ差し替え可)。PKCE/Device Flow 非対応。設定手順は `android/DEVELOPMENT.md` §9。
   OAuth ログイン後は URL 手入力でなく `BitbucketApi`(`/2.0/repositories?role=member`)で clone 可能リポを取得し

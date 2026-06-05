@@ -83,8 +83,8 @@ OAuth は `local.properties` に client_id/secret がある時だけ有効化さ
 
 1. Bitbucket Cloud → 対象 Workspace → **Workspace settings** → Apps and features → **OAuth clients**
    →「**Create OAuth client**」。
-   - Name: `git-reader`
-   - **Callback URL**: `gitreader://oauth`
+   - Name: `CodeLeaf`
+   - **Callback URL**: `codeleaf://oauth`
    - **Permissions**: Repositories → **Read**
 2. 発行された **Client ID / Secret** を `android/local.properties` に追記（git 管理外）:
    ```
@@ -95,7 +95,7 @@ OAuth は `local.properties` に client_id/secret がある時だけ有効化さ
    ログイン後に URL を入れて clone（手入力トークン不要）。access token は1時間で失効するが
    refresh token で自動更新される（再ログイン不要）。
 
-仕組み: 3-legged Authorization Code Grant。`gitreader://oauth` を `OAuthRedirectActivity` が受け、
+仕組み: 3-legged Authorization Code Grant。`codeleaf://oauth` を `OAuthRedirectActivity` が受け、
 `BitbucketOAuthService` が code をトークンに交換（`data/oauth/`）。token 交換は `OAuthTokenExchanger`
 interface に隔離してあり、将来「バックエンド代行」へ差し替え可能（公開配布時の secret 同梱対策）。
 
@@ -104,7 +104,7 @@ GitHub は **OAuth 2.0 Device Flow**（RFC 8628）を採用。**client_secret �
 `local.properties` には **client_id だけ**置けば有効化される（無くてもビルド可・fine-grained PAT は常用可）。
 
 1. GitHub → Settings → Developer settings → **OAuth Apps** → **New OAuth App**
-   - Application name: `git-reader`
+   - Application name: `CodeLeaf`
    - Homepage URL: 任意（例 `https://example.com`）
    - Authorization callback URL: 任意（Device Flow では未使用。例 `https://example.com/callback`）
    - 作成後、アプリ設定で **「Enable Device Flow」にチェック**。

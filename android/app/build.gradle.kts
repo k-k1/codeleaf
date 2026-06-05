@@ -21,11 +21,11 @@ fun secretProp(vararg names: String): String =
         .replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {
-    namespace = "com.k1.gitreader"
+    namespace = "jp.lazmix.codeleaf"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.k1.gitreader"
+        applicationId = "jp.lazmix.codeleaf"
         minSdk = 33
         targetSdk = 35
         versionCode = 1
