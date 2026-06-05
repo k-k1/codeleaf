@@ -1,0 +1,49 @@
+# CLAUDE.md
+
+> 毎セッションのコンテキストに読み込まれる。**高シグナルだけ**を簡潔に保つ。
+> 更新ルール: 1事実 = 1〜2行 / 重複・自明・git やコードから追える情報は書かない /
+> 詳細はメモリ `project-spec-v1`・`DESIGN.md`・`android/DEVELOPMENT.md` へ退避し、ここはポインタに。
+> **このファイルは 120 行を超えさせない**（超えそうなら削るか退避する）。
+
+## 何のアプリか
+複数 git リポ(GitHub / Bitbucket cloud)を clone し Markdown 中心に閲覧する **読み取り専用** Android
+リーダー。push / commit はしない。確定仕様・画面モックは `DESIGN.md`。
+
+## 技術スタック
+Kotlin + Jetpack Compose(Material3) / MVVM + StateFlow / 手動DI(`GitReaderApplication.container = AppContainer`)。
+JGit 7.6 / Markwon 4.6.2(+WebView で Mermaid) / Prism4j(kapt) / Room / token は AndroidKeystore 暗号化。
+package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/app/src/main/java/com/k1/gitreader/`(data/git/render/ui)。
+
+## ビルド / テスト (PowerShell・cd android 前提)
+- 環境: `$env:JAVA_HOME="C:\programs\java\jdk-21.0.9+10"; $env:ANDROID_SDK_ROOT="C:\Android\Sdk"`
+- ビルド: `.\gradlew.bat assembleDebug`
+- JVM単体: `.\gradlew.bat testDebugUnitTest --tests "<FQN>"`
+- 計装(GMD): `.\gradlew.bat pixel6Api35DebugAndroidTest [-Pandroid.testInstrumentationRunnerArguments.class=<FQN>]`
+- adb は `C:\Android\Sdk\platform-tools\adb.exe`。スクショは `adb shell screencap -p /sdcard/x.png; adb pull ...`
+  (PowerShell の `>` リダイレクトはバイナリを壊す)。
+
+## 進め方
+- 1機能 = 1スライス: 実装 → assembleDebug → (該当なら)JVM/GMD テスト → commit → push(origin/main 逐次)。
+- Write/Edit の file_path は**必ず絶対パス**(cwd=android だと相対は android/android/ に作られる)。
+- git は cwd ズレ回避に `git -C C:/private_workspace/git-reader ...`。コミット末尾に Co-Authored-By 行。
+
+## ハマりどころ(コードから読み取りにくい点)
+- **kapt** は `kotlin("kapt")` を **version なし**で適用(catalog alias は失敗)。
+  `configurations.all { exclude(group="org.jetbrains", module="annotations-java5") }` で dex 重複を回避。
+- **Prism4j 同梱言語のみ**ハイライト可(bash / typescript / rust は不可)。
+- **Markdown 本文は `AndroidView(TextView)`** で Compose セマンティクスから不可視 → 本文/リンクは Compose test で検証不可。
+  検証は (a)ロジックを純粋関数化し JVM 単体, (b)到達は Compose ノード(CodeView/表/frontmatter/見出し), (c)実機 uiautomator。
+- **リンク**: `setTextIsSelectable(true)` は MovementMethod を奪う → 使わず setMarkdown 後に `LinkMovementMethod` を明示。
+  相対 .md はアプリ内遷移・外部リンクは設定で CustomTabs / 外部ブラウザ。
+- **GitHub HTTPS 認証**: username 空だと 401 → `JgitClient.credentials` が `x-access-token` を補う。PAT は Contents: Read-only 必須。
+- **同期**: `fetch → reset --hard origin/<branch> → clean -fdx`(ローカル変更は破棄)。
+  `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
+- **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。
+  表ヘッダ・見出しの固定は `graphicsLayer.translationY + zIndex + positionInRoot` による擬似スティッキー。
+- **ファイルアイコン**: 拡張子 → Devicon SVG(`assets/devicon`, Coil で描画)。黒系ロゴは onSurface にティント。
+  フォルダ/未対応拡張子は `res/drawable` のベクターにフォールバック(`ui/FileIcons.kt`)。
+- **E2E**: `Git.init().setInitialBranch("main")` で端末上にローカルリポを作り `file パス`で clone(NW 不要・credentials 無視)。
+  @Before で `container.repoRepository` の既存リポを一掃して決定論化。
+
+## さらに詳しく
+設計判断の全体・全機能リスト・設定項目・テスト一覧は メモリ `project-spec-v1` と `android/DEVELOPMENT.md` を参照。
