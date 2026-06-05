@@ -104,6 +104,8 @@ fun GitReaderApp() {
     var railCollapsed by rememberSaveable { mutableStateOf(false) }
     // 2/3ペインでファイル一覧ペインを畳んでビューアを全幅にしているか。
     var listCollapsed by rememberSaveable { mutableStateOf(false) }
+    // コミットグラフ2/3ペインでコミット一覧ペインを畳んで詳細を全幅にしているか。
+    var graphListCollapsed by rememberSaveable { mutableStateOf(false) }
 
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -457,17 +459,32 @@ fun GitReaderApp() {
                     if (!two) {
                         GraphPane(selectedSha = null, onSelect = { navigate(Screen.CommitDetail(repo, it)) })
                     } else {
+                        val sel = graphSelected
+                        // コミット選択中だけ一覧を畳める(未選択時は一覧を出す)。
+                        val showList = sel == null || !graphListCollapsed
                         Row(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(0.45f)) {
-                                GraphPane(selectedSha = graphSelected?.sha, onSelect = { graphSelected = it })
+                            if (showList) {
+                                Box(Modifier.weight(0.45f)) {
+                                    GraphPane(selectedSha = sel?.sha, onSelect = { graphSelected = it })
+                                }
+                                VerticalDivider()
                             }
-                            VerticalDivider()
                             Box(Modifier.weight(0.55f)) {
-                                val sel = graphSelected
                                 if (sel != null) {
                                     key(sel.sha) { CommitDetailContent(sel) { vm.commitDiff(repo, sel.sha) } }
                                 } else {
                                     SelectPlaceholder("コミットを選択")
+                                }
+                                // 区切り線下部の開閉ハンドル(片手でコミット一覧を畳む/戻す)。選択中のみ。
+                                if (sel != null) {
+                                    PaneToggleHandle(
+                                        collapsed = graphListCollapsed,
+                                        onToggle = { graphListCollapsed = !graphListCollapsed },
+                                        // diff 下部の折り返しバーと重ならないよう少し上に。
+                                        modifier = Modifier.align(Alignment.BottomStart)
+                                            .padding(bottom = 72.dp)
+                                            .offset(x = if (graphListCollapsed) 4.dp else (-20).dp),
+                                    )
                                 }
                             }
                         }
