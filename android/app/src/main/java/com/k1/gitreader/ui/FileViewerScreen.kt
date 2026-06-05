@@ -5,7 +5,10 @@ import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,6 +65,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.k1.gitreader.data.LinkOpenMode
@@ -503,11 +507,13 @@ private fun MarkdownTableView(
         .coerceIn(0f, (tableHeightPx - headerHeightPx).coerceAtLeast(0).toFloat())
 
     @Composable
-    fun cell(text: String, isHeader: Boolean, col: Int) {
+    fun cell(text: String, isHeader: Boolean, width: Dp) {
         Text(
             text = text,
-            // セル毎にボーダーを引いて表のグリッドを見せる(横スクロールモード)。
-            modifier = Modifier.width(colWidths[col])
+            // セル毎にボーダーを引いて表のグリッドを見せる。fillMaxHeight で行内のセル高さを揃える
+            // (改行で背の高いセルがあっても他セルの枠がその高さまで伸びる)。
+            modifier = Modifier.width(width)
+                .fillMaxHeight()
                 .border(0.5.dp, borderColor)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             fontSize = fontSize,
@@ -517,26 +523,41 @@ private fun MarkdownTableView(
         )
     }
 
-    Column(
-        modifier
-            .horizontalScroll(hScroll)
-            .onGloballyPositioned {
-                tableTopPx = it.positionInRoot().y
-                tableHeightPx = it.size.height
-            },
-    ) {
-        // ヘッダ: translationY で上端に追従、zIndex で本文より前面に描画
-        Row(
-            Modifier
-                .zIndex(1f)
-                .graphicsLayer { translationY = stickyOffset }
-                .onGloballyPositioned { headerHeightPx = it.size.height }
-                .background(headerBg),
-        ) {
-            for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true, c)
+    BoxWithConstraints(modifier) {
+        // 内容由来の合計幅がビューポートより狭ければ全幅に広げる(均等比率)。広ければ横スクロール。
+        val avail = maxWidth
+        val total = colWidths.fold(0.dp) { a, b -> a + b }
+        val widths = if (total > 0.dp && total < avail) {
+            val scale = avail / total
+            colWidths.map { it * scale }
+        } else {
+            colWidths
         }
-        rows.forEach { row ->
-            Row { for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false, c) }
+        Column(
+            Modifier
+                .horizontalScroll(hScroll)
+                .onGloballyPositioned {
+                    tableTopPx = it.positionInRoot().y
+                    tableHeightPx = it.size.height
+                },
+        ) {
+            // ヘッダ: translationY で上端に追従、zIndex で本文より前面に描画。
+            // height(IntrinsicSize.Min) で行内セルを同じ高さに揃える。
+            Row(
+                Modifier
+                    .height(IntrinsicSize.Min)
+                    .zIndex(1f)
+                    .graphicsLayer { translationY = stickyOffset }
+                    .onGloballyPositioned { headerHeightPx = it.size.height }
+                    .background(headerBg),
+            ) {
+                for (c in 0 until colCount) cell(header.getOrElse(c) { "" }, true, widths[c])
+            }
+            rows.forEach { row ->
+                Row(Modifier.height(IntrinsicSize.Min)) {
+                    for (c in 0 until colCount) cell(row.getOrElse(c) { "" }, false, widths[c])
+                }
+            }
         }
     }
 }

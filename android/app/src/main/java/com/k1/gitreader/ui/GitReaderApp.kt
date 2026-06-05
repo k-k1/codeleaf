@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -20,8 +23,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -96,6 +102,8 @@ fun GitReaderApp() {
     var historySelected by remember { mutableStateOf<CommitInfo?>(null) }
     // 3ペインの左レール(リポ一覧)を畳んでいるか。
     var railCollapsed by rememberSaveable { mutableStateOf(false) }
+    // 2/3ペインでファイル一覧ペインを畳んでビューアを全幅にしているか。
+    var listCollapsed by rememberSaveable { mutableStateOf(false) }
 
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -371,13 +379,28 @@ fun GitReaderApp() {
                         // 1ペイン: ビューア←=ファイルを閉じる / ブラウザ←=リポ退出。
                         if (file != null) ViewerPane(file, showBack = true) else BrowserPane(showBack = true)
                     } else {
+                        // ファイルを開いている時だけ一覧を畳める(未選択時は一覧を出す)。
+                        val showList = file == null || !listCollapsed
                         Row(Modifier.fillMaxSize()) {
-                            // 3ペインはレールがリポ切替/退出を担うのでブラウザ←を撤去。2ペインは残す。
-                            Box(Modifier.weight(0.4f)) { BrowserPane(showBack = !three) }
-                            VerticalDivider()
+                            if (showList) {
+                                // 3ペインはレールがリポ切替/退出を担うのでブラウザ←を撤去。2ペインは残す。
+                                Box(Modifier.weight(0.4f)) { BrowserPane(showBack = !three) }
+                                VerticalDivider()
+                            }
                             Box(Modifier.weight(0.6f)) {
                                 // 2/3ペインは一覧が常に見えるためビューア←は撤去。
                                 if (file != null) ViewerPane(file, showBack = false) else SelectPlaceholder("ファイルを選択")
+                                // 区切り線下部の開閉ハンドル(片手で一覧を畳む/戻す)。ファイル表示中のみ。
+                                if (file != null) {
+                                    PaneToggleHandle(
+                                        collapsed = listCollapsed,
+                                        onToggle = { listCollapsed = !listCollapsed },
+                                        // 下部バー(目次)と重ならないよう少し上に。
+                                        modifier = Modifier.align(Alignment.BottomStart)
+                                            .padding(bottom = 96.dp)
+                                            .offset(x = if (listCollapsed) 4.dp else (-20).dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -518,6 +541,17 @@ fun GitReaderApp() {
 
         // View は backStack ではなく detailStack で扱う(Browse 分岐内で描画)。到達不能。
         is Screen.View -> Unit
+    }
+}
+
+/** 区切り線下部に置く、一覧ペインの開閉ハンドル(片手操作用の丸ボタン＋シェブロン)。 */
+@Composable
+private fun PaneToggleHandle(collapsed: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    FilledTonalIconButton(onClick = onToggle, modifier = modifier.size(40.dp)) {
+        Icon(
+            if (collapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowLeft,
+            contentDescription = if (collapsed) "一覧を表示" else "一覧を隠す",
+        )
     }
 }
 
