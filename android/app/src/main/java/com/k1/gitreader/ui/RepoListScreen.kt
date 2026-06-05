@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -79,7 +78,12 @@ fun RepoListScreen(
                     }
                 },
                 actions = {
-                    if (repos.isNotEmpty()) {
+                    // リポが1つも無いときは編集の代わりに＋。1つ以上あれば編集(＋は編集画面の中)。
+                    if (repos.isEmpty()) {
+                        IconButton(onClick = onAddClick) {
+                            Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
+                        }
+                    } else {
                         IconButton(onClick = onEdit) {
                             Icon(Icons.Default.Create, contentDescription = "リポジトリを編集")
                         }
@@ -91,11 +95,6 @@ fun RepoListScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
-                Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
-            }
-        },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (status.busy) {
@@ -109,7 +108,7 @@ fun RepoListScreen(
                 ) {
                     Text("リポジトリが未登録です", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "右下の + から GitHub / Bitbucket のリポジトリを追加してください",
+                        "右上の + から GitHub / Bitbucket のリポジトリを追加してください",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

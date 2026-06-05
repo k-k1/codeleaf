@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
@@ -67,6 +68,7 @@ fun RepoEditScreen(
     onReorder: (List<Repo>) -> Unit,
     onSetColor: (Repo, RepoColor) -> Unit,
     onDelete: (Repo) -> Unit,
+    onAdd: () -> Unit,
     onBack: () -> Unit,
 ) {
     val items = remember { mutableStateListOf<Repo>() }
@@ -91,6 +93,11 @@ fun RepoEditScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onAdd) {
+                        Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
                     }
                 },
             )

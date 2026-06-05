@@ -201,6 +201,7 @@ fun GitReaderApp() {
             onReorder = vm::saveRepoOrder,
             onSetColor = vm::setRepoColor,
             onDelete = vm::delete,
+            onAdd = { navigate(Screen.Add) },
             onBack = { pop() },
         )
 
