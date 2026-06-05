@@ -313,7 +313,15 @@ fun GitReaderApp() {
             }
 
             @Composable
-            fun BrowserPane(showBack: Boolean) {
+            fun BrowserPane(multiPane: Boolean) {
+                // ← の挙動:
+                //  1ペイン: 常に表示。ルート=リポ一覧へ / それ以外=ひとつ上の階層へ。
+                //  2/3ペイン: ルートでは非表示 / それ以外=ひとつ上の階層へ。
+                val backAction: (() -> Unit)? = when {
+                    !multiPane -> ({ if (current.path.isEmpty()) leaveRepo() else goUp() })
+                    current.path.isNotEmpty() -> ({ goUp() })
+                    else -> null
+                }
                 FileBrowserScreen(
                     repo = repo,
                     path = current.path,
@@ -339,8 +347,7 @@ fun GitReaderApp() {
                             detailStack.clear() // 作業ツリー書換でファイルが変化/消滅しうる
                         }
                     },
-                    // ← は階層を1つ上へ。ルート(path 空)ならリポを出て一覧へ。3ペインは非表示(null)。
-                    onBack = if (showBack) ({ if (current.path.isEmpty()) leaveRepo() else goUp() }) else null,
+                    onBack = backAction,
                     onUp = { goUp() },
                 )
             }
@@ -376,18 +383,19 @@ fun GitReaderApp() {
                 @Composable
                 fun ContentPanes() {
                     if (!two) {
-                        // 1ペイン: ビューア←=ファイルを閉じる / ブラウザ←=リポ退出。
-                        if (file != null) ViewerPane(file, showBack = true) else BrowserPane(showBack = true)
+                        // 1ペイン: ビューア←=ファイルを閉じる / ブラウザ←=上の階層 or リポ退出。
+                        if (file != null) ViewerPane(file, showBack = true) else BrowserPane(multiPane = false)
                     } else {
                         // ファイルを開いている時だけ一覧を畳める(未選択時は一覧を出す)。
                         val showList = file == null || !listCollapsed
+                        // 3ペインはレールがある分、一覧を少し狭く。
+                        val browserWeight = if (three) 0.3f else 0.4f
                         Row(Modifier.fillMaxSize()) {
                             if (showList) {
-                                // 3ペインはレールがリポ切替/退出を担うのでブラウザ←を撤去。2ペインは残す。
-                                Box(Modifier.weight(0.4f)) { BrowserPane(showBack = !three) }
+                                Box(Modifier.weight(browserWeight)) { BrowserPane(multiPane = true) }
                                 VerticalDivider()
                             }
-                            Box(Modifier.weight(0.6f)) {
+                            Box(Modifier.weight(1f - browserWeight)) {
                                 // 2/3ペインは一覧が常に見えるためビューア←は撤去。
                                 if (file != null) ViewerPane(file, showBack = false) else SelectPlaceholder("ファイルを選択")
                                 // 区切り線下部の開閉ハンドル(片手で一覧を畳む/戻す)。ファイル表示中のみ。

@@ -75,8 +75,8 @@ data class MdSection(val heading: Heading?, val markdown: String)
 
 /**
  * Markwon の配色をリポ毎テーマに連動させるための色(ARGB int)。
- * コードフェンスの背景は Prism4j 側テーマが受け持つため、ここではインラインコード・
- * リンク・引用バー・区切り線など Prism 管轄外の要素を扱う。
+ * コードフェンスのトークン色は Prism4j がハイライトするが、ブロックの背景・余白・既定文字色は
+ * Markwon 既定(薄グレー・余白なし)だと「のっぺり」見えるため、ここでテーマ連動値を与える。
  */
 data class MarkdownColors(
     val link: Int,
@@ -84,6 +84,8 @@ data class MarkdownColors(
     val inlineCodeText: Int,
     val blockQuoteBar: Int,
     val divider: Int,
+    val codeBlockBg: Int = 0,
+    val codeBlockText: Int = 0,
 )
 
 /**
@@ -130,10 +132,15 @@ object MarkdownRenderer {
                 if (colors != null) {
                     usePlugin(object : AbstractMarkwonPlugin() {
                         override fun configureTheme(builder: MarkwonTheme.Builder) {
+                            val density = context.resources.displayMetrics.density
                             builder
                                 .linkColor(colors.link)
                                 .codeBackgroundColor(colors.inlineCodeBg)
                                 .codeTextColor(colors.inlineCodeText)
+                                // コードフェンス(<pre>)の背景・既定文字色・余白をテーマ連動で。
+                                .codeBlockBackgroundColor(colors.codeBlockBg)
+                                .codeBlockTextColor(colors.codeBlockText)
+                                .codeBlockMargin((12 * density).toInt())
                                 .blockQuoteColor(colors.blockQuoteBar)
                                 .thematicBreakColor(colors.divider)
                                 .headingBreakColor(colors.divider)
@@ -444,6 +451,8 @@ fun MarkdownView(
         inlineCodeText = scheme.onSurfaceVariant.toArgb(),
         blockQuoteBar = scheme.outline.toArgb(),
         divider = scheme.outlineVariant.toArgb(),
+        codeBlockBg = scheme.surfaceVariant.toArgb(),
+        codeBlockText = scheme.onSurface.toArgb(),
     )
     val markwon = remember(context, dark, baseDir.path, workDir.path, colors) {
         val resolver = RepoLinkResolver(
