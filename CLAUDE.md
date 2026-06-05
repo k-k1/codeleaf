@@ -36,6 +36,12 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
 - **リンク**: `setTextIsSelectable(true)` は MovementMethod を奪う → 使わず setMarkdown 後に `LinkMovementMethod` を明示。
   相対 .md はアプリ内遷移・外部リンクは設定で CustomTabs / 外部ブラウザ。
 - **GitHub HTTPS 認証**: username 空だと 401 → `JgitClient.credentials` が `x-access-token` を補う。PAT は Contents: Read-only 必須。
+- **認証種別**: `Repo.authType` = TOKEN(手入力 PAT/API token) / OAUTH。OAuth token は `TokenStore` の `oauth_<id>` に
+  JSON 暗号化保存。git の username はホスト/種別で分岐(`gitUsernameFor`): Bitbucket OAuth=`x-token-auth`、GitHub=`x-access-token`。
+- **Bitbucket OAuth**(`data/oauth/`): Authorization Code Grant。client_id/secret は local.properties→BuildConfig(git管理外)。
+  redirect `gitreader://oauth` を `OAuthRedirectActivity` が受け、`BitbucketOAuthService` が code 交換。access token 1h 失効→
+  `RepoRepository.credentialsFor` が sync 直前に refresh(同一リポ Mutex 内)。交換は `OAuthTokenExchanger` interface に隔離
+  (将来バックエンド代行へ差し替え可)。PKCE/Device Flow 非対応。設定手順は `android/DEVELOPMENT.md` §9。
 - **同期**: `fetch → reset --hard origin/<branch> → clean -fdx`(ローカル変更は破棄)。
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。

@@ -1,15 +1,20 @@
 package com.k1.gitreader.data
 
 import com.k1.gitreader.data.crypto.TokenStore
+import com.k1.gitreader.data.db.AuthType
 import com.k1.gitreader.data.db.GitHost
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.RepoColor
 import com.k1.gitreader.data.db.RepoDao
 import com.k1.gitreader.data.db.ThemeMode
+import com.k1.gitreader.data.oauth.OAuthAccount
+import com.k1.gitreader.data.oauth.gitUsernameFor
+import com.k1.gitreader.data.oauth.needsRefresh
 import com.k1.gitreader.git.BranchInfo
 import com.k1.gitreader.git.CommitInfo
 import com.k1.gitreader.git.GraphCommit
 import com.k1.gitreader.git.JgitClient
+import org.eclipse.jgit.transport.CredentialsProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -100,7 +105,7 @@ fun searchCorpus(
     return SearchOutcome(hits)
 }
 
-/** 新規リポジトリ登録フォームの入力値。 */
+/** 新規リポジトリ登録フォームの入力値。authType=OAUTH のとき oauth が非 null。 */
 data class NewRepo(
     val name: String,
     val url: String,
@@ -109,6 +114,8 @@ data class NewRepo(
     val token: String,
     val branch: String?,
     val themeMode: ThemeMode,
+    val authType: AuthType = AuthType.TOKEN,
+    val oauth: OAuthAccount? = null,
 )
 
 /**
@@ -120,6 +127,8 @@ class RepoRepository(
     private val tokenStore: TokenStore,
     private val jgit: JgitClient,
     private val reposRoot: File,
+    /** OAuth access token 失効時の更新。未設定(手動トークンのみ運用)なら null。 */
+    private val refreshOAuth: (suspend (OAuthAccount) -> Result<OAuthAccount>)? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     fun observeRepos(): Flow<List<Repo>> = dao.observeAll()
@@ -140,21 +149,26 @@ class RepoRepository(
                 username = input.username,
                 branch = input.branch.orEmpty(),
                 themeMode = input.themeMode,
+                authType = input.authType,
             ),
         )
-        tokenStore.setToken(id, input.token)
+        when (input.authType) {
+            AuthType.TOKEN -> tokenStore.setToken(id, input.token)
+            AuthType.OAUTH -> tokenStore.setOAuth(id, input.oauth!!.toJson())
+        }
         val dir = File(reposRoot, id.toString())
         try {
-            val cp = jgit.credentials(input.username, input.token)
+            val cp = credentialsFor(dao.getById(id)!!)
             jgit.clone(input.url, dir, cp)
             val branch = input.branch?.takeIf { it.isNotBlank() } ?: jgit.currentBranch(dir)
             val saved = dao.getById(id)!!.copy(branch = branch, lastSyncedAt = nowMillis())
             dao.update(saved)
             saved
         } catch (t: Throwable) {
-            // ロールバック
+            // ロールバック（両名前空間のトークンを掃除）
             dao.getById(id)?.let { dao.delete(it) }
             tokenStore.removeToken(id)
+            tokenStore.removeOAuth(id)
             dir.deleteRecursively()
             throw t
         }
@@ -163,13 +177,32 @@ class RepoRepository(
     /** 指定ブランチで最新化（ローカル変更は破棄）。同一リポの同期は直列化される。 */
     suspend fun sync(repo: Repo, branch: String = repo.branch): Repo = withContext(ioDispatcher) {
         syncLock(repo.id).withLock {
-            val token = tokenStore.getToken(repo.id)
-            val cp = jgit.credentials(repo.username, token)
+            // OAuth の refresh も同一リポ Mutex 内で行い、並行 sync との競合を防ぐ。
+            val cp = credentialsFor(repo)
             jgit.sync(workDir(repo), branch, cp)
             val saved = repo.copy(branch = branch, lastSyncedAt = nowMillis())
             dao.update(saved)
             saved
         }
+    }
+
+    /** 認証種別に応じた CredentialsProvider を構築。OAUTH は期限切れなら refresh して新トークンを使う。 */
+    private suspend fun credentialsFor(repo: Repo): CredentialsProvider? = when (repo.authType) {
+        AuthType.TOKEN -> jgit.credentials(repo.username, tokenStore.getToken(repo.id))
+        AuthType.OAUTH -> {
+            val json = tokenStore.getOAuth(repo.id) ?: error("OAuth 資格情報がありません")
+            val account = ensureFresh(repo.id, OAuthAccount.fromJson(json))
+            jgit.credentials(gitUsernameFor(repo.host, AuthType.OAUTH, repo.username), account.accessToken)
+        }
+    }
+
+    /** access token が期限切れ間近なら refresh して保存し直す。refresh 失効は例外送出(再ログイン誘導)。 */
+    private suspend fun ensureFresh(repoId: Long, account: OAuthAccount): OAuthAccount {
+        if (!needsRefresh(account.expiresAtEpochMs, nowMillis())) return account
+        val refresher = refreshOAuth ?: return account
+        val refreshed = refresher(account).getOrThrow()
+        tokenStore.setOAuth(repoId, refreshed.toJson())
+        return refreshed
     }
 
     suspend fun listBranches(repo: Repo): List<BranchInfo> = withContext(ioDispatcher) {
@@ -270,6 +303,7 @@ class RepoRepository(
     suspend fun delete(repo: Repo) = withContext(ioDispatcher) {
         dao.delete(repo)
         tokenStore.removeToken(repo.id)
+        tokenStore.removeOAuth(repo.id)
         workDir(repo).deleteRecursively()
     }
 

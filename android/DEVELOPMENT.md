@@ -77,3 +77,24 @@ cd android
   Gradle Managed Devices 定義」で担保する。
 - ローカルでサッと動かすなら手順5の手動エミュ + `connectedDebugAndroidTest`、
   CI/他PCでの確実な再現なら手順7の Managed Devices、という使い分け。
+
+## 9. Bitbucket OAuth（任意・「Bitbucket でログイン」を使う場合）
+OAuth は `local.properties` に client_id/secret がある時だけ有効化される（無くてもビルド可・手動トークンは常用可）。
+
+1. Bitbucket Cloud → 対象 Workspace → **Workspace settings** → Apps and features → **OAuth clients**
+   →「**Create OAuth client**」。
+   - Name: `git-reader`
+   - **Callback URL**: `gitreader://oauth`
+   - **Permissions**: Repositories → **Read**
+2. 発行された **Client ID / Secret** を `android/local.properties` に追記（git 管理外）:
+   ```
+   BITBUCKET_OAUTH_CLIENT_ID=<Client ID>
+   BITBUCKET_OAUTH_CLIENT_SECRET=<Secret>
+   ```
+3. 再ビルドすると AddRepoScreen に「Bitbucket でログイン」ボタンが出る。
+   ログイン後に URL を入れて clone（手入力トークン不要）。access token は1時間で失効するが
+   refresh token で自動更新される（再ログイン不要）。
+
+仕組み: 3-legged Authorization Code Grant。`gitreader://oauth` を `OAuthRedirectActivity` が受け、
+`BitbucketOAuthService` が code をトークンに交換（`data/oauth/`）。token 交換は `OAuthTokenExchanger`
+interface に隔離してあり、将来「バックエンド代行」へ差し替え可能（公開配布時の secret 同梱対策）。

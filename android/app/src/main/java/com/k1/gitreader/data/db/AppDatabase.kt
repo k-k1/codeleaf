@@ -14,6 +14,8 @@ class Converters {
     @TypeConverter fun stringToTheme(s: String): ThemeMode = ThemeMode.valueOf(s)
     @TypeConverter fun colorToString(c: RepoColor): String = c.name
     @TypeConverter fun stringToColor(s: String): RepoColor = RepoColor.valueOf(s)
+    @TypeConverter fun authTypeToString(a: AuthType): String = a.name
+    @TypeConverter fun stringToAuthType(s: String): AuthType = AuthType.valueOf(s)
 }
 
 /** v1→v2: 並べ替え順(sortOrder)とカード色(colorTag)を追加。 */
@@ -24,7 +26,14 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [Repo::class], version = 2, exportSchema = false)
+/** v2→v3: 認証種別(authType)を追加。既存行は手入力トークン扱い(TOKEN)。 */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE repos ADD COLUMN authType TEXT NOT NULL DEFAULT 'TOKEN'")
+    }
+}
+
+@Database(entities = [Repo::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun repoDao(): RepoDao

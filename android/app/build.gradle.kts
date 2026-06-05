@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,16 @@ plugins {
     // kapt は Kotlin プラグイン経由でクラスパス上にあるため version 指定なしで適用する
     kotlin("kapt")
 }
+
+// OAuth の client_id/secret は local.properties(git 管理外) から読み BuildConfig へ。未設定なら空文字。
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+// 複数のキー名候補を許容（最初に見つかった非空の値を使う）。
+fun secretProp(vararg names: String): String =
+    (names.firstNotNullOfOrNull { localProps.getProperty(it)?.takeIf { v -> v.isNotBlank() } } ?: "")
+        .replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {
     namespace = "com.k1.gitreader"
@@ -18,6 +30,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_ID", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_ID", "BITBUCKET_OAUTH_ID")}\"")
+        buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_SECRET", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_SECRET", "BITBUCKET_OAUTH_SECRET")}\"")
     }
 
     buildTypes {
@@ -39,6 +54,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // JGit の jar が同梱する META-INF を除外（重複・不要分）
@@ -120,6 +136,8 @@ dependencies {
 
     // local unit test (純粋ロジックの JVM 検証)
     testImplementation(libs.junit)
+    // org.json は Android 同梱だが JVM 単体には無いため OAuth 応答 parse テスト用に追加
+    testImplementation("org.json:json:20240303")
 
     // instrumented test (ランタイムART検証)
     androidTestImplementation(libs.androidx.test.ext.junit)

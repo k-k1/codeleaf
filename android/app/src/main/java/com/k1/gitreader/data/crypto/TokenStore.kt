@@ -20,24 +20,39 @@ class TokenStore(context: Context) {
 
     private val prefs = context.getSharedPreferences("repo_tokens", Context.MODE_PRIVATE)
 
-    fun setToken(repoId: Long, token: String) {
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
-        val ct = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
-        val packed = b64(cipher.iv) + ":" + b64(ct)
-        prefs.edit().putString(key(repoId), packed).apply()
+    // --- 手入力トークン (key prefix "repo_") ---
+    fun setToken(repoId: Long, token: String) = put(tokenKey(repoId), token)
+    fun getToken(repoId: Long): String? = get(tokenKey(repoId))
+    fun removeToken(repoId: Long) = remove(tokenKey(repoId))
+
+    // --- OAuth 資格情報 JSON (key prefix "oauth_") ---
+    fun setOAuth(repoId: Long, json: String) = put(oauthKey(repoId), json)
+    fun getOAuth(repoId: Long): String? = get(oauthKey(repoId))
+    fun removeOAuth(repoId: Long) = remove(oauthKey(repoId))
+
+    private fun put(key: String, plain: String) {
+        prefs.edit().putString(key, encrypt(plain)).apply()
     }
 
-    fun getToken(repoId: Long): String? {
-        val packed = prefs.getString(key(repoId), null) ?: return null
+    private fun get(key: String): String? =
+        prefs.getString(key, null)?.let { decrypt(it) }
+
+    private fun remove(key: String) {
+        prefs.edit().remove(key).apply()
+    }
+
+    private fun encrypt(plain: String): String {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        val ct = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+        return b64(cipher.iv) + ":" + b64(ct)
+    }
+
+    private fun decrypt(packed: String): String {
         val (ivB64, ctB64) = packed.split(":", limit = 2).let { it[0] to it[1] }
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, unb64(ivB64)))
         return String(cipher.doFinal(unb64(ctB64)), Charsets.UTF_8)
-    }
-
-    fun removeToken(repoId: Long) {
-        prefs.edit().remove(key(repoId)).apply()
     }
 
     private fun getOrCreateKey(): SecretKey {
@@ -57,7 +72,8 @@ class TokenStore(context: Context) {
         return gen.generateKey()
     }
 
-    private fun key(repoId: Long) = "repo_$repoId"
+    private fun tokenKey(repoId: Long) = "repo_$repoId"
+    private fun oauthKey(repoId: Long) = "oauth_$repoId"
     private fun b64(b: ByteArray) = Base64.encodeToString(b, Base64.NO_WRAP)
     private fun unb64(s: String) = Base64.decode(s, Base64.NO_WRAP)
 

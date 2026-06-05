@@ -6,6 +6,9 @@ import androidx.room.PrimaryKey
 /** 対応 git ホスト。認証情報の扱い（username 必須かどうか）が分岐する。 */
 enum class GitHost { GITHUB, BITBUCKET }
 
+/** 認証種別。TOKEN=手入力 PAT/API token、OAUTH=OAuth ログイン(access/refresh を TokenStore に保存)。 */
+enum class AuthType { TOKEN, OAUTH }
+
 /** リポジトリ毎の表示テーマ。 */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -27,4 +30,5 @@ data class Repo(
     val lastSyncedAt: Long? = null,
     val sortOrder: Int = 0,
     val colorTag: RepoColor = RepoColor.NONE,
+    val authType: AuthType = AuthType.TOKEN,
 )

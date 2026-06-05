@@ -17,12 +17,19 @@ import com.k1.gitreader.data.SettingsStore
 import com.k1.gitreader.data.TextFile
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
+import com.k1.gitreader.data.oauth.AuthorizationRequest
+import com.k1.gitreader.data.oauth.BitbucketOAuthService
+import com.k1.gitreader.data.oauth.OAuthAccount
 import com.k1.gitreader.git.BranchInfo
 import com.k1.gitreader.git.CommitInfo
 import java.io.File
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -35,12 +42,23 @@ data class UiStatus(
 class RepoListViewModel(
     private val repository: RepoRepository,
     private val settingsStore: SettingsStore,
+    private val oauthService: BitbucketOAuthService? = null,
+    oauthResults: Channel<Result<OAuthAccount>>? = null,
 ) : ViewModel() {
 
     val repos: StateFlow<List<Repo>> = repository.observeRepos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val settings: StateFlow<AppSettings> = settingsStore.settings
+
+    /** OAuth が利用可能か（BuildConfig に client_id/secret がある）。 */
+    val bitbucketOAuthAvailable: Boolean = oauthService != null
+
+    /** redirect Activity が交換した OAuth 結果（AddRepoScreen が購読）。 */
+    val oauthResult: Flow<Result<OAuthAccount>> = oauthResults?.receiveAsFlow() ?: emptyFlow()
+
+    /** 認可を開始（state 保存）。UI は返り値の url を Custom Tabs で開く。未設定なら null。 */
+    fun startBitbucketOAuth(): AuthorizationRequest? = oauthService?.startAuthorization()
 
     private val _status = MutableStateFlow(UiStatus())
     val status: StateFlow<UiStatus> = _status
@@ -168,7 +186,12 @@ class RepoListViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as GitReaderApplication
-                RepoListViewModel(app.container.repoRepository, app.container.settingsStore)
+                RepoListViewModel(
+                    app.container.repoRepository,
+                    app.container.settingsStore,
+                    app.container.bitbucketOAuthService,
+                    app.container.oauthResults,
+                )
             }
         }
     }

@@ -1,11 +1,14 @@
 package com.k1.gitreader.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.k1.gitreader.data.db.Repo
 
@@ -25,6 +28,7 @@ private sealed interface Screen {
 @Composable
 fun GitReaderApp() {
     val vm: RepoListViewModel = viewModel(factory = RepoListViewModel.Factory)
+    val context = LocalContext.current
     val backStack = remember { mutableStateListOf<Screen>(Screen.List) }
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -52,6 +56,13 @@ fun GitReaderApp() {
             defaultTheme = settings.defaultTheme,
             onBack = { pop() },
             onSubmit = { input -> vm.addRepo(input) { ok -> if (ok) pop() } },
+            bitbucketOAuthAvailable = vm.bitbucketOAuthAvailable,
+            onStartBitbucketOAuth = {
+                vm.startBitbucketOAuth()?.let { req ->
+                    CustomTabsIntent.Builder().build().launchUrl(context, req.url.toUri())
+                }
+            },
+            oauthResult = vm.oauthResult,
         )
 
         Screen.RepoEdit -> RepoEditScreen(
