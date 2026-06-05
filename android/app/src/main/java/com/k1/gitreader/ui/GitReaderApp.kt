@@ -48,6 +48,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -589,7 +590,8 @@ fun GitReaderApp() {
 /** 区切り線下部に置く、一覧ペインの開閉ハンドル(片手操作用の丸ボタン＋シェブロン)。 */
 @Composable
 private fun PaneToggleHandle(collapsed: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
-    FilledTonalIconButton(onClick = onToggle, modifier = modifier.size(40.dp)) {
+    // 本文に被さるので半透明にして主張を抑える(タップは効く)。
+    FilledTonalIconButton(onClick = onToggle, modifier = modifier.size(40.dp).alpha(0.6f)) {
         Icon(
             if (collapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowLeft,
             contentDescription = if (collapsed) "一覧を表示" else "一覧を隠す",
