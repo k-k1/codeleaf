@@ -23,30 +23,36 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.os.Parcelable
 import com.k1.gitreader.data.db.Repo
 import com.k1.gitreader.data.db.ThemeMode
 import com.k1.gitreader.git.GraphCommit
+import kotlinx.parcelize.Parcelize
 
-private sealed interface Screen {
-    data object List : Screen
-    data object Add : Screen
-    data object Settings : Screen
-    data object RepoEdit : Screen
-    data class Browse(val repo: Repo, val path: String) : Screen
-    data class Search(val repo: Repo) : Screen
-    data class Graph(val repo: Repo) : Screen
-    data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
-    data class History(val repo: Repo, val filePath: String) : Screen
-    data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
-    data class CommitDetail(val repo: Repo, val commit: GraphCommit) : Screen
+// プロセス死から復元するため Parcelable(各メンバ @Parcelize)。
+private sealed interface Screen : Parcelable {
+    @Parcelize data object List : Screen
+    @Parcelize data object Add : Screen
+    @Parcelize data object Settings : Screen
+    @Parcelize data object RepoEdit : Screen
+    @Parcelize data class Browse(val repo: Repo, val path: String) : Screen
+    @Parcelize data class Search(val repo: Repo) : Screen
+    @Parcelize data class Graph(val repo: Repo) : Screen
+    @Parcelize data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
+    @Parcelize data class History(val repo: Repo, val filePath: String) : Screen
+    @Parcelize data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
+    @Parcelize data class CommitDetail(val repo: Repo, val commit: GraphCommit) : Screen
 }
 
 /** 2ペイン(左=一覧/右=詳細)・3ペイン(左=リポ一覧/中=一覧/右=詳細)のしきい値。 */
@@ -57,11 +63,22 @@ private val THREE_PANE_MIN_WIDTH = 960.dp
 fun GitReaderApp() {
     val vm: RepoListViewModel = viewModel(factory = RepoListViewModel.Factory)
     val context = LocalContext.current
-    val backStack = remember { mutableStateListOf<Screen>(Screen.List) }
+    // backStack/detailStack/graphSelected はプロセス死から復元する(rememberSaveable + @Parcelize)。
+    val backStack = rememberSaveable(
+        saver = listSaver(
+            save = { it.toList() },
+            restore = { saved -> (saved.ifEmpty { listOf(Screen.List) }).toMutableStateList() },
+        ),
+    ) { mutableStateListOf<Screen>(Screen.List) }
     // 開いているファイルは backStack と直交する別スタックで持つ(2/3ペインのため)。
-    val detailStack = remember { mutableStateListOf<Screen.View>() }
+    val detailStack = rememberSaveable(
+        saver = listSaver<SnapshotStateList<Screen.View>, Screen.View>(
+            save = { it.toList() },
+            restore = { it.toMutableStateList() },
+        ),
+    ) { mutableStateListOf<Screen.View>() }
     // コミットグラフ2/3ペインで右に出す選択コミット。
-    var graphSelected by remember { mutableStateOf<GraphCommit?>(null) }
+    var graphSelected by rememberSaveable { mutableStateOf<GraphCommit?>(null) }
     // 3ペインの左レール(リポ一覧)を畳んでいるか。
     var railCollapsed by rememberSaveable { mutableStateOf(false) }
 

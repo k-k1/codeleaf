@@ -28,10 +28,13 @@ package `com.k1.gitreader` / minSdk 33 / targetSdk 35。ソースは `android/ap
 - git は cwd ズレ回避に `git -C C:/private_workspace/git-reader ...`。コミット末尾に Co-Authored-By 行。
 
 ## ハマりどころ(コードから読み取りにくい点)
-- **ナビ/2ペイン**(`ui/GitReaderApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
-  幅 `BoxWithConstraints>=600dp` で Browse/Graph 分岐を2ペイン化(左=一覧/右=Viewer or コミット詳細)、未満は全画面。
-  戻るは `handleBack` に一本化(先に detailStack を戻す)。`MainActivity` に `configChanges` 追加済み(回転で再生成せず
-  状態保持)。**instrumented E2E は portrait(compact)前提** — landscape で実行すると2ペインになり一部 assert が崩れる。
+- **ナビ/多ペイン**(`ui/GitReaderApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
+  幅 `BoxWithConstraints` で `>=600dp`=2ペイン / `>=960dp`=3ペイン(左=リポ一覧レール｜中=一覧｜右=詳細)、未満は全画面。
+  3ペインのレールは `RepoListScreen` 再利用＋`railCollapsed`(rememberSaveable)で開閉、テーマは レール=default/中右=repo に分割。
+  戻るは `handleBack` に一本化(先に detailStack を戻す)。`MainActivity` の `configChanges` で回転は状態保持。
+  **状態永続化**: `Screen`/`Repo`/`GraphCommit` を `@Parcelize`(`kotlin("plugin.parcelize")`, Instant は `InstantParceler`)、
+  `backStack`/`detailStack`/`graphSelected` を `rememberSaveable` でプロセス死から復元。
+  **instrumented E2E は portrait(compact)前提** — landscape で実行すると2/3ペインになり一部 assert が崩れる。
 - **kapt** は `kotlin("kapt")` を **version なし**で適用(catalog alias は失敗)。
   `configurations.all { exclude(group="org.jetbrains", module="annotations-java5") }` で dex 重複を回避。
 - **Prism4j 同梱言語のみ**ハイライト可(bash / typescript / rust は不可)。

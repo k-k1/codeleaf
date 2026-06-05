@@ -5,8 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    // kapt は Kotlin プラグイン経由でクラスパス上にあるため version 指定なしで適用する
+    // kapt / parcelize は Kotlin プラグイン経由でクラスパス上にあるため version 指定なしで適用する
     kotlin("kapt")
+    kotlin("plugin.parcelize")
 }
 
 // OAuth の client_id/secret は local.properties(git 管理外) から読み BuildConfig へ。未設定なら空文字。

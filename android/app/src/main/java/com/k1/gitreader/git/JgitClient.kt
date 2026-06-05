@@ -1,5 +1,10 @@
 package com.k1.gitreader.git
 
+import android.os.Parcel
+import android.os.Parcelable
+import kotlinx.parcelize.Parceler
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.TypeParceler
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand.ResetType
 import org.eclipse.jgit.diff.DiffFormatter
@@ -33,7 +38,15 @@ data class CommitInfo(
     val committedAt: Instant,
 )
 
+/** Instant を epochMilli Long で Parcel に書き出す(プロセス死復元のため)。 */
+object InstantParceler : Parceler<Instant> {
+    override fun create(parcel: Parcel): Instant = Instant.ofEpochMilli(parcel.readLong())
+    override fun Instant.write(parcel: Parcel, flags: Int) = parcel.writeLong(toEpochMilli())
+}
+
 /** コミットグラフ1ノード。parents は親コミットの sha（マージは複数）、refs は指しているブランチ/タグ名。 */
+@Parcelize
+@TypeParceler<Instant, InstantParceler>
 data class GraphCommit(
     val sha: String,
     val parents: List<String>,
@@ -42,7 +55,7 @@ data class GraphCommit(
     val author: String,
     val committedAt: Instant,
     val refs: List<String>,
-)
+) : Parcelable
 
 /**
  * JGit を薄くラップした git クライアント。全メソッドはブロッキング I/O のため、
