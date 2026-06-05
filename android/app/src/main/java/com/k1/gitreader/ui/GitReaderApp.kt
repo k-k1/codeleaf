@@ -167,6 +167,7 @@ fun GitReaderApp() {
             onSettings = { navigate(Screen.Settings) },
             onEdit = { navigate(Screen.RepoEdit) },
             onOpen = { navigate(Screen.Browse(it, "")) },
+            onOpenGraph = { graphSelected = null; navigate(Screen.Graph(it)) },
             onSync = vm::sync,
             onMessageShown = vm::clearMessage,
             selectedRepoId = selectedRepoId,
