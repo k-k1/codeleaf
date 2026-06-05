@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.TextButton
@@ -228,87 +230,89 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
     val hScroll = rememberScrollState()
 
     Column(modifier) {
-        // wrap=false のときは本文全体を横スクロール可に(CodeView と同じ挙動)。
-        Column(
-            Modifier.weight(1f)
-                .verticalScroll(rememberScrollState())
-                .let { if (wrap) it else it.horizontalScroll(hScroll) },
-        ) {
-            files.forEachIndexed { i, file ->
-                val isCollapsed = collapsed[i] == true
-                file.header?.let { h ->
-                    Row(
-                        Modifier
-                            .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
-                            .background(headerBg)
-                            .clickable { collapsed[i] = !isCollapsed }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            if (isCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isCollapsed) "展開" else "折りたたむ",
-                            tint = headerFg,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            h.path,
-                            color = headerFg,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            softWrap = wrap,
-                            maxLines = if (wrap) Int.MAX_VALUE else 1,
-                            modifier = if (wrap) Modifier.weight(1f) else Modifier,
-                        )
-                    }
-                }
-                if (!isCollapsed) {
-                    file.rows.forEach { row ->
-                        when (row) {
-                            is DiffRow.FileHeader -> Unit // ヘッダは上で描画済み
-                            is DiffRow.Hunk -> Text(
-                                text = row.text,
-                                color = muted,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
+        BoxWithConstraints(Modifier.weight(1f)) {
+            // 折り返しOFF時も追加緑/削除赤の帯がペイン右端まで届くよう、各行は最低でもビューポート幅を確保する
+            // (内容がそれより長ければ内容幅まで広がり横スクロール可)。折り返しONは従来どおり全幅。
+            val rowMod = if (wrap) Modifier.fillMaxWidth() else Modifier.widthIn(min = maxWidth)
+            // wrap=false のときは本文全体を横スクロール可に(CodeView と同じ挙動)。
+            Column(
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .let { if (wrap) it else it.horizontalScroll(hScroll) },
+            ) {
+                files.forEachIndexed { i, file ->
+                    val isCollapsed = collapsed[i] == true
+                    file.header?.let { h ->
+                        Row(
+                            rowMod
+                                .background(headerBg)
+                                .clickable { collapsed[i] = !isCollapsed }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                if (isCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isCollapsed) "展開" else "折りたたむ",
+                                tint = headerFg,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                h.path,
+                                color = headerFg,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
                                 softWrap = wrap,
                                 maxLines = if (wrap) Int.MAX_VALUE else 1,
-                                modifier = Modifier
-                                    .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
-                                    .background(hunkBg)
-                                    .padding(horizontal = 12.dp, vertical = 3.dp),
+                                modifier = if (wrap) Modifier.weight(1f) else Modifier,
                             )
-                            is DiffRow.Line -> Row(
-                                Modifier
-                                    .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
-                                    .background(when (row.kind) { '+' -> addBg; '-' -> delBg; else -> Color.Transparent })
-                                    .padding(vertical = 1.dp),
-                            ) {
-                                Text(
-                                    text = row.lineNo?.toString().orEmpty(),
+                        }
+                    }
+                    if (!isCollapsed) {
+                        file.rows.forEach { row ->
+                            when (row) {
+                                is DiffRow.FileHeader -> Unit // ヘッダは上で描画済み
+                                is DiffRow.Hunk -> Text(
+                                    text = row.text,
                                     color = muted,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp,
-                                    textAlign = TextAlign.End,
-                                    maxLines = 1,
-                                    modifier = Modifier.width(gutterWidth).padding(end = 6.dp),
-                                )
-                                Text(
-                                    text = row.text.ifEmpty { " " },
-                                    color = base,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
                                     softWrap = wrap,
                                     maxLines = if (wrap) Int.MAX_VALUE else 1,
-                                    modifier = (if (wrap) Modifier.weight(1f) else Modifier).padding(end = 12.dp),
+                                    modifier = rowMod
+                                        .background(hunkBg)
+                                        .padding(horizontal = 12.dp, vertical = 3.dp),
                                 )
+                                is DiffRow.Line -> Row(
+                                    rowMod
+                                        .background(when (row.kind) { '+' -> addBg; '-' -> delBg; else -> Color.Transparent })
+                                        .padding(vertical = 1.dp),
+                                ) {
+                                    Text(
+                                        text = row.lineNo?.toString().orEmpty(),
+                                        color = muted,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.End,
+                                        maxLines = 1,
+                                        modifier = Modifier.width(gutterWidth).padding(end = 6.dp),
+                                    )
+                                    Text(
+                                        text = row.text.ifEmpty { " " },
+                                        color = base,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        softWrap = wrap,
+                                        maxLines = if (wrap) Int.MAX_VALUE else 1,
+                                        modifier = (if (wrap) Modifier.weight(1f) else Modifier).padding(end = 12.dp),
+                                    )
+                                }
                             }
                         }
                     }
                 }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(12.dp))
         }
         // 下部バー: Viewer と同様に折り返しを切替。
         SlimBottomBar {
