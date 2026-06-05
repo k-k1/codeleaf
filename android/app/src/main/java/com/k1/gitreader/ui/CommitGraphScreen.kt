@@ -1,6 +1,8 @@
 package com.k1.gitreader.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,6 +61,8 @@ fun CommitGraphScreen(
     repoName: String,
     loadGraph: suspend () -> List<GraphCommit>,
     onBack: () -> Unit,
+    selectedSha: String? = null,
+    onSelectCommit: (GraphCommit) -> Unit = {},
 ) {
     var commits by remember { mutableStateOf<List<GraphCommit>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -90,7 +94,12 @@ fun CommitGraphScreen(
                 rows.isEmpty() -> Text("コミットがありません", Modifier.padding(16.dp))
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(rows, key = { it.commit.sha }) { row ->
-                        GraphCommitRow(row, laneCount)
+                        GraphCommitRow(
+                            row = row,
+                            laneCount = laneCount,
+                            selected = row.commit.sha == selectedSha,
+                            onClick = { onSelectCommit(row.commit) },
+                        )
                     }
                 }
             }
@@ -99,8 +108,13 @@ fun CommitGraphScreen(
 }
 
 @Composable
-private fun GraphCommitRow(row: GraphRow, laneCount: Int) {
-    Row(Modifier.fillMaxWidth().height(ROW_HEIGHT)) {
+private fun GraphCommitRow(row: GraphRow, laneCount: Int, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth()
+            .height(ROW_HEIGHT)
+            .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+            .clickable(onClick = onClick),
+    ) {
         GraphCell(row, laneCount, Modifier.width(LANE_WIDTH * laneCount).fillMaxHeight())
         Column(
             Modifier.weight(1f).fillMaxHeight().padding(end = 12.dp),
@@ -129,7 +143,7 @@ private fun GraphCommitRow(row: GraphRow, laneCount: Int) {
 }
 
 @Composable
-private fun RefChip(name: String) {
+internal fun RefChip(name: String) {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,

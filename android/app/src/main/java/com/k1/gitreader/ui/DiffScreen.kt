@@ -62,23 +62,29 @@ fun DiffScreen(
                 error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
                 text == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 text.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-                else -> Column(
-                    Modifier.fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .horizontalScroll(rememberScrollState())
-                        .padding(12.dp),
-                ) {
-                    text.lineSequence().forEach { line ->
-                        Text(
-                            text = line.ifEmpty { " " },
-                            color = colorForLine(line),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            softWrap = false,
-                        )
-                    }
-                }
+                else -> DiffText(text, Modifier.fillMaxSize())
             }
+        }
+    }
+}
+
+/** unified diff を色付きモノスペースで縦横スクロール表示する(DiffScreen / コミット詳細で共有)。 */
+@Composable
+fun DiffText(diff: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .verticalScroll(rememberScrollState())
+            .horizontalScroll(rememberScrollState())
+            .padding(12.dp),
+    ) {
+        diff.lineSequence().forEach { line ->
+            Text(
+                text = line.ifEmpty { " " },
+                color = colorForLine(line),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                softWrap = false,
+            )
         }
     }
 }

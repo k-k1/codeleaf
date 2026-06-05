@@ -290,6 +290,10 @@ class RepoRepository(
     suspend fun commitGraph(repo: Repo): List<GraphCommit> =
         withContext(ioDispatcher) { jgit.commitGraph(workDir(repo)) }
 
+    /** 指定コミット全体の unified diff(第1親との全ファイル差分)。 */
+    suspend fun commitDiff(repo: Repo, sha: String): String =
+        withContext(ioDispatcher) { jgit.commitDiff(workDir(repo), sha) }
+
     /** リポジトリの表示テーマを変更して保存する。更新後の Repo を返す。 */
     suspend fun setTheme(repo: Repo, mode: ThemeMode): Repo = withContext(ioDispatcher) {
         val updated = repo.copy(themeMode = mode)

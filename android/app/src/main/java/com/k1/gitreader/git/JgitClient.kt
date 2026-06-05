@@ -38,6 +38,7 @@ data class GraphCommit(
     val sha: String,
     val parents: List<String>,
     val shortMessage: String,
+    val fullMessage: String,
     val author: String,
     val committedAt: Instant,
     val refs: List<String>,
@@ -163,6 +164,31 @@ class JgitClient {
         }
     }
 
+    /** 指定コミット全体の unified diff（第1親との差分・全ファイル）。 */
+    fun commitDiff(dir: File, sha: String): String {
+        Git.open(dir).use { git ->
+            val repo = git.repository
+            RevWalk(repo).use { rw ->
+                val commit = rw.parseCommit(ObjectId.fromString(sha))
+                repo.newObjectReader().use { reader ->
+                    val newTree = CanonicalTreeParser().apply { reset(reader, commit.tree) }
+                    val oldIter = if (commit.parentCount > 0) {
+                        val parent = rw.parseCommit(commit.getParent(0).id)
+                        CanonicalTreeParser().apply { reset(reader, parent.tree) }
+                    } else {
+                        EmptyTreeIterator()
+                    }
+                    val out = ByteArrayOutputStream()
+                    DiffFormatter(out).use { df ->
+                        df.setRepository(repo)
+                        df.format(df.scan(oldIter, newTree)) // pathFilter 無し = 全ファイル
+                    }
+                    return out.toString(Charsets.UTF_8.name())
+                }
+            }
+        }
+    }
+
     /**
      * 全 ref(ローカル/リモートブランチ・タグ)を起点に DAG を辿り、コミットグラフを返す。
      * TOPO かつ committer date 降順。各コミットに紐づくブランチ/タグ名も付与する。
@@ -195,6 +221,7 @@ class JgitClient {
                             sha = c.name,
                             parents = c.parents.map { it.name },
                             shortMessage = c.shortMessage,
+                            fullMessage = c.fullMessage,
                             author = c.authorIdent.name,
                             committedAt = c.committerIdent.whenAsInstant,
                             refs = refNames[c.name].orEmpty().sorted(),

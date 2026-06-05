@@ -146,6 +146,9 @@ class RepoListViewModel(
     suspend fun commitGraph(repo: Repo): List<com.k1.gitreader.git.GraphCommit> =
         repository.commitGraph(repo)
 
+    suspend fun commitDiff(repo: Repo, sha: String): String =
+        repository.commitDiff(repo, sha)
+
     /** リポ毎テーマを変更（保存後、更新済み Repo を onDone で返す）。 */
     fun setRepoTheme(repo: Repo, mode: ThemeMode, onDone: (Repo) -> Unit) {
         viewModelScope.launch {

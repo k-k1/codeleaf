@@ -14,7 +14,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.k1.gitreader.data.db.Repo
+import com.k1.gitreader.git.GraphCommit
 
 private sealed interface Screen {
     data object List : Screen
@@ -34,6 +37,7 @@ private sealed interface Screen {
     data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
     data class History(val repo: Repo, val filePath: String) : Screen
     data class Diff(val repo: Repo, val filePath: String, val sha: String) : Screen
+    data class CommitDetail(val repo: Repo, val commit: GraphCommit) : Screen
 }
 
 /** 2ペイン化のしきい値(これ以上の幅で左=一覧/右=詳細)。 */
@@ -46,6 +50,8 @@ fun GitReaderApp() {
     val backStack = remember { mutableStateListOf<Screen>(Screen.List) }
     // 開いているファイルは backStack と直交する別スタックで持つ(2ペインのため)。
     val detailStack = remember { mutableStateListOf<Screen.View>() }
+    // コミットグラフ2ペインで右に出す選択コミット。
+    var graphSelected by remember { mutableStateOf<GraphCommit?>(null) }
 
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
@@ -72,6 +78,7 @@ fun GitReaderApp() {
                 is Screen.Search -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
                 is Screen.History -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
                 is Screen.Diff -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
+                is Screen.CommitDetail -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
                 else -> {}
             }
         }
@@ -150,7 +157,7 @@ fun GitReaderApp() {
                     loadBranches = { vm.listBranches(repo) },
                     onSync = { vm.syncNow(repo) },
                     onSearch = { navigate(Screen.Search(repo)) },
-                    onGraph = { navigate(Screen.Graph(repo)) },
+                    onGraph = { graphSelected = null; navigate(Screen.Graph(repo)) },
                     onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
                     onOpenFile = {
@@ -225,11 +232,42 @@ fun GitReaderApp() {
         }
 
         is Screen.Graph -> GitReaderTheme(current.repo.themeMode) {
-            CommitGraphScreen(
-                repoName = current.repo.name,
-                loadGraph = { vm.commitGraph(current.repo) },
-                onBack = { pop() },
-            )
+            val repo = current.repo
+
+            @Composable
+            fun GraphPane(selectedSha: String?, onSelect: (GraphCommit) -> Unit) {
+                CommitGraphScreen(
+                    repoName = repo.name,
+                    loadGraph = { vm.commitGraph(repo) },
+                    onBack = { handleBack() },
+                    selectedSha = selectedSha,
+                    onSelectCommit = onSelect,
+                )
+            }
+
+            BoxWithConstraints {
+                val expanded = maxWidth >= TWO_PANE_MIN_WIDTH
+                if (!expanded) {
+                    GraphPane(selectedSha = null, onSelect = { navigate(Screen.CommitDetail(repo, it)) })
+                } else {
+                    Row(Modifier.fillMaxSize()) {
+                        Box(Modifier.weight(0.45f)) {
+                            GraphPane(selectedSha = graphSelected?.sha, onSelect = { graphSelected = it })
+                        }
+                        VerticalDivider()
+                        Box(Modifier.weight(0.55f)) {
+                            val sel = graphSelected
+                            if (sel != null) {
+                                key(sel.sha) {
+                                    CommitDetailContent(sel) { vm.commitDiff(repo, sel.sha) }
+                                }
+                            } else {
+                                SelectPlaceholder("コミットを選択")
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         is Screen.History -> GitReaderTheme(current.repo.themeMode) {
@@ -246,6 +284,14 @@ fun GitReaderApp() {
                 sha = current.sha,
                 loadDiff = { vm.fileDiff(current.repo, current.filePath, current.sha) },
                 onBack = { pop() },
+            )
+        }
+
+        is Screen.CommitDetail -> GitReaderTheme(current.repo.themeMode) {
+            CommitDetailScreen(
+                commit = current.commit,
+                loadDiff = { vm.commitDiff(current.repo, current.commit.sha) },
+                onBack = { handleBack() },
             )
         }
 

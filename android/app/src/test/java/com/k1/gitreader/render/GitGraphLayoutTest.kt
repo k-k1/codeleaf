@@ -9,7 +9,7 @@ import java.time.Instant
 class GitGraphLayoutTest {
 
     private fun c(sha: String, vararg parents: String) =
-        GraphCommit(sha, parents.toList(), "msg $sha", "author", Instant.EPOCH, emptyList())
+        GraphCommit(sha, parents.toList(), "msg $sha", "msg $sha", "author", Instant.EPOCH, emptyList())
 
     @Test
     fun linearHistory_singleLane() {
