@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -327,7 +328,8 @@ private fun DropZoneRow() {
     }
 }
 
-/** リポ1枚のカード。左にドラッグハンドル(セクション間移動)、名前、色ドット、右に削除。 */
+/** リポ1枚のカード。選んだ色をリポ一覧と同等に反映(左アクセントバー＋淡い色地)。
+ *  左にドラッグハンドル(セクション間移動)、名前の右に host・ブランチ、下に色ドット、右端に削除。 */
 @Composable
 private fun RepoEditCard(
     repo: Repo,
@@ -337,7 +339,15 @@ private fun RepoEditCard(
     onDelete: () -> Unit,
     dragModifier: Modifier,
 ) {
+    val accent = repo.colorTag.accent()
+    // リポ一覧の選択パネルと同じく、色付きは淡くハイライト(色なしは既定)。
+    val colors = if (accent != null) {
+        CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.22f))
+    } else {
+        CardDefaults.cardColors()
+    }
     Card(
+        colors = colors,
         elevation = CardDefaults.cardElevation(defaultElevation = if (dragging) 8.dp else 1.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -346,6 +356,8 @@ private fun RepoEditCard(
             .graphicsLayer { translationY = dragOffset },
     ) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            // 左端のアクセント色バー(色なしは透明)。リポ一覧と揃える。
+            Box(Modifier.width(6.dp).fillMaxHeight().background(accent ?: Color.Transparent))
             // 専用ハンドル: 掴んで上下ドラッグでセクション間を移動。
             Box(
                 modifier = Modifier
@@ -357,15 +369,27 @@ private fun RepoEditCard(
             ) {
                 Icon(Icons.Default.Menu, contentDescription = "並べ替え・グループ移動")
             }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    repo.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Column(Modifier.weight(1f).padding(end = 4.dp)) {
+                // 名前の右に host(github/bitbucket)・ブランチ。
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        repo.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "${repo.host.name.lowercase()} · ${repo.branch}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
                 Row(
-                    Modifier.padding(top = 4.dp),
+                    Modifier.padding(top = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     RepoColor.entries.forEach { c ->
