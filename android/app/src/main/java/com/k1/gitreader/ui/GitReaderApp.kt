@@ -293,6 +293,17 @@ fun GitReaderApp() {
         is Screen.Browse -> {
             val repo = current.repo
 
+            // ひとつ上のディレクトリへ。直下が親なら pop、非線形なら親に置換。
+            fun goUp() {
+                val parent = current.path.substringBeforeLast('/', "")
+                val below = backStack.getOrNull(backStack.lastIndex - 1)
+                if (below is Screen.Browse && below.repo.id == repo.id && below.path == parent) {
+                    backStack.removeAt(backStack.lastIndex)
+                } else {
+                    backStack[backStack.lastIndex] = Screen.Browse(repo, parent)
+                }
+            }
+
             @Composable
             fun BrowserPane(showBack: Boolean) {
                 FileBrowserScreen(
@@ -320,19 +331,9 @@ fun GitReaderApp() {
                             detailStack.clear() // 作業ツリー書換でファイルが変化/消滅しうる
                         }
                     },
-                    // ← はリポ退出(リポ一覧へ)。3ペインはレールが担うため非表示(null)。
-                    onBack = if (showBack) ({ leaveRepo() }) else null,
-                    onUp = {
-                        val parent = current.path.substringBeforeLast('/', "")
-                        val below = backStack.getOrNull(backStack.lastIndex - 1)
-                        if (below is Screen.Browse && below.repo.id == repo.id && below.path == parent) {
-                            // 直下が親ディレクトリならそのまま戻る(スタックを汚さない)。
-                            backStack.removeAt(backStack.lastIndex)
-                        } else {
-                            // それ以外(非線形に来た場合)は現在の Browse を親に置換する。
-                            backStack[backStack.lastIndex] = Screen.Browse(repo, parent)
-                        }
-                    },
+                    // ← は階層を1つ上へ。ルート(path 空)ならリポを出て一覧へ。3ペインは非表示(null)。
+                    onBack = if (showBack) ({ if (current.path.isEmpty()) leaveRepo() else goUp() }) else null,
+                    onUp = { goUp() },
                 )
             }
 
