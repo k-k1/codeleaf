@@ -29,7 +29,8 @@ object BitbucketAuthorization {
     const val AUTHORIZE_URL = "https://bitbucket.org/site/oauth2/authorize"
     const val TOKEN_URL = "https://bitbucket.org/site/oauth2/access_token"
 
-    /** scope は consumer 側設定(repository:read)に従うため URL には付けない。 */
+    /** scope は consumer 側設定に従うため URL には付けない。
+     *  必要権限: Repositories:Read ＋ Account:Read(後者は /2.0/user/workspaces に必須)。 */
     fun build(clientId: String, redirectUri: String, state: String): AuthorizationRequest {
         val url = buildString {
             append(AUTHORIZE_URL)

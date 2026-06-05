@@ -85,7 +85,9 @@ OAuth は `local.properties` に client_id/secret がある時だけ有効化さ
    →「**Create OAuth client**」。
    - Name: `CodeLeaf`
    - **Callback URL**: `codeleaf://oauth`
-   - **Permissions**: Repositories → **Read**
+   - **Permissions**: Repositories → **Read** ＋ Account → **Read**
+     （Account:Read は CHANGE-2770 後のワークスペース列挙 `GET /2.0/user/workspaces` に必須。
+     不足すると 403 でリポ一覧が取れない。権限変更後は要・再ログイン）
 2. 発行された **Client ID / Secret** を `android/local.properties` に追記（git 管理外）:
    ```
    BITBUCKET_OAUTH_CLIENT_ID=<Client ID>

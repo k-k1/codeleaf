@@ -41,22 +41,41 @@ class BitbucketApiTest {
         assertNull(next)
     }
 
+    // /2.0/user/workspaces は workspace をネストする形。
+    private val workspaces = """{"values":[{"type":"workspace_membership","workspace":{"slug":"ws","name":"WS"}}]}"""
+
     @Test
-    fun listRepositoriesFollowsPaginationAndSendsBearer() {
+    fun parseWorkspaceSlugsHandlesNestedAndTopLevel() {
+        val nested = parseWorkspaceSlugs("""{"values":[{"workspace":{"slug":"a"}},{"workspace":{"slug":"b"}}],"next":"u"}""")
+        assertEquals(listOf("a", "b"), nested.first)
+        assertEquals("u", nested.second)
+        // 直に slug を持つ形にも対応。
+        val flat = parseWorkspaceSlugs("""{"values":[{"slug":"c"}]}""")
+        assertEquals(listOf("c"), flat.first)
+        assertNull(flat.second)
+    }
+
+    @Test
+    fun listRepositoriesEnumeratesWorkspacesThenReposAndSendsBearer() {
         var firstAuth: String? = null
         val http = object : ApiHttp {
             override fun getJson(url: String, authHeader: String): HttpResult {
                 if (firstAuth == null) firstAuth = authHeader
-                return if (url.contains("page=2")) HttpResult(200, page2) else HttpResult(200, page1)
+                return when {
+                    url.contains("/user/workspaces") -> HttpResult(200, workspaces)
+                    url.contains("page=2") -> HttpResult(200, page2)
+                    else -> HttpResult(200, page1) // /2.0/repositories/ws
+                }
             }
         }
         val repos = BitbucketApi(http).listRepositories("AT").getOrThrow()
         assertEquals(listOf("ws/repo-a", "ws/repo-b", "ws/repo-c"), repos.map { it.fullName })
-        assertEquals("Bearer AT", firstAuth)
+        assertEquals("Bearer AT", firstAuth) // 最初の呼び出し(=workspaces)も Bearer
     }
 
     @Test
-    fun listRepositoriesSurfacesHttpError() {
+    fun listRepositoriesSurfacesWorkspacesHttpError() {
+        // workspaces 取得が失敗(401)したら HTTP エラーとして表面化する。
         val http = object : ApiHttp {
             override fun getJson(url: String, authHeader: String) = HttpResult(401, """{"error":"x"}""")
         }
