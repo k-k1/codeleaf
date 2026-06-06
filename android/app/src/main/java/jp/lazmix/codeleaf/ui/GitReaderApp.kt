@@ -62,17 +62,36 @@ import kotlinx.parcelize.Parcelize
 
 // プロセス死から復元するため Parcelable(各メンバ @Parcelize)。
 private sealed interface Screen : Parcelable {
+    /** repo を持つ画面の共通口。テーマ変更時に backStack/detailStack 内を一括差し替えするのに使う。 */
+    sealed interface WithRepo : Screen {
+        val repo: Repo
+        fun withRepo(updated: Repo): WithRepo
+    }
     @Parcelize data object List : Screen
     @Parcelize data object Add : Screen
     @Parcelize data object Settings : Screen
     @Parcelize data object RepoEdit : Screen
-    @Parcelize data class Browse(val repo: Repo, val path: String) : Screen
-    @Parcelize data class Search(val repo: Repo) : Screen
-    @Parcelize data class Graph(val repo: Repo) : Screen
-    @Parcelize data class View(val repo: Repo, val filePath: String, val line: Int? = null) : Screen
-    @Parcelize data class History(val repo: Repo, val filePath: String) : Screen
-    @Parcelize data class Diff(val repo: Repo, val filePath: String, val commit: CommitInfo) : Screen
-    @Parcelize data class CommitDetail(val repo: Repo, val commit: GraphCommit) : Screen
+    @Parcelize data class Browse(override val repo: Repo, val path: String) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class Search(override val repo: Repo) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class Graph(override val repo: Repo) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class View(override val repo: Repo, val filePath: String, val line: Int? = null) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class History(override val repo: Repo, val filePath: String) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class Diff(override val repo: Repo, val filePath: String, val commit: CommitInfo) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class CommitDetail(override val repo: Repo, val commit: GraphCommit) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
 }
 
 /** 2ペイン(左=一覧/右=詳細)・3ペイン(左=リポ一覧/中=一覧/右=詳細)のしきい値。 */
@@ -135,15 +154,8 @@ fun GitReaderApp() {
     // リポ毎テーマ変更を backStack / detailStack 内の同一リポ全画面へ反映する。
     fun applyThemeUpdate(updated: Repo) {
         for (idx in backStack.indices) {
-            when (val s = backStack[idx]) {
-                is Screen.Browse -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                is Screen.Graph -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                is Screen.Search -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                is Screen.History -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                is Screen.Diff -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                is Screen.CommitDetail -> if (s.repo.id == updated.id) backStack[idx] = s.copy(repo = updated)
-                else -> {}
-            }
+            val s = backStack[idx]
+            if (s is Screen.WithRepo && s.repo.id == updated.id) backStack[idx] = s.withRepo(updated)
         }
         for (idx in detailStack.indices) {
             val s = detailStack[idx]
