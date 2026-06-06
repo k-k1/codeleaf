@@ -22,7 +22,11 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class CommitGraphE2EInstrumentedTest {
 
-    @get:Rule
+    // LazyColumn prefetch 由来の test-only フレーク(looper)対策: 再試行は compose より外側(order 大)。
+    @get:Rule(order = 1)
+    val retry = RetryRule()
+
+    @get:Rule(order = 0)
     val compose = createAndroidComposeRule<MainActivity>()
 
     private val app get() = ApplicationProvider.getApplicationContext<GitReaderApplication>()
