@@ -26,6 +26,10 @@ import java.io.File
  * ファイルブラウザの pull-to-refresh で閲覧中リポが同期されることを実 UI で検証する。
  * ネットワーク非依存(ローカル git リポを file パスで clone)。
  *
+ * 検証は「同期完了」スナックバー(瞬間表示・SnackbarHost 依存で取りこぼしやすい)ではなく、
+ * **同期の持続的な結果** — clone 後にリモートへ足したコミットのファイルが pull で作業ツリーに現れ、
+ * 一覧に表示されること — をアサートする。これによりフルスイートの負荷下でも決定的になる。
+ *
  * 実行: `./gradlew pixel6Api35DebugAndroidTest`。
  */
 @RunWith(AndroidJUnit4::class)
@@ -65,17 +69,25 @@ class PullToRefreshE2EInstrumentedTest {
 
     @Test
     fun pullToRefresh_syncsCurrentRepo() {
-        // リポを開く → ブラウザに README.md
+        // リポを開く → ブラウザに README.md(clone 直後の状態)
         compose.onNodeWithText("ptr-fixture").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("README.md").fetchSemanticsNodes().isNotEmpty()
         }
+        // clone 後にリモート(origin)へ新規コミットを足す。まだ pull していないので一覧には出ない。
+        Git.open(srcRepo).use { git ->
+            File(srcRepo, "PULLED.md").writeText("# Pulled\n")
+            git.add().addFilepattern(".").call()
+            git.commit().setMessage("add pulled")
+                .setAuthor("t", "t@example.com").setCommitter("t", "t@example.com").call()
+        }
 
-        // ファイル一覧を下に引く → 同期 → 「同期完了」スナックバー
+        // ファイル一覧を下に引く → 同期(fetch + reset --hard origin/main) → 新ファイルが作業ツリーに現れる。
+        // 瞬間表示のスナックバーではなく、同期で取り込まれた PULLED.md の出現で同期成立を判定する。
         compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
         compose.waitUntil(timeoutMillis = 15_000) {
-            compose.onAllNodesWithText("同期完了").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("PULLED.md").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("同期完了").assertIsDisplayed()
+        compose.onNodeWithText("PULLED.md").assertIsDisplayed()
     }
 }
