@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -157,6 +158,12 @@ private fun GraphCommitRow(row: GraphRow, laneCount: Int, selected: Boolean, onC
                 Text(
                     row.commit.shortMessage,
                     style = MaterialTheme.typography.bodyMedium,
+                    // 現ブランチ非到達(他ブランチ専用/未取り込み)は減光して区別する。
+                    color = if (row.commit.inCurrentBranch) {
+                        Color.Unspecified
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -191,6 +198,8 @@ internal fun RefChip(name: String) {
 
 @Composable
 private fun GraphCell(row: GraphRow, laneCount: Int, modifier: Modifier) {
+    // 中空ノードの内側を塗って下のレーン線が透けないようにする色。
+    val nodeFill = MaterialTheme.colorScheme.surface
     Canvas(modifier) {
         val laneW = LANE_WIDTH.toPx()
         val r = NODE_RADIUS.toPx()
@@ -219,7 +228,13 @@ private fun GraphCell(row: GraphRow, laneCount: Int, modifier: Modifier) {
                 drawLine(color, Offset(laneX(row.nodeLane), centerY), Offset(laneX(j), size.height), sw)
             }
         }
-        // ノード
-        drawCircle(laneColor(row.nodeLane), radius = r, center = Offset(laneX(row.nodeLane), centerY))
+        // ノード: 反映済みは塗りつぶし、現ブランチ非到達は中空リングで区別する。
+        val nodeCenter = Offset(laneX(row.nodeLane), centerY)
+        if (row.commit.inCurrentBranch) {
+            drawCircle(laneColor(row.nodeLane), radius = r, center = nodeCenter)
+        } else {
+            drawCircle(nodeFill, radius = r, center = nodeCenter)
+            drawCircle(laneColor(row.nodeLane), radius = r, center = nodeCenter, style = Stroke(width = sw))
+        }
     }
 }

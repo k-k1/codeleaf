@@ -57,6 +57,11 @@ data class GraphCommit(
     val author: String,
     val committedAt: Instant,
     val refs: List<String>,
+    /**
+     * 現在チェックアウト中ブランチ(HEAD)から到達可能か。true=ローカル作業ツリーに反映済み。
+     * false=他ブランチ専用/未取り込みで、UI ではグレー表示する。
+     */
+    val inCurrentBranch: Boolean = true,
 ) : Parcelable
 
 /**
@@ -213,6 +218,19 @@ class JgitClient {
             val repo = git.repository
             val allRefs = repo.refDatabase.refs.filter { it.name != "HEAD" }
 
+            // 現在チェックアウト中(HEAD)から到達可能なコミット = ローカル作業ツリーに反映済み。
+            // それ以外(他ブランチ専用・未取り込み)は inCurrentBranch=false にして UI でグレー表示する。
+            // 解決できない場合(detached 等)は空のままにし、後段で全コミットを反映済み扱いにする。
+            val reachableFromHead = HashSet<String>()
+            runCatching {
+                repo.resolve("HEAD")?.let { head ->
+                    RevWalk(repo).use { hw ->
+                        hw.markStart(hw.parseCommit(head))
+                        for (c in hw) reachableFromHead.add(c.name)
+                    }
+                }
+            }
+
             // sha -> その位置を指す ref 短縮名
             val refNames = HashMap<String, MutableList<String>>()
             for (ref in allRefs) {
@@ -240,6 +258,8 @@ class JgitClient {
                             author = c.authorIdent.name,
                             committedAt = c.committerIdent.whenAsInstant,
                             refs = refNames[c.name].orEmpty().sorted(),
+                            // HEAD を解決できなかった時(集合が空)は全て反映済み扱い(全グレー化を回避)。
+                            inCurrentBranch = reachableFromHead.isEmpty() || c.name in reachableFromHead,
                         ),
                     )
                 }
