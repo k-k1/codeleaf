@@ -258,6 +258,16 @@ fun GitReaderApp() {
         }
     }
 
+    // リポ詳細系画面の共通ホスト: 3ペインなら左レール付き、未満ならリポ毎テーマで全画面。
+    @Composable
+    fun RepoPaneHost(three: Boolean, repo: Repo, content: @Composable () -> Unit) {
+        if (three) {
+            ThreePaneScaffold(repo.id, repo.themeMode) { content() }
+        } else {
+            GitReaderTheme(repo.themeMode) { content() }
+        }
+    }
+
     when (val current = backStack.last()) {
         Screen.List -> BoxWithConstraints {
             if (maxWidth >= THREE_PANE_MIN_WIDTH) {
@@ -437,11 +447,7 @@ fun GitReaderApp() {
                     }
                 }
 
-                if (three) {
-                    ThreePaneScaffold(repo.id, repo.themeMode) { ContentPanes() }
-                } else {
-                    GitReaderTheme(repo.themeMode) { ContentPanes() }
-                }
+                RepoPaneHost(three, repo) { ContentPanes() }
             }
         }
 
@@ -513,11 +519,7 @@ fun GitReaderApp() {
                     }
                 }
 
-                if (three) {
-                    ThreePaneScaffold(repo.id, repo.themeMode) { ContentPanes() }
-                } else {
-                    GitReaderTheme(repo.themeMode) { ContentPanes() }
-                }
+                RepoPaneHost(three, repo) { ContentPanes() }
             }
         }
 
@@ -578,11 +580,7 @@ fun GitReaderApp() {
                     }
                 }
 
-                if (three) {
-                    ThreePaneScaffold(repo.id, repo.themeMode) { ContentPanes() }
-                } else {
-                    GitReaderTheme(repo.themeMode) { ContentPanes() }
-                }
+                RepoPaneHost(three, repo) { ContentPanes() }
             }
         }
 

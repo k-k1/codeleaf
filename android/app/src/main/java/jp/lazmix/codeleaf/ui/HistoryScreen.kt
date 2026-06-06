@@ -11,12 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -65,9 +61,7 @@ fun HistoryScreen(
             TopAppBar(
                 title = { Text("履歴: ${filePath.substringAfterLast('/')}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
-                    }
+                    BackButton(onBack)
                 },
             )
         },
@@ -113,7 +107,7 @@ fun HistoryScreen(
                             ) {
                                 Text(c.shortMessage, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(
-                                    "${c.sha.take(7)} · ${c.author} · ${relativeTimeMillis(c.committedAt.toEpochMilli())}",
+                                    "${shortSha(c.sha)} · ${c.author} · ${relativeTimeMillis(c.committedAt.toEpochMilli())}",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -148,7 +142,7 @@ fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli())} · ${commit.sha.take(7)}",
+                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli())} · ${shortSha(commit.sha)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

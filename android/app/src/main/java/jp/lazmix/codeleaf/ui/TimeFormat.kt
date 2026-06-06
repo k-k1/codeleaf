@@ -15,3 +15,6 @@ fun relativeTimeMillis(epochMillis: Long): String {
         else -> "${day / 365}年前"
     }
 }
+
+/** コミット SHA の短縮表示（先頭 7 桁）。各画面で重複していた `sha.take(7)` を集約する。 */
+fun shortSha(sha: String): String = sha.take(7)

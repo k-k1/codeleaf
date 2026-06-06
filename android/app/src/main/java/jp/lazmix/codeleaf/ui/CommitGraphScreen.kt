@@ -16,11 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -92,9 +88,7 @@ fun CommitGraphScreen(
             TopAppBar(
                 title = { Text("コミットグラフ: $repoName", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
-                    }
+                    BackButton(onBack)
                 },
             )
         },
@@ -169,7 +163,7 @@ private fun GraphCommitRow(row: GraphRow, laneCount: Int, selected: Boolean, onC
                 )
             }
             Text(
-                "${row.commit.author} · ${relativeTimeMillis(row.commit.committedAt.toEpochMilli())} · ${row.commit.sha.take(7)}",
+                "${row.commit.author} · ${relativeTimeMillis(row.commit.committedAt.toEpochMilli())} · ${shortSha(row.commit.sha)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
