@@ -249,6 +249,9 @@ class RepoListViewModel(
 
     fun setCollapseFolders(on: Boolean) = settingsStore.setCollapseFolders(on)
 
+    fun setFileNameDisplay(mode: jp.lazmix.codeleaf.data.FileNameDisplay) =
+        settingsStore.setFileNameDisplay(mode)
+
     fun setIconSet(set: jp.lazmix.codeleaf.data.IconSet) = settingsStore.setIconSet(set)
 
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */

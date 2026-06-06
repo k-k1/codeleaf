@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -56,8 +57,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +72,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.FileEntry
+import jp.lazmix.codeleaf.data.FileNameDisplay
 import jp.lazmix.codeleaf.data.IconSet
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.ThemeMode
@@ -95,6 +100,7 @@ fun FileBrowserScreen(
     /** ひとつ上のディレクトリへ(パスから親を算出して遷移)。ルートでは無効。 */
     onUp: () -> Unit,
     iconSet: IconSet = IconSet.MATERIAL,
+    fileNameDisplay: FileNameDisplay = FileNameDisplay.WRAP,
 ) {
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
@@ -216,7 +222,7 @@ fun FileBrowserScreen(
                     entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.fillMaxSize()) {
                         items(entries!!, key = { it.relPath }) { e ->
-                            EntryRow(e, iconSet, onClick = {
+                            EntryRow(e, iconSet, fileNameDisplay, onClick = {
                                 // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
                                 if (!locked) {
                                     when {
@@ -319,7 +325,12 @@ private fun PathBreadcrumb(path: String, onNavigate: (String) -> Unit) {
 }
 
 @Composable
-private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
+private fun EntryRow(
+    entry: FileEntry,
+    iconSet: IconSet,
+    nameDisplay: FileNameDisplay,
+    onClick: () -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
     val mark = FileIcons.mark(entry.name)
 
@@ -356,16 +367,71 @@ private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             FileEntryIcon(entry, iconSet)
-            // 省略せず全文を表示する(長い名前は複数行に折り返す)。畳んだ連鎖は "src/main/java"。
-            Text(
-                entry.displayName,
+            FileNameText(
+                text = entry.displayName,
+                mode = nameDisplay,
                 color = textColor,
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
-                softWrap = true,
                 modifier = Modifier.weight(1f),
             )
             chip?.let { (label, color) -> MarkChip(label, color) }
+        }
+    }
+}
+
+/**
+ * ファイル名を設定に応じて表示する。WRAP=折り返し全表示 / END_ELLIPSIS=末尾を… /
+ * MIDDLE_ELLIPSIS=中央を…(先頭と末尾を残す。Compose1.7 に MiddleEllipsis が無いため
+ * TextMeasurer＋onSizeChanged で実幅を測り二分探索で詰める。`IntrinsicSize.Min` 行で
+ * BoxWithConstraints は使えないため onSizeChanged を採用)。
+ */
+@Composable
+private fun FileNameText(
+    text: String,
+    mode: FileNameDisplay,
+    color: Color,
+    fontWeight: FontWeight?,
+    fontStyle: FontStyle?,
+    modifier: Modifier = Modifier,
+) {
+    when (mode) {
+        FileNameDisplay.WRAP -> Text(
+            text, color = color, fontWeight = fontWeight, fontStyle = fontStyle,
+            softWrap = true, modifier = modifier,
+        )
+        FileNameDisplay.END_ELLIPSIS -> Text(
+            text, color = color, fontWeight = fontWeight, fontStyle = fontStyle,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier,
+        )
+        FileNameDisplay.MIDDLE_ELLIPSIS -> {
+            val measurer = rememberTextMeasurer()
+            val style = LocalTextStyle.current.merge(
+                TextStyle(color = color, fontWeight = fontWeight, fontStyle = fontStyle),
+            )
+            var widthPx by remember { mutableStateOf(0) }
+            val display = remember(text, widthPx, style) {
+                fun fits(s: String) =
+                    measurer.measure(s, style, softWrap = false, maxLines = 1).size.width <= widthPx
+                if (widthPx <= 0 || fits(text)) {
+                    text
+                } else {
+                    var lo = 0
+                    var hi = text.length - 1
+                    var best = "…"
+                    while (lo <= hi) {
+                        val keep = (lo + hi) / 2
+                        val head = keep / 2
+                        val cand = text.take(head) + "…" + text.takeLast(keep - head)
+                        if (fits(cand)) { best = cand; lo = keep + 1 } else { hi = keep - 1 }
+                    }
+                    best
+                }
+            }
+            Text(
+                display, style = style, maxLines = 1, softWrap = false,
+                modifier = modifier.onSizeChanged { if (it.width != widthPx) widthPx = it.width },
+            )
         }
     }
 }

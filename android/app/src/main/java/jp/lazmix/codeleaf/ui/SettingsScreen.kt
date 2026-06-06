@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.data.AppSettings
+import jp.lazmix.codeleaf.data.FileNameDisplay
 import jp.lazmix.codeleaf.data.FontScale
 import jp.lazmix.codeleaf.data.IconSet
 import jp.lazmix.codeleaf.data.LinkOpenMode
@@ -67,6 +68,7 @@ fun SettingsScreen(
     onSetTableMode: (TableMode) -> Unit,
     onSetStickyHeadings: (Boolean) -> Unit,
     onSetCollapseFolders: (Boolean) -> Unit,
+    onSetFileNameDisplay: (FileNameDisplay) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
@@ -198,6 +200,28 @@ fun SettingsScreen(
                     )
                 }
                 Switch(checked = settings.collapseFolders, onCheckedChange = onSetCollapseFolders)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("ファイル名の表示", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "長い名前の扱い。折り返し=全文を複数行。中央省略=先頭と末尾を残す。末尾省略=末尾を…。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val items = listOf(
+                        FileNameDisplay.WRAP to "折り返し",
+                        FileNameDisplay.MIDDLE_ELLIPSIS to "中央省略",
+                        FileNameDisplay.END_ELLIPSIS to "末尾省略",
+                    )
+                    items.forEachIndexed { i, (mode, label) ->
+                        SegmentedButton(
+                            selected = settings.fileNameDisplay == mode,
+                            onClick = { onSetFileNameDisplay(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(i, items.size),
+                        ) { Text(label) }
+                    }
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

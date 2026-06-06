@@ -374,6 +374,7 @@ fun GitReaderApp() {
             onSetTableMode = vm::setTableMode,
             onSetStickyHeadings = vm::setStickyHeadings,
             onSetCollapseFolders = vm::setCollapseFolders,
+            onSetFileNameDisplay = vm::setFileNameDisplay,
             onSetIconSet = vm::setIconSet,
             onClearCache = { vm.clearCache() },
             onBack = { pop() },
@@ -420,6 +421,7 @@ fun GitReaderApp() {
                         if (detailStack.lastOrNull()?.filePath != it) detailStack.add(Screen.View(repo, it))
                     },
                     iconSet = settings.iconSet,
+                    fileNameDisplay = settings.fileNameDisplay,
                     onSwitchBranch = { branch ->
                         vm.switchBranch(repo, branch) { updated ->
                             val i = backStack.indexOfLast { it is Screen.Browse }

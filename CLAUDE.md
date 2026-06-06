@@ -40,7 +40,8 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   `backStack`/`detailStack`/`graphSelected`/`focusMode` を `rememberSaveable` でプロセス死から復元。
   **instrumented E2E は portrait(compact)前提** — landscape で実行すると2/3ペインになり一部 assert が崩れる。
 - **ブラウザ**(`FileBrowserScreen`): 上部に GitHub 風パンくず(`PathBreadcrumb`・🏠＋各フォルダ、祖先タップで `onNavigateToDir`→`navigateToDir` が
-  スタックを当該 Browse まで畳む/無ければ置換)。ファイル名は**省略せず折り返し**(softWrap)で全表示。
+  スタックを当該 Browse まで畳む/無ければ置換)。ファイル名表示は設定 `fileNameDisplay`(`FileNameText`)= 折り返し(既定)/中央省略/末尾省略。
+  中央省略は Compose1.7 に `MiddleEllipsis` が無いため `TextMeasurer`＋`onSizeChanged` で自前(BoxWithConstraints は `IntrinsicSize.Min` 行で不可)。
   **単一子フォルダ連鎖は畳む**(`RepoRepository.collapseDirChain`・設定 `collapseFolders` で切替)= `src/main/java` を1エントリ(`FileEntry.displayName`)にし relPath は最深、タップで直行(submodule は越えない)。
 - **kapt** は `kotlin("kapt")` を **version なし**で適用(catalog alias は失敗)。
   `configurations.all { exclude(group="org.jetbrains", module="annotations-java5") }` で dex 重複を回避。
