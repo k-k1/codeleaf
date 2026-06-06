@@ -93,6 +93,12 @@ private sealed interface Screen : Parcelable {
     @Parcelize data class CommitDetail(override val repo: Repo, val commit: GraphCommit) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
+    @Parcelize data class Memos(override val repo: Repo) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
+    @Parcelize data class MemoDetail(override val repo: Repo, val memoId: Long, val memoTitle: String) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
 }
 
 /** 2ペイン(左=一覧/右=詳細)・3ペイン(左=リポ一覧/中=一覧/右=詳細)のしきい値。 */
@@ -149,6 +155,18 @@ fun GitReaderApp() {
             detailStack.clear()
             focusMode = false
         }
+    }
+
+    // メモのエントリから該当ファイルの行を開く。メモ画面を畳んで Browse に戻り(無ければ作る)、
+    // ビューア(detailStack)に View を積む。
+    fun openFileAt(repo: Repo, path: String, line: Int) {
+        while (backStack.size > 1 && backStack.last() !is Screen.Browse) {
+            backStack.removeAt(backStack.lastIndex)
+        }
+        if (backStack.last() !is Screen.Browse) {
+            backStack.add(Screen.Browse(repo, path.substringBeforeLast('/', "")))
+        }
+        detailStack.add(Screen.View(repo, path, line))
     }
 
     // リポを出てリポ一覧へ戻る(Browse チェーンを畳む)。ブラウザ ← の動作。
@@ -421,6 +439,7 @@ fun GitReaderApp() {
                         stickyHeadings = settings.stickyHeadings,
                         targetLine = file.line,
                         onHistory = { historySelected = null; navigate(Screen.History(file.repo, file.filePath)) },
+                        onMemos = { navigate(Screen.Memos(file.repo)) },
                         onNavigateToFile = { path -> detailStack.add(Screen.View(file.repo, path)) },
                         onBack = { handleBack() },
                         showBack = showBack,
@@ -660,6 +679,34 @@ fun GitReaderApp() {
                 commit = current.commit,
                 loadDiff = { vm.commitDiff(current.repo, current.commit.sha) },
                 onBack = { handleBack() },
+            )
+        }
+
+        is Screen.Memos -> GitReaderTheme(current.repo.themeMode) {
+            val memoList by vm.observeMemos(current.repo.id).collectAsState(initial = emptyList())
+            MemosScreen(
+                repoName = current.repo.name,
+                memos = memoList,
+                onOpenMemo = { navigate(Screen.MemoDetail(current.repo, it.id, it.title)) },
+                onCreateMemo = { title -> vm.createMemo(current.repo.id, title) },
+                onRenameMemo = { id, title -> vm.renameMemo(id, title) },
+                onDeleteMemo = { id -> vm.deleteMemo(id) },
+                loadEntries = { id -> vm.getMemoEntries(id) },
+                onBack = { pop() },
+            )
+        }
+
+        is Screen.MemoDetail -> GitReaderTheme(current.repo.themeMode) {
+            val entries by vm.observeMemoEntries(current.memoId).collectAsState(initial = emptyList())
+            MemoDetailScreen(
+                repoName = current.repo.name,
+                memoTitle = current.memoTitle,
+                entries = entries,
+                onOpenEntry = { e -> openFileAt(current.repo, e.filePath, e.lineStart) },
+                onDeleteEntry = { vm.deleteMemoEntry(it) },
+                onRenameMemo = { vm.renameMemo(current.memoId, it) },
+                onDeleteMemo = { vm.deleteMemo(current.memoId); pop() },
+                onBack = { pop() },
             )
         }
 

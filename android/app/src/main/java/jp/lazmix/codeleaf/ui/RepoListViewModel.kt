@@ -10,6 +10,7 @@ import jp.lazmix.codeleaf.GitReaderApplication
 import jp.lazmix.codeleaf.data.AppSettings
 import jp.lazmix.codeleaf.data.FileEntry
 import jp.lazmix.codeleaf.data.FontScale
+import jp.lazmix.codeleaf.data.MemoRepository
 import jp.lazmix.codeleaf.data.NewRepo
 import jp.lazmix.codeleaf.data.RepoRepository
 import jp.lazmix.codeleaf.data.SettingsStore
@@ -51,6 +52,7 @@ data class UiStatus(
 class RepoListViewModel(
     private val repository: RepoRepository,
     private val settingsStore: SettingsStore,
+    private val memos: MemoRepository,
     private val oauthService: BitbucketOAuthService? = null,
     private val githubOAuthService: GitHubDeviceFlowService? = null,
     oauthResults: Channel<Result<OAuthAccount>>? = null,
@@ -260,6 +262,60 @@ class RepoListViewModel(
         }
     }
 
+    // --- メモ ---
+    fun observeMemos(repoId: Long) = memos.observeMemos(repoId)
+    fun observeMemoEntries(memoId: Long) = memos.observeEntries(memoId)
+    suspend fun getMemoEntries(memoId: Long) = memos.getEntries(memoId)
+
+    fun createMemo(repoId: Long, title: String, onCreated: (Long) -> Unit = {}) {
+        viewModelScope.launch { onCreated(memos.createMemo(repoId, title)) }
+    }
+
+    fun renameMemo(id: Long, title: String) {
+        viewModelScope.launch { memos.renameMemo(id, title) }
+    }
+
+    fun deleteMemo(id: Long) {
+        viewModelScope.launch { memos.deleteMemo(id) }
+    }
+
+    fun addMemoEntry(
+        memoId: Long,
+        filePath: String,
+        lineStart: Int,
+        lineEnd: Int,
+        quote: String,
+        comment: String,
+        onDone: () -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            memos.addEntry(memoId, filePath, lineStart, lineEnd, quote, comment)
+            onDone()
+        }
+    }
+
+    /** 新規メモ帳を作って即エントリを1件追加する(ビューアの「新規メモ帳に保存」用)。 */
+    fun createMemoWithEntry(
+        repoId: Long,
+        title: String,
+        filePath: String,
+        lineStart: Int,
+        lineEnd: Int,
+        quote: String,
+        comment: String,
+        onDone: () -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val memoId = memos.createMemo(repoId, title)
+            memos.addEntry(memoId, filePath, lineStart, lineEnd, quote, comment)
+            onDone()
+        }
+    }
+
+    fun deleteMemoEntry(id: Long) {
+        viewModelScope.launch { memos.deleteEntry(id) }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -267,6 +323,7 @@ class RepoListViewModel(
                 RepoListViewModel(
                     app.container.repoRepository,
                     app.container.settingsStore,
+                    app.container.memoRepository,
                     app.container.bitbucketOAuthService,
                     app.container.githubOAuthService,
                     app.container.oauthResults,

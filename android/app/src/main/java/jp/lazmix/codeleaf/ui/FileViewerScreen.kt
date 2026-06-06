@@ -102,6 +102,7 @@ fun FileViewerScreen(
     stickyHeadings: Boolean = true,
     targetLine: Int? = null,
     onHistory: () -> Unit,
+    onMemos: () -> Unit,
     onNavigateToFile: (String) -> Unit,
     onBack: () -> Unit,
     /** 戻る矢印を表示するか。2/3ペインでは一覧が常に見えるため非表示にする。 */
@@ -219,6 +220,10 @@ fun FileViewerScreen(
                         DropdownMenuItem(
                             text = { Text("履歴") },
                             onClick = { menuExpanded = false; onHistory() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("メモ") },
+                            onClick = { menuExpanded = false; onMemos() },
                         )
                     }
                 },
