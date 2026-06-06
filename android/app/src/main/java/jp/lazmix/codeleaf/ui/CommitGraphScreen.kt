@@ -25,13 +25,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.git.GraphCommit
 import jp.lazmix.codeleaf.render.GitGraphLayout
 import jp.lazmix.codeleaf.render.GraphRow
-import kotlinx.coroutines.launch
 
 private val LANE_COLORS = listOf(
     Color(0xFF42A5F5), Color(0xFF66BB6A), Color(0xFFEF5350), Color(0xFFAB47BC),
@@ -71,8 +68,6 @@ fun CommitGraphScreen(
 ) {
     var commits by remember { mutableStateOf<List<GraphCommit>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var refreshing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -95,22 +90,11 @@ fun CommitGraphScreen(
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = {
-                    if (onSync == null || refreshing) return@PullToRefreshBox
-                    scope.launch {
-                        refreshing = true
-                        val result = runCatching { onSync() }
-                        // 同期後はコミットが増減しうるので再読込(rows/laneCount は commits から再算出)。
-                        commits = runCatching { loadGraph() }.getOrElse { error = it.message; emptyList() }
-                        refreshing = false
-                        snackbar.showSnackbar(
-                            result.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
+            SyncRefreshBox(
+                snackbar = snackbar,
+                onSync = onSync,
+                // 同期後はコミットが増減しうるので再読込(rows/laneCount は commits から再算出)。
+                onReload = { commits = runCatching { loadGraph() }.getOrElse { error = it.message; emptyList() } },
             ) {
                 when {
                     commits == null -> LinearProgressIndicator(Modifier.fillMaxWidth())

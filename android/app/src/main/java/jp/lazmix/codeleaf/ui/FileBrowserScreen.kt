@@ -189,9 +189,7 @@ fun FileBrowserScreen(
                         // 同期後はツリーが変わりうるので再読込
                         entries = runCatching { loadDir(path) }.getOrElse { error = it.message; emptyList() }
                         refreshing = false
-                        snackbar.showSnackbar(
-                            result.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
-                        )
+                        snackbar.showSnackbar(syncResultMessage(result.exceptionOrNull()))
                     }
                 },
                 modifier = Modifier.fillMaxSize(),

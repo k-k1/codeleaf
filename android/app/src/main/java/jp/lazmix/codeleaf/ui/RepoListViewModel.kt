@@ -127,7 +127,7 @@ class RepoListViewModel(
             val ok = runCatching { repository.sync(repo) }
             _status.value = UiStatus(
                 busy = false,
-                message = ok.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
+                message = syncResultMessage(ok.exceptionOrNull()),
             )
         }
     }
