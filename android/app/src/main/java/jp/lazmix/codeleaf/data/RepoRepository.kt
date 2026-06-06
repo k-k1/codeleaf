@@ -258,26 +258,28 @@ class RepoRepository(
 
     /** 作業ツリー内の relPath 配下を列挙（.git 除外・フォルダ優先→名前順）。
      *  submodule のルートと LFS ポインタを判別フラグ付きで返す。 */
-    suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> = withContext(ioDispatcher) {
-        val root = workDir(repo)
-        val dir = if (relPath.isEmpty()) root else File(root, relPath)
-        // .gitmodules があるリポだけ index を読んで submodule パス集合を得る。
-        val subPaths = if (File(root, ".gitmodules").exists()) jgit.submodulePaths(root) else emptySet()
-        val children = dir.listFiles().orEmpty().filterNot { it.name == ".git" }
-        children
-            .map { f ->
-                val rel = joinRel(relPath, f.name)
-                FileEntry(
-                    name = f.name,
-                    relPath = rel,
-                    isDir = f.isDirectory,
-                    isSubmodule = f.isDirectory && rel in subPaths,
-                    isLfs = !f.isDirectory && isLfsPointer(f),
-                )
-            }
-            .sortedWith(compareByDescending<FileEntry> { it.isDir }.thenBy { it.name.lowercase() })
+    suspend fun listDir(repo: Repo, relPath: String, collapse: Boolean = true): List<FileEntry> =
+        withContext(ioDispatcher) {
+            val root = workDir(repo)
+            val dir = if (relPath.isEmpty()) root else File(root, relPath)
+            // .gitmodules があるリポだけ index を読んで submodule パス集合を得る。
+            val subPaths = if (File(root, ".gitmodules").exists()) jgit.submodulePaths(root) else emptySet()
+            val children = dir.listFiles().orEmpty().filterNot { it.name == ".git" }
+            val sorted = children
+                .map { f ->
+                    val rel = joinRel(relPath, f.name)
+                    FileEntry(
+                        name = f.name,
+                        relPath = rel,
+                        isDir = f.isDirectory,
+                        isSubmodule = f.isDirectory && rel in subPaths,
+                        isLfs = !f.isDirectory && isLfsPointer(f),
+                    )
+                }
+                .sortedWith(compareByDescending<FileEntry> { it.isDir }.thenBy { it.name.lowercase() })
+            if (!collapse) return@withContext sorted
             // 単一子フォルダ連鎖(src/main/java 等)を1エントリに畳む。タップで最深へ直行。
-            .map { e ->
+            sorted.map { e ->
                 if (e.isDir && !e.isSubmodule) {
                     val (display, target) = collapseDirChain(root, e.relPath, subPaths)
                     if (target != e.relPath) {
@@ -289,7 +291,7 @@ class RepoRepository(
                     e
                 }
             }
-    }
+        }
 
     /**
      * フォルダ [startRel] が「中身が単一のサブフォルダだけ」である限り降り、連結表示名と最深パスを返す。

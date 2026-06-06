@@ -33,6 +33,8 @@ data class AppSettings(
     val showLineNumbers: Boolean = false,
     val tableMode: TableMode = TableMode.INLINE,
     val stickyHeadings: Boolean = true,
+    /** 単一子フォルダ連鎖(src/main/java 等)を1エントリに畳んで表示するか。 */
+    val collapseFolders: Boolean = true,
     val iconSet: IconSet = IconSet.MATERIAL,
     /** リポ一覧で選択中のグループ。空=すべて表示。 */
     val selectedGroup: String = "",
@@ -60,6 +62,7 @@ class SettingsStore(context: Context) {
         showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
         tableMode = enumOrDefault(prefs.getString(KEY_TABLE, null), TableMode.INLINE),
         stickyHeadings = prefs.getBoolean(KEY_STICKY, true),
+        collapseFolders = prefs.getBoolean(KEY_COLLAPSE, true),
         iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.MATERIAL),
         selectedGroup = prefs.getString(KEY_GROUP, "") ?: "",
         groups = prefs.getString(KEY_GROUPS, null)
@@ -106,6 +109,11 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(stickyHeadings = on)
     }
 
+    fun setCollapseFolders(on: Boolean) {
+        prefs.edit().putBoolean(KEY_COLLAPSE, on).apply()
+        _settings.value = _settings.value.copy(collapseFolders = on)
+    }
+
     fun setIconSet(set: IconSet) {
         prefs.edit().putString(KEY_ICONSET, set.name).apply()
         _settings.value = _settings.value.copy(iconSet = set)
@@ -131,6 +139,7 @@ class SettingsStore(context: Context) {
         const val KEY_LINENUM = "show_line_numbers"
         const val KEY_TABLE = "table_mode"
         const val KEY_STICKY = "sticky_headings"
+        const val KEY_COLLAPSE = "collapse_folders"
         const val KEY_ICONSET = "icon_set"
         const val KEY_GROUP = "selected_group"
         const val KEY_GROUPS = "groups"

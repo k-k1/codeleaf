@@ -373,6 +373,7 @@ fun GitReaderApp() {
             onSetShowLineNumbers = vm::setShowLineNumbers,
             onSetTableMode = vm::setTableMode,
             onSetStickyHeadings = vm::setStickyHeadings,
+            onSetCollapseFolders = vm::setCollapseFolders,
             onSetIconSet = vm::setIconSet,
             onClearCache = { vm.clearCache() },
             onBack = { pop() },

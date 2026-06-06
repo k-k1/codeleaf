@@ -66,6 +66,7 @@ fun SettingsScreen(
     onSetShowLineNumbers: (Boolean) -> Unit,
     onSetTableMode: (TableMode) -> Unit,
     onSetStickyHeadings: (Boolean) -> Unit,
+    onSetCollapseFolders: (Boolean) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
     onClearCache: () -> Unit,
     onBack: () -> Unit,
@@ -186,6 +187,17 @@ fun SettingsScreen(
                     )
                 }
                 Switch(checked = settings.stickyHeadings, onCheckedChange = onSetStickyHeadings)
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("単一フォルダを畳む", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "中身が1つの子フォルダだけの階層を src/main/java のようにまとめ、辿る手間を省く。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = settings.collapseFolders, onCheckedChange = onSetCollapseFolders)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

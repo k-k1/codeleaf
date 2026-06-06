@@ -199,7 +199,7 @@ class RepoListViewModel(
 
     // --- ファイルブラウザ / 閲覧 ---
     suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> =
-        repository.listDir(repo, relPath)
+        repository.listDir(repo, relPath, collapse = settingsStore.settings.value.collapseFolders)
 
     suspend fun readFile(repo: Repo, relPath: String): String =
         repository.readText(repo, relPath)
@@ -246,6 +246,8 @@ class RepoListViewModel(
     fun setTableMode(mode: jp.lazmix.codeleaf.data.TableMode) = settingsStore.setTableMode(mode)
 
     fun setStickyHeadings(on: Boolean) = settingsStore.setStickyHeadings(on)
+
+    fun setCollapseFolders(on: Boolean) = settingsStore.setCollapseFolders(on)
 
     fun setIconSet(set: jp.lazmix.codeleaf.data.IconSet) = settingsStore.setIconSet(set)
 
