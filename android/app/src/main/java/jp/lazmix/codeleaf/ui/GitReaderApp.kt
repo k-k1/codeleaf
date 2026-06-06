@@ -400,6 +400,7 @@ fun GitReaderApp() {
                     onSync = { vm.syncNow(repo) },
                     onSearch = { navigate(Screen.Search(repo)) },
                     onGraph = { graphSelected = null; navigate(Screen.Graph(repo)) },
+                    onMemos = { navigate(Screen.Memos(repo)) },
                     onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
                     onOpenFile = {

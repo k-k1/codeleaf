@@ -79,6 +79,7 @@ fun FileBrowserScreen(
     onSync: suspend () -> Unit,
     onSearch: () -> Unit,
     onGraph: () -> Unit,
+    onMemos: () -> Unit,
     onSetTheme: (ThemeMode) -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
@@ -139,6 +140,10 @@ fun FileBrowserScreen(
                         DropdownMenuItem(
                             text = { Text("コミットグラフ") },
                             onClick = { menuExpanded = false; onGraph() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("メモ") },
+                            onClick = { menuExpanded = false; onMemos() },
                         )
                         HorizontalDivider()
                         Text(
