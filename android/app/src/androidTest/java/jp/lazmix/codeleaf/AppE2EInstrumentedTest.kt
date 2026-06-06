@@ -13,14 +13,11 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.eclipse.jgit.api.Git
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -44,29 +41,20 @@ class AppE2EInstrumentedTest {
 
     @Before
     fun setUp() {
-        // 既存リポジトリを一掃して決定論的にする(前回の失敗実行の残骸対策)。
-        val repo = app.container.repoRepository
-        runBlocking { repo.observeRepos().first().forEach { repo.delete(it) } }
-
-        // clone 元のローカル git リポジトリを作る(README.md + docs/guide.md)。
-        srcRepo = File(app.cacheDir, "e2e-src").apply { deleteRecursively(); mkdirs() }
-        Git.init().setInitialBranch("main").setDirectory(srcRepo).call().use { git ->
-            File(srcRepo, "README.md").writeText("# Title\n\n[guide](docs/guide.md)\n")
-            File(srcRepo, "docs").mkdirs()
-            File(srcRepo, "docs/guide.md").writeText("# Guide\n")
-            git.add().addFilepattern(".").call()
-            git.commit()
-                .setMessage("init")
-                .setAuthor("t", "t@example.com")
-                .setCommitter("t", "t@example.com")
-                .call()
-        }
+        // 既存リポを一掃して決定論化(前回の失敗実行の残骸対策)。clone 元は README.md + docs/guide.md。
+        app.cleanRepos()
+        srcRepo = app.createSrcRepo(
+            "e2e-src",
+            mapOf(
+                "README.md" to "# Title\n\n[guide](docs/guide.md)\n",
+                "docs/guide.md" to "# Guide\n",
+            ),
+        )
     }
 
     @After
     fun tearDown() {
-        val repo = app.container.repoRepository
-        runBlocking { repo.observeRepos().first().forEach { repo.delete(it) } }
+        app.cleanRepos()
         if (::srcRepo.isInitialized) srcRepo.deleteRecursively()
     }
 

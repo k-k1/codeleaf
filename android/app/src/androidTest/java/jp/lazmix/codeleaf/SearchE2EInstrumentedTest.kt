@@ -11,16 +11,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import jp.lazmix.codeleaf.data.NewRepo
-import jp.lazmix.codeleaf.data.db.GitHost
-import jp.lazmix.codeleaf.data.db.ThemeMode
-import org.eclipse.jgit.api.Git
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -38,31 +32,16 @@ class SearchE2EInstrumentedTest {
 
     @Before
     fun setUp() {
-        val repo = app.container.repoRepository
-        runBlocking {
-            repo.observeRepos().first().forEach { repo.delete(it) }
-            srcRepo = File(app.cacheDir, "search-src").apply { deleteRecursively(); mkdirs() }
-            Git.init().setInitialBranch("main").setDirectory(srcRepo).call().use { git ->
-                File(srcRepo, "README.md").writeText("# Title\n\nneedle alpha\n")
-                File(srcRepo, "docs").mkdirs()
-                File(srcRepo, "docs/guide.md").writeText("needle beta\n")
-                File(srcRepo, "other.txt").writeText("nothing relevant here\n")
-                git.add().addFilepattern(".").call()
-                git.commit().setMessage("init")
-                    .setAuthor("t", "t@example.com").setCommitter("t", "t@example.com").call()
-            }
-            repo.addAndClone(
-                NewRepo(
-                    name = "search-fixture",
-                    url = srcRepo.absolutePath,
-                    host = GitHost.GITHUB,
-                    username = "",
-                    token = "x",
-                    branch = null,
-                    themeMode = ThemeMode.SYSTEM,
-                ),
-            )
-        }
+        app.cleanRepos()
+        srcRepo = app.createSrcRepo(
+            "search-src",
+            mapOf(
+                "README.md" to "# Title\n\nneedle alpha\n",
+                "docs/guide.md" to "needle beta\n",
+                "other.txt" to "nothing relevant here\n",
+            ),
+        )
+        app.addFixtureRepo("search-fixture", srcRepo)
     }
 
     private fun openSearch() {

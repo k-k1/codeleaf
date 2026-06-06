@@ -11,17 +11,11 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import jp.lazmix.codeleaf.data.FontScale
-import jp.lazmix.codeleaf.data.NewRepo
-import jp.lazmix.codeleaf.data.db.GitHost
-import jp.lazmix.codeleaf.data.db.ThemeMode
-import org.eclipse.jgit.api.Git
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -39,30 +33,11 @@ class WrapDefaultE2EInstrumentedTest {
 
     @Before
     fun setUp() {
-        val repo = app.container.repoRepository
-        runBlocking {
-            app.container.settingsStore.setWrapByDefault(true) // 既定値から開始
-            app.container.settingsStore.setFontScale(FontScale.MEDIUM)
-            repo.observeRepos().first().forEach { repo.delete(it) }
-            srcRepo = File(app.cacheDir, "wrapdef-src").apply { deleteRecursively(); mkdirs() }
-            Git.init().setInitialBranch("main").setDirectory(srcRepo).call().use { git ->
-                File(srcRepo, "Sample.kt").writeText("val x = 1\n")
-                git.add().addFilepattern(".").call()
-                git.commit().setMessage("init")
-                    .setAuthor("t", "t@example.com").setCommitter("t", "t@example.com").call()
-            }
-            repo.addAndClone(
-                NewRepo(
-                    name = "wrapdef-fixture",
-                    url = srcRepo.absolutePath,
-                    host = GitHost.GITHUB,
-                    username = "",
-                    token = "x",
-                    branch = null,
-                    themeMode = ThemeMode.SYSTEM,
-                ),
-            )
-        }
+        app.container.settingsStore.setWrapByDefault(true) // 既定値から開始
+        app.container.settingsStore.setFontScale(FontScale.MEDIUM)
+        app.cleanRepos()
+        srcRepo = app.createSrcRepo("wrapdef-src", mapOf("Sample.kt" to "val x = 1\n"))
+        app.addFixtureRepo("wrapdef-fixture", srcRepo)
     }
 
     @Test

@@ -8,11 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import jp.lazmix.codeleaf.data.NewRepo
-import jp.lazmix.codeleaf.data.db.GitHost
 import jp.lazmix.codeleaf.data.db.RepoColor
-import jp.lazmix.codeleaf.data.db.ThemeMode
-import org.eclipse.jgit.api.Git
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,19 +32,9 @@ class RepoEditE2EInstrumentedTest {
 
     @Before
     fun setUp() {
-        val repo = app.container.repoRepository
-        runBlocking {
-            repo.observeRepos().first().forEach { repo.delete(it) }
-            srcRepo = File(app.cacheDir, "edit-src").apply { deleteRecursively(); mkdirs() }
-            Git.init().setInitialBranch("main").setDirectory(srcRepo).call().use { git ->
-                File(srcRepo, "README.md").writeText("# x\n")
-                git.add().addFilepattern(".").call()
-                git.commit().setMessage("init").setAuthor("t", "t@e").setCommitter("t", "t@e").call()
-            }
-            repo.addAndClone(
-                NewRepo("edit-fixture", srcRepo.absolutePath, GitHost.GITHUB, "", "x", null, ThemeMode.SYSTEM),
-            )
-        }
+        app.cleanRepos()
+        srcRepo = app.createSrcRepo("edit-src", mapOf("README.md" to "# x\n"))
+        app.addFixtureRepo("edit-fixture", srcRepo)
     }
 
     @Test

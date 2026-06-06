@@ -7,17 +7,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import jp.lazmix.codeleaf.data.NewRepo
 import jp.lazmix.codeleaf.data.TableMode
-import jp.lazmix.codeleaf.data.db.GitHost
-import jp.lazmix.codeleaf.data.db.ThemeMode
-import org.eclipse.jgit.api.Git
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -35,31 +29,13 @@ class TableModeE2EInstrumentedTest {
 
     @Before
     fun setUp() {
-        val repo = app.container.repoRepository
-        runBlocking {
-            app.container.settingsStore.setTableMode(TableMode.SCROLLABLE)
-            repo.observeRepos().first().forEach { repo.delete(it) }
-            srcRepo = File(app.cacheDir, "table-src").apply { deleteRecursively(); mkdirs() }
-            Git.init().setInitialBranch("main").setDirectory(srcRepo).call().use { git ->
-                File(srcRepo, "README.md").writeText(
-                    "# Doc\n\n| 項目 | 値 |\n| --- | --- |\n| 言語 | Kotlin |\n| UI | Compose |\n",
-                )
-                git.add().addFilepattern(".").call()
-                git.commit().setMessage("init")
-                    .setAuthor("t", "t@e").setCommitter("t", "t@e").call()
-            }
-            repo.addAndClone(
-                NewRepo(
-                    name = "table-fixture",
-                    url = srcRepo.absolutePath,
-                    host = GitHost.GITHUB,
-                    username = "",
-                    token = "x",
-                    branch = null,
-                    themeMode = ThemeMode.SYSTEM,
-                ),
-            )
-        }
+        app.container.settingsStore.setTableMode(TableMode.SCROLLABLE)
+        app.cleanRepos()
+        srcRepo = app.createSrcRepo(
+            "table-src",
+            mapOf("README.md" to "# Doc\n\n| 項目 | 値 |\n| --- | --- |\n| 言語 | Kotlin |\n| UI | Compose |\n"),
+        )
+        app.addFixtureRepo("table-fixture", srcRepo)
     }
 
     @Test
