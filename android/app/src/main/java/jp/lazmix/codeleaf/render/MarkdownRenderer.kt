@@ -416,6 +416,7 @@ object CodeHighlight {
         when (name.substringAfterLast('/').lowercase()) {
             "makefile", "makefile.am", "gnumakefile" -> return "makefile"
             ".bashrc", ".bash_profile", ".zshrc", ".profile" -> return "bash"
+            "dockerfile", "containerfile" -> return "dockerfile"
         }
         return when (name.substringAfterLast('.', "").lowercase()) {
             "kt", "kts" -> "kotlin"
@@ -441,7 +442,10 @@ object CodeHighlight {
             "mk" -> "makefile"
             "tex" -> "latex"
             "clj", "cljs", "cljc", "edn" -> "clojure"
-            "diff", "patch" -> "git"
+            "toml" -> "toml"
+            "ini", "cfg", "conf", "properties" -> "ini"
+            "dockerfile" -> "dockerfile"
+            "diff", "patch" -> "diff"
             "md", "markdown" -> "markdown"
             else -> null
         }

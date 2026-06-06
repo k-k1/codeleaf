@@ -37,7 +37,7 @@ class CodeGrammarLocatorTest {
     fun locator_exposes_custom_and_bundled_languages() {
         val langs = CodeGrammarLocator().languages()
         // 手書き
-        assertTrue(langs.containsAll(listOf("bash", "typescript", "rust")))
+        assertTrue(langs.containsAll(listOf("bash", "typescript", "rust", "toml", "ini", "dockerfile", "diff")))
         // 新規同梱(bundler が @PrismBundle から生成)
         assertTrue(langs.containsAll(listOf("git", "makefile", "latex", "clojure")))
         // 既存同梱も引き続き解決できる
@@ -108,6 +108,74 @@ class CodeGrammarLocatorTest {
     }
 
     @Test
+    fun toml_highlights_core_tokens() {
+        val types = tokenTypes(
+            "toml",
+            """
+            # config
+            [server]
+            host = "localhost"
+            port = 8080
+            enabled = true
+            """.trimIndent(),
+        )
+        assertTrue("comment", "comment" in types)
+        assertTrue("table", "table" in types)
+        assertTrue("key", "key" in types)
+        assertTrue("string", "string" in types)
+        assertTrue("number", "number" in types)
+        assertTrue("boolean", "boolean" in types)
+    }
+
+    @Test
+    fun ini_highlights_core_tokens() {
+        val types = tokenTypes(
+            "ini",
+            """
+            ; comment
+            [section]
+            key = value
+            """.trimIndent(),
+        )
+        assertTrue("comment", "comment" in types)
+        assertTrue("section", "section" in types)
+        assertTrue("key", "key" in types)
+        assertTrue("value", "value" in types)
+    }
+
+    @Test
+    fun dockerfile_highlights_instructions() {
+        val types = tokenTypes(
+            "dockerfile",
+            """
+            # base image
+            FROM alpine:3.19
+            RUN apk add --no-cache curl
+            ENV NAME="world"
+            """.trimIndent(),
+        )
+        assertTrue("comment", "comment" in types)
+        assertTrue("instruction", "instruction" in types)
+        assertTrue("string", "string" in types)
+    }
+
+    @Test
+    fun diff_highlights_added_and_removed() {
+        val types = tokenTypes(
+            "diff",
+            """
+            @@ -1,3 +1,3 @@
+            -val old = 1
+            +val new = 2
+             unchanged
+            """.trimIndent(),
+        )
+        assertTrue("coord", "coord" in types)
+        assertTrue("inserted", "inserted" in types)
+        assertTrue("deleted", "deleted" in types)
+    }
+
+    @Test
     fun languageForFile_maps_new_extensions() {
         assertEquals("typescript", CodeHighlight.languageForFile("app.ts"))
         assertEquals("typescript", CodeHighlight.languageForFile("App.tsx"))
@@ -118,7 +186,11 @@ class CodeGrammarLocatorTest {
         assertEquals("bash", CodeHighlight.languageForFile(".bashrc"))
         assertEquals("latex", CodeHighlight.languageForFile("paper.tex"))
         assertEquals("clojure", CodeHighlight.languageForFile("core.clj"))
-        assertEquals("git", CodeHighlight.languageForFile("fix.patch"))
+        assertEquals("diff", CodeHighlight.languageForFile("fix.patch"))
+        assertEquals("toml", CodeHighlight.languageForFile("Cargo.toml"))
+        assertEquals("ini", CodeHighlight.languageForFile("app.ini"))
+        assertEquals("dockerfile", CodeHighlight.languageForFile("Dockerfile"))
+        assertEquals("dockerfile", CodeHighlight.languageForFile("docker/Dockerfile"))
         assertNull(CodeHighlight.languageForFile("notes.unknownext"))
     }
 }

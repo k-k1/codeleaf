@@ -21,11 +21,17 @@ class CodeGrammarLocator(
             "bash", "shell", "sh", "shell-session", "zsh" -> CustomGrammars.bash(prism4j)
             "typescript", "ts", "tsx" -> CustomGrammars.typescript(prism4j)
             "rust", "rs" -> CustomGrammars.rust(prism4j)
+            "toml" -> CustomGrammars.toml(prism4j)
+            "ini", "cfg", "conf", "properties" -> CustomGrammars.ini(prism4j)
+            "dockerfile", "docker" -> CustomGrammars.dockerfile(prism4j)
+            "diff", "patch" -> CustomGrammars.diff(prism4j)
             else -> base.grammar(prism4j, language)
         }
 
     override fun languages(): Set<String> =
-        base.languages() + setOf("bash", "typescript", "rust")
+        base.languages() + setOf(
+            "bash", "typescript", "rust", "toml", "ini", "dockerfile", "diff",
+        )
 }
 
 /**
@@ -214,5 +220,95 @@ object CustomGrammars {
             "punctuation",
             p("[{}\\[\\];(),.:]"),
         ),
+    )
+
+    // ---- toml ----------------------------------------------------------------
+
+    private const val ML = JPattern.MULTILINE
+    private const val ML_CI = JPattern.MULTILINE or JPattern.CASE_INSENSITIVE
+
+    /** PrismJS toml component の実用サブセット。 */
+    fun toml(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "toml",
+        token("comment", p("#.*")),
+        token(
+            "table",
+            p("(^[ \\t]*\\[\\[?)[^\\]\\r\\n]+(?=\\]\\]?)", lookbehind = true, flags = ML, alias = "class-name"),
+        ),
+        token(
+            "key",
+            p("(^[ \\t]*)[-\\w.\"']+(?=[ \\t]*=)", lookbehind = true, flags = ML, alias = "property"),
+        ),
+        token(
+            "string",
+            p(
+                "\"\"\"[\\s\\S]*?\"\"\"|'''[\\s\\S]*?'''|\"(?:\\\\.|[^\\\\\"\\r\\n])*\"|'[^'\\r\\n]*'",
+                greedy = true,
+            ),
+        ),
+        token(
+            "date",
+            p(
+                "\\b\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})?)?\\b",
+                alias = "number",
+            ),
+        ),
+        token(
+            "number",
+            p("[+-]?\\b(?:0x[\\da-fA-F_]+|0o[0-7_]+|0b[01_]+|\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?|inf|nan)\\b"),
+        ),
+        token("boolean", p("\\b(?:true|false)\\b")),
+        token("punctuation", p("[\\[\\]{}.,=]")),
+    )
+
+    // ---- ini -----------------------------------------------------------------
+
+    /** PrismJS ini component の実用サブセット(properties/conf にも流用)。 */
+    fun ini(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "ini",
+        token("comment", p("(^[ \\t]*)[#;].*", lookbehind = true, flags = ML)),
+        token("section", p("^[ \\t]*\\[[^\\]\\r\\n]*\\]", flags = ML, alias = "class-name")),
+        token(
+            "key",
+            p("(^[ \\t]*)[^=\\r\\n\\[#;][^=\\r\\n]*?(?=[ \\t]*=)", lookbehind = true, flags = ML, alias = "property"),
+        ),
+        token("value", p("(=[ \\t]*)[^\\r\\n]*", lookbehind = true, flags = ML, alias = "string")),
+        token("punctuation", p("=")),
+    )
+
+    // ---- dockerfile ----------------------------------------------------------
+
+    /** PrismJS dockerfile component の実用サブセット(命令は大文字小文字非依存)。 */
+    fun dockerfile(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "dockerfile",
+        token("comment", p("#.*")),
+        token(
+            "instruction",
+            p(
+                "(^[ \\t]*)(?:ADD|ARG|CMD|COPY|ENTRYPOINT|ENV|EXPOSE|FROM|HEALTHCHECK|LABEL|MAINTAINER|ONBUILD|RUN|SHELL|STOPSIGNAL|USER|VOLUME|WORKDIR)\\b",
+                lookbehind = true,
+                flags = ML_CI,
+                alias = "keyword",
+            ),
+        ),
+        token(
+            "string",
+            p("\"(?:\\\\.|[^\\\\\"\\r\\n])*\"|'(?:\\\\.|[^\\\\'\\r\\n])*'", greedy = true),
+        ),
+        token("variable", p("\\$\\{[^}\\r\\n]+\\}|\\$\\w+")),
+        token("operator", p("\\\\(?=\\s*$)", flags = ML)),
+    )
+
+    // ---- diff ----------------------------------------------------------------
+
+    /** PrismJS diff component の実用サブセット。行頭の +/- と @@/ヘッダで着色する。 */
+    fun diff(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "diff",
+        token(
+            "coord",
+            p("^(?:@@[^\\r\\n]*@@|diff [^\\r\\n]*|index [^\\r\\n]*|[-+]{3} [^\\r\\n]*)", flags = ML, alias = "comment"),
+        ),
+        token("inserted", p("^\\+[^\\r\\n]*", flags = ML)),
+        token("deleted", p("^-[^\\r\\n]*", flags = ML)),
     )
 }
