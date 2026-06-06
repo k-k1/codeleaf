@@ -1,6 +1,9 @@
-# git-reader 設計ドキュメント (v1)
+# CodeLeaf 設計ドキュメント
 
-複数の git リポジトリ (GitHub / Bitbucket cloud) をチェックアウトし、**Markdown を中心にコードを閲覧する読み取り専用 Android リーダー**。
+> 旧称 git-reader。package / applicationId は `jp.lazmix.codeleaf`。
+> このドキュメントは設計判断の根拠を残す。実装の最新事実は `CLAUDE.md`・`android/DEVELOPMENT.md` を正とする。
+
+複数の git リポジトリ (GitHub / Bitbucket Cloud) を clone し、**Markdown を中心にコードを閲覧する読み取り専用 Android リーダー**。
 add / commit / push は行わない。ローカルの変更は同期時に常に破棄する。
 
 ---
@@ -14,17 +17,18 @@ add / commit / push は行わない。ローカルの変更は同期時に常に
 ### 機能
 | 区分 | 内容 |
 |---|---|
-| リポジトリ管理 | URL + 認証情報で登録、複数管理、削除 |
-| 認証 | HTTPS + token のみ。GitHub=PAT / Bitbucket Cloud=email+API token。self-hosted 非対応 |
+| リポジトリ管理 | URL + 認証で登録、複数管理、グループ(Working Set)分け・並べ替え、削除 |
+| 認証 | HTTPS。**トークン方式**(GitHub=PAT / Bitbucket Cloud=API token)と **OAuth**(GitHub=Device Flow / Bitbucket=Authorization Code Grant)。self-hosted 非対応 |
 | ブランチ | 全ブランチを **直近更新順** に一覧・フィルタ・選択、閲覧中の切替も可 (fetch 方式) |
 | 同期 | **手動のみ**。`fetch → reset --hard origin/<branch> → clean -fdx`（ローカル変更は破棄） |
-| 閲覧 | ファイル探索 / コード表示(ハイライト) / **Markdown 整形(メイン)** / コミット履歴・unified diff |
+| 閲覧 | ファイル探索 / コード表示(ハイライト) / **Markdown 整形(メイン)** / コミットグラフ・履歴・unified diff |
+| 検索 | リポ内の**全文検索**(ファイル名・本文) |
 | テーマ | ダーク/ライト等を **リポジトリ毎** に指定 |
 
-### 非対象 (v1)
+### 非対象
 - 書き込み系 (add/commit/push/branch作成)
 - self-hosted (GHE / Bitbucket Server)
-- Git LFS
+- Git LFS の**実体取得**(ポインタは検出し Viewer で開かない扱い)
 - 自動 / バックグラウンド同期
 
 ---
@@ -35,11 +39,11 @@ add / commit / push は行わない。ローカルの変更は同期時に常に
 |---|---|---|
 | 言語/UI | Kotlin + Jetpack Compose | MVVM + StateFlow |
 | git | **JGit** | Android 唯一の実用解。IO スレッドで実行 |
-| Markdown | **Markwon** | core / ext-tables / ext-strikethrough / html / image / syntax-highlight / linkify |
-| 絵文字 | shortcode→unicode 変換プラグイン | `:smile:` など |
+| Markdown | **Markwon** 4.6.2 | core / ext-tables / ext-strikethrough / ext-tasklist / html / image / syntax-highlight。自動リンクは CommonMark autolink 拡張(Android Linkify は不使用) |
+| 絵文字 | emoji-java + shortcode→unicode 変換プラグイン | `:smile:` など |
 | Mermaid | アプリ内同梱 `mermaid.min.js` + **WebView** | オフライン描画、テーマ連動 CSS |
-| 永続化 | Room | リポジトリ/設定/ブランチキャッシュ |
-| 認証保存 | Android Keystore + EncryptedSharedPreferences | token を暗号化 |
+| 永続化 | Room (v4) + SharedPreferences | Room は `Repo` のみ。設定は SharedPreferences、ブランチは都度算出(キャッシュ DB は持たない) |
+| 認証保存 | Android Keystore + EncryptedSharedPreferences | token / OAuth 資格情報を暗号化 |
 | min SDK | **31 (Android 12)** / target 35 | 12+ 端末対応 |
 
 ---
@@ -49,20 +53,26 @@ add / commit / push は行わない。ローカルの変更は同期時に常に
 ```
 :app
  ├─ ui/        Compose 画面 + ViewModel (MVVM, StateFlow)
- │     RepoList / AddRepo / RepoBrowser / FileViewer / History / Diff / Settings
+ │     RepoList / AddRepo / RepoEdit / FileBrowser / FileViewer /
+ │     CommitGraph / CommitDetail / History / Diff / Search / Settings
  ├─ data/
- │   ├─ db/        Room: Repo, BranchCache, Settings
- │   ├─ crypto/    Keystore + EncryptedSharedPreferences (token)
- │   └─ repo/      Repository 層 (UI ↔ git/db の仲介)
- ├─ git/         JgitClient (clone/fetch/reset/clean/branches/log/diff)
- └─ render/      MarkdownRenderer (Markwon) + MermaidWebView + 相対パス Resolver
+ │   ├─ db/        Room: Repo (v4) + RepoDao
+ │   ├─ crypto/    TokenStore (Keystore + EncryptedSharedPreferences)
+ │   ├─ oauth/     GitHub Device Flow / Bitbucket Auth-Code Grant + REST API
+ │   ├─ RepoRepository  Repository 層 (UI ↔ git/db/oauth の仲介)
+ │   └─ SettingsStore   アプリ設定 (SharedPreferences)
+ ├─ git/         JgitClient (clone/fetch/reset/clean/branches/log/diff/submodule)
+ └─ render/      MarkdownRenderer (Markwon) + MermaidWebView + GitGraphLayout
 ```
 
-### データモデル (Room 概略)
-- `Repo(id, name, url, host, username, branch, themeMode, lastSyncedAt)`
-  - token はここに持たず、Keystore 側に `id` 紐付けで暗号化保存
-- `BranchCache(repoId, name, lastCommitAt, lastCommitSha)` — 直近更新順表示用
-- `Settings` — アプリ全体デフォルト (テーマ初期値 / フォントサイズ / ハイライト配色)
+### データモデル
+- **Room は `Repo` エンティティのみ**(`@Database(entities=[Repo], version=4)`)。
+  `Repo(id, name, url, host, username, branch, themeMode, lastSyncedAt, sortOrder, colorTag, authType, groupName)`
+  - token / OAuth 資格情報はここに持たず、`TokenStore`(Keystore)に `id` 紐付けで暗号化保存
+  - `authType` = TOKEN / OAUTH、`groupName` = Working Set、`colorTag` = 一覧アバター色
+- **ブランチ一覧はキャッシュ DB を持たず**、`refs/remotes/origin/*` から都度算出する(下記 §4)
+- **設定は Room ではなく `SettingsStore`(SharedPreferences)**: 既定テーマ / フォント倍率 / コード折返し /
+  diff 折返し / 行番号 / テーブル表示 / 見出しスティッキー / リンク開き方 / アイコンセット / グループ
 
 ---
 
@@ -78,8 +88,9 @@ add / commit / push は行わない。ローカルの変更は同期時に常に
 fetch (+refs/heads/*)
 → reset --hard origin/<branch>
 → clean -fdx              # 未追跡ファイル含め完全破棄
-→ BranchCache 更新 (各 refs/remotes/origin/* の committer date)
+→ Repo.lastSyncedAt 更新
 ```
+リポ毎に Mutex で直列化する。OAuth リポは fetch 直前にアクセストークンを必要なら refresh する(同一 Mutex 内)。
 
 ### ブランチ一覧 (直近更新順)
 - fetch 済みの `refs/remotes/origin/*` を列挙 → 各 ref を解決し committer date で降順ソート
@@ -88,10 +99,12 @@ fetch (+refs/heads/*)
 ### 認証メモ
 | | GitHub | Bitbucket Cloud |
 |---|---|---|
-| token | PAT (classic / fine-grained) | API token (App password は廃止方向) |
-| username | 任意 / `x-access-token` | **Atlassian メールアドレス (必須)** |
+| トークン方式 | PAT (classic / fine-grained, Contents:Read 必須) | API token (App password は廃止方向) |
+| OAuth | **Device Flow**(client_secret 不要 / scope=`repo`) | **Authorization Code Grant**(client_id+secret / redirect `codeleaf://oauth`) |
+| git の username | TOKEN=任意・空なら `x-access-token` を補完 / OAuth=`x-access-token` | TOKEN=Atlassian メール (必須) / OAuth=`x-token-auth` |
 
-→ 登録フォームは「ユーザー名 + トークン」2 フィールド。GitHub は username 任意、Bitbucket は必須の注記を出す。
+→ トークン方式は「ユーザー名 + トークン」入力。OAuth はログイン後に API でアクセス可能リポを列挙して選択する
+(URL 手入力はトークン方式のときだけ)。詳細手順は `android/DEVELOPMENT.md` §9(Bitbucket)・§10(GitHub)。
 
 ---
 
@@ -109,11 +122,14 @@ fetch (+refs/heads/*)
 
 ### 画面遷移
 ```
-Home(リポ一覧) ─┬─ AddRepo
-                └─ RepoBrowser(ファイル探索) ─ FileViewer ─┬─ History ─ Diff
-                       │  └ ⋮: テーマ/削除/同期            └ Diff
+Home(リポ一覧) ─┬─ AddRepo / RepoEdit
+                └─ FileBrowser(ファイル探索) ─┬─ FileViewer ─┬─ History ─ Diff
+                       │  └ ⋮: テーマ/同期/グラフ           └ Diff
+                       ├─ Search(全文検索) → FileViewer
+                       ├─ CommitGraph → CommitDetail → Diff
                        └ branchチップ → ブランチ BottomSheet
 ```
+- 大画面では `BoxWithConstraints` 幅で多ペイン化(≥600dp=2 / ≥960dp=3ペイン)。詳細は `CLAUDE.md`。
 
 ### 設計方針
 - **操作系は画面下部に集約**（片手操作・親指で届く）
@@ -123,7 +139,7 @@ Home(リポ一覧) ─┬─ AddRepo
 ### ① ホーム（リポジトリ一覧）
 ```
 ┌────────────────────────────┐
-│ git-reader            ⚙   │
+│ CodeLeaf              ⚙   │
 ├────────────────────────────┤
 │ ┌────────────────────────┐ │
 │ │◐ my-docs               │ │
@@ -208,24 +224,31 @@ Home(リポ一覧) ─┬─ AddRepo
                           -古い行       (赤)
 ```
 
+### ⑧ コミットグラフ / ⑨ 全文検索
+- **コミットグラフ**: lane レイアウト(`render/GitGraphLayout.kt`)で DAG を描画。ref バッジ付き、
+  現在ブランチに到達しないコミットは減光。タップで CommitDetail → Diff。
+- **全文検索**: リポ内のファイル名・本文を横断検索し、ヒットから Viewer へ。
+
 ### 設定（⚙ グローバル）
-- デフォルトテーマ / フォントサイズ / コードハイライト配色 / キャッシュ容量・全削除
+- 既定テーマ / フォント倍率 / コード折返し(本文・diff) / 行番号表示 / テーブル表示(インライン・横スクロール) /
+  見出しスティッキー / リンクの開き方(アプリ内・外部ブラウザ) / ファイルアイコンセット / キャッシュ全削除
 
 ---
 
 ## 7. 技術リスクと検証順序
 
-1. **【最優先】JGit の Android 動作確認 (PoC)**
-   - JGit は Java SE 前提の API を含み、バージョンによっては Android で地雷あり
-   - 「指定リポを HTTPS+token で clone → fetch → reset --hard」が通るかを最初に検証
-2. Mermaid の WebView オフライン描画 + テーマ連動 CSS
-3. 相対画像/リンクのパス解決
+> いずれも検証済み・実装済み。以下は当時の着手順の記録。
 
-推奨着手順: **JGit PoC → プロジェクト雛形 → 機能実装**
+1. **【最優先】JGit の Android 動作確認 (PoC)** — clone → fetch → reset --hard が通るか。
+   検証は `androidTest/JgitInstrumentedTest.kt` に常設化。
+2. Mermaid の WebView オフライン描画 + テーマ連動 CSS — `MermaidWebViewInstrumentedTest.kt`。
+3. 相対画像/リンクのパス解決 — `MarkdownRenderer`。
 
 ---
 
-## 8. 未確定 / 今後の検討
-- コードのシンタックスハイライト対応言語の範囲
-- 全文検索 (将来)
-- frontmatter(YAML) の扱い・目次自動生成の詳細
+## 8. 今後の検討
+- シンタックスハイライト対応言語の拡張(現状は Prism4j 同梱言語に限られる)
+- self-hosted (GHE / Bitbucket Server) 対応の是非
+- OAuth トークン交換のバックエンド代行(現状はアプリ内で client_secret を扱う Bitbucket 経路がある)
+
+> frontmatter(YAML) 表示・目次自動生成・全文検索は実装済み(§5・§6)。

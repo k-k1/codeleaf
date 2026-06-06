@@ -42,6 +42,12 @@ data class UiStatus(
     val message: String? = null,
 )
 
+/**
+ * アプリ全体の主 ViewModel。リポジトリの一覧・追加(clone)・同期・削除・並べ替え・グループ分け、
+ * OAuth ログイン、ファイル/ブランチ/履歴/diff の読み出し、全文検索、設定の読み書きを束ねる。
+ * 状態は [repos]・[status]・[settings] の StateFlow で公開し、画面はこれを購読する。
+ * DI は手動(`AppContainer` 経由・[Factory])で、OAuth 系依存は未設定なら null(機能無効)。
+ */
 class RepoListViewModel(
     private val repository: RepoRepository,
     private val settingsStore: SettingsStore,
