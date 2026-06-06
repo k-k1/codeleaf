@@ -58,7 +58,8 @@ class SyntaxHighlightInstrumentedTest {
         assertEquals("python", CodeHighlight.languageForFile("script.py"))
         assertEquals("markup", CodeHighlight.languageForFile("layout.xml"))
         assertEquals("json", CodeHighlight.languageForFile("data.json"))
+        assertEquals("dockerfile", CodeHighlight.languageForFile("Dockerfile"))
         assertNull("未対応拡張子は null", CodeHighlight.languageForFile("notes.unknownext"))
-        assertNull("拡張子なしは null", CodeHighlight.languageForFile("Dockerfile"))
+        assertNull("拡張子なし・無対応は null", CodeHighlight.languageForFile("LICENSE"))
     }
 }

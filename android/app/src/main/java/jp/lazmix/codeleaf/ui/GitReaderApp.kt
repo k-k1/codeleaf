@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -122,8 +123,8 @@ fun GitReaderApp() {
     var historySelected by remember { mutableStateOf<CommitInfo?>(null) }
     // 3ペインの左レール(リポ一覧)を畳んでいるか。
     var railCollapsed by rememberSaveable { mutableStateOf(false) }
-    // 2/3ペインでファイル一覧ペインを畳んでビューアを全幅にしているか。
-    var listCollapsed by rememberSaveable { mutableStateOf(false) }
+    // 集中モード: ファイルを開いている間、レールと一覧を隠してビューアを全幅にする(1/2/3ペイン共通)。
+    var focusMode by rememberSaveable { mutableStateOf(false) }
     // コミットグラフ2/3ペインでコミット一覧ペインを畳んで詳細を全幅にしているか。
     var graphListCollapsed by rememberSaveable { mutableStateOf(false) }
     // ファイル履歴2/3ペインでコミット一覧ペインを畳んで差分を全幅にしているか。
@@ -136,19 +137,25 @@ fun GitReaderApp() {
     fun handleBack() {
         val top = backStack.last()
         if (top is Screen.Browse && detailStack.isNotEmpty()) {
-            detailStack.removeAt(detailStack.lastIndex) // まず開いているファイルを1つ戻す
+            // 集中モード中はまず集中を解除する(ファイルは開いたまま・レールと一覧を戻す)。
+            if (focusMode) { focusMode = false; return }
+            detailStack.removeAt(detailStack.lastIndex) // 次に開いているファイルを1つ戻す
             return
         }
         val before = top
         pop()
         // リポ閲覧から抜けたら開いていたファイルを掃除する。
-        if (before is Screen.Browse && backStack.last() !is Screen.Browse) detailStack.clear()
+        if (before is Screen.Browse && backStack.last() !is Screen.Browse) {
+            detailStack.clear()
+            focusMode = false
+        }
     }
 
     // リポを出てリポ一覧へ戻る(Browse チェーンを畳む)。ブラウザ ← の動作。
     fun leaveRepo() {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         detailStack.clear()
+        focusMode = false
     }
 
     // リポ毎テーマ変更を backStack / detailStack 内の同一リポ全画面へ反映する。
@@ -389,6 +396,7 @@ fun GitReaderApp() {
                                 backStack[i] = Screen.Browse(updated, "")
                             }
                             detailStack.clear() // 作業ツリー書換でファイルが変化/消滅しうる
+                            focusMode = false
                         }
                     },
                     onBack = backAction,
@@ -431,46 +439,78 @@ fun GitReaderApp() {
                 }
             }
 
+            // 集中モードの開閉ハンドル(ビューア左下)。集中ON=全幅 / OFF=レール+一覧。
+            @Composable
+            fun BoxScope.FocusHandle() {
+                PaneToggleHandle(
+                    collapsed = focusMode,
+                    onToggle = { focusMode = !focusMode },
+                    expandLabel = "一覧とレールを表示",
+                    collapseLabel = "集中モード(全幅)",
+                    // 下部バー(目次/送り)と重ならないよう少し上に。
+                    modifier = Modifier.align(Alignment.BottomStart)
+                        .padding(bottom = 96.dp)
+                        .offset(x = if (focusMode) 4.dp else (-20).dp),
+                )
+            }
+
+            // ビューアと集中ハンドルを重ねた右ペイン。未選択時はプレースホルダ。
+            @Composable
+            fun ViewerArea(file: Screen.View?, showBack: Boolean) {
+                Box(Modifier.fillMaxSize()) {
+                    if (file != null) ViewerPane(file, showBack = showBack)
+                    else SelectPlaceholder("ファイルを選択")
+                    if (file != null) FocusHandle()
+                }
+            }
+
             BoxWithConstraints {
                 val three = maxWidth >= THREE_PANE_MIN_WIDTH
                 val two = maxWidth >= TWO_PANE_MIN_WIDTH
                 val file = detailStack.lastOrNull()
+                val focused = focusMode && file != null
 
-                @Composable
-                fun ContentPanes() {
-                    if (!two) {
-                        // 1ペイン: ビューア←=ファイルを閉じる / ブラウザ←=上の階層 or リポ退出。
-                        if (file != null) ViewerPane(file, showBack = true) else BrowserPane(threePane = false)
-                    } else {
-                        // ファイルを開いている時だけ一覧を畳める(未選択時は一覧を出す)。
-                        val showList = file == null || !listCollapsed
-                        // 3ペインはレールがある分、一覧を少し狭く。
-                        val browserWeight = if (three) 0.3f else 0.4f
+                when {
+                    // 集中モード: レール・一覧を隠して全幅ビューア。
+                    focused -> GitReaderTheme(repo.themeMode) {
+                        Box(Modifier.fillMaxSize()) {
+                            ViewerPane(file!!, showBack = false)
+                            FocusHandle()
+                        }
+                    }
+                    // 3ペイン: 既存のレール(展開/アイコン) + 一覧 + ビューア。
+                    three -> ThreePaneScaffold(repo.id, repo.themeMode) {
                         Row(Modifier.fillMaxSize()) {
-                            if (showList) {
-                                Box(Modifier.weight(browserWeight)) { BrowserPane(threePane = three) }
-                                VerticalDivider()
-                            }
-                            Box(Modifier.weight(1f - browserWeight)) {
-                                // 2/3ペインは一覧が常に見えるためビューア←は撤去。
-                                if (file != null) ViewerPane(file, showBack = false) else SelectPlaceholder("ファイルを選択")
-                                // 区切り線下部の開閉ハンドル(片手で一覧を畳む/戻す)。ファイル表示中のみ。
-                                if (file != null) {
-                                    PaneToggleHandle(
-                                        collapsed = listCollapsed,
-                                        onToggle = { listCollapsed = !listCollapsed },
-                                        // 下部バー(目次)と重ならないよう少し上に。
-                                        modifier = Modifier.align(Alignment.BottomStart)
-                                            .padding(bottom = 96.dp)
-                                            .offset(x = if (listCollapsed) 4.dp else (-20).dp),
-                                    )
+                            Box(Modifier.weight(0.3f)) { BrowserPane(threePane = true) }
+                            VerticalDivider()
+                            Box(Modifier.weight(0.7f)) { ViewerArea(file, showBack = false) }
+                        }
+                    }
+                    // 1/2ペイン: アイコンレール常設(レール=default テーマ / 中右=repo テーマ)。
+                    else -> Row(Modifier.fillMaxSize()) {
+                        IconRail(repo.id)
+                        VerticalDivider()
+                        Box(Modifier.weight(1f)) {
+                            GitReaderTheme(repo.themeMode) {
+                                if (two) {
+                                    Row(Modifier.fillMaxSize()) {
+                                        Box(Modifier.weight(0.4f)) { BrowserPane(threePane = false) }
+                                        VerticalDivider()
+                                        Box(Modifier.weight(0.6f)) { ViewerArea(file, showBack = false) }
+                                    }
+                                } else if (file != null) {
+                                    // 1ペインでファイル表示: ←=閉じる + 集中ハンドルでレールを隠せる。
+                                    Box(Modifier.fillMaxSize()) {
+                                        ViewerPane(file, showBack = true)
+                                        FocusHandle()
+                                    }
+                                } else {
+                                    BrowserPane(threePane = false)
                                 }
                             }
                         }
                     }
                 }
-
-                RepoPaneHost(three, repo) { ContentPanes() }
             }
         }
 
@@ -630,12 +670,18 @@ fun GitReaderApp() {
 
 /** 区切り線下部に置く、一覧ペインの開閉ハンドル(片手操作用の丸ボタン＋シェブロン)。 */
 @Composable
-private fun PaneToggleHandle(collapsed: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+private fun PaneToggleHandle(
+    collapsed: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    expandLabel: String = "一覧を表示",
+    collapseLabel: String = "一覧を隠す",
+) {
     // 本文に被さるので半透明にして主張を抑える(タップは効く)。
     FilledTonalIconButton(onClick = onToggle, modifier = modifier.size(40.dp).alpha(0.6f)) {
         Icon(
             if (collapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowLeft,
-            contentDescription = if (collapsed) "一覧を表示" else "一覧を隠す",
+            contentDescription = if (collapsed) expandLabel else collapseLabel,
         )
     }
 }

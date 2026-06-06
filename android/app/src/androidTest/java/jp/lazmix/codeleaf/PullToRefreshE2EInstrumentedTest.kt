@@ -1,7 +1,9 @@
 package jp.lazmix.codeleaf
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -58,7 +60,9 @@ class PullToRefreshE2EInstrumentedTest {
 
         // ファイル一覧を下に引く → 同期(fetch + reset --hard origin/main) → 新ファイルが作業ツリーに現れる。
         // 瞬間表示のスナックバーではなく、同期で取り込まれた PULLED.md の出現で同期成立を判定する。
-        compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
+        // 1ペインではアイコンレールにも縦スクロールがあるため、README.md を含むファイル一覧に限定する。
+        compose.onNode(hasScrollAction() and hasAnyDescendant(hasText("README.md")))
+            .performTouchInput { swipeDown() }
         compose.waitUntil(timeoutMillis = 15_000) {
             compose.onAllNodesWithText("PULLED.md").fetchSemanticsNodes().isNotEmpty()
         }
