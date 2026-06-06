@@ -25,6 +25,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -104,6 +106,10 @@ fun FileViewerScreen(
     onBack: () -> Unit,
     /** 戻る矢印を表示するか。2/3ペインでは一覧が常に見えるため非表示にする。 */
     showBack: Boolean = true,
+    /** 同一フォルダ内のファイル(repo ルート相対パス, 表示順)。前/次ファイル送りに使う。 */
+    loadSiblings: suspend () -> List<String> = { emptyList() },
+    /** 前/次ファイルを開く(現在のビューアを置き換える)。 */
+    onOpenSibling: (String) -> Unit = {},
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
@@ -116,6 +122,15 @@ fun FileViewerScreen(
         error = null
         text = runCatching { loadText() }.getOrElse { error = it.message; null }
     }
+
+    // 同一フォルダの隣接ファイル(前/次送り用)。読み込めるまでは送りボタンを出さない。
+    var siblings by remember(repo.id, filePath) { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(repo.id, filePath) {
+        siblings = runCatching { loadSiblings() }.getOrDefault(emptyList())
+    }
+    val siblingIndex = siblings.indexOf(filePath)
+    val prevFile = siblings.getOrNull(siblingIndex - 1)
+    val nextFile = siblings.getOrNull(siblingIndex + 1)
 
     val isMarkdown = filePath.endsWith(".md", true) || filePath.endsWith(".markdown", true)
     val fileName = filePath.substringAfterLast('/')
@@ -211,20 +226,28 @@ fun FileViewerScreen(
         },
         bottomBar = {
             SlimBottomBar {
-                // 左: 目次
+                // 左: 目次(整形 Markdown) / 折り返し(コード・Raw)。同じ左位置に揃える。
                 if (isMarkdown && !raw && tocEntries.isNotEmpty()) {
                     TextButton(
                         onClick = { showToc = true },
                         modifier = Modifier.padding(start = 4.dp),
                     ) { Text("☰ 目次") }
                 }
-                Spacer(Modifier.weight(1f))
-                // 右: 折り返し(コード/Raw時のみ)。整形/Raw 切替は右上 ⋮ メニューへ移動。
                 if (!isMarkdown || raw) {
                     TextButton(
                         onClick = { wrap = !wrap; onToggleWrap(wrap) },
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(start = 4.dp),
                     ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
+                }
+                Spacer(Modifier.weight(1f))
+                // 右: 同一フォルダ内の前/次ファイルを開く(端では無効化)。
+                if (siblings.size > 1 && siblingIndex >= 0) {
+                    IconButton(onClick = { prevFile?.let(onOpenSibling) }, enabled = prevFile != null) {
+                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "前のファイル")
+                    }
+                    IconButton(onClick = { nextFile?.let(onOpenSibling) }, enabled = nextFile != null) {
+                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = "次のファイル")
+                    }
                 }
             }
         },

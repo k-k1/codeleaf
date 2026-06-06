@@ -416,6 +416,17 @@ fun GitReaderApp() {
                         onNavigateToFile = { path -> detailStack.add(Screen.View(file.repo, path)) },
                         onBack = { handleBack() },
                         showBack = showBack,
+                        loadSiblings = {
+                            val dir = file.filePath.substringBeforeLast('/', "")
+                            vm.listDir(file.repo, dir)
+                                .filter { !it.isDir && !it.isSubmodule && !it.isLfs }
+                                .map { it.relPath }
+                        },
+                        onOpenSibling = { path ->
+                            if (detailStack.isNotEmpty()) {
+                                detailStack[detailStack.lastIndex] = Screen.View(file.repo, path)
+                            }
+                        },
                     )
                 }
             }
