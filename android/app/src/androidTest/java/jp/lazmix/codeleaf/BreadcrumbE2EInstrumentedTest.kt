@@ -27,7 +27,11 @@ class BreadcrumbE2EInstrumentedTest {
     @Before
     fun setUp() {
         app.cleanRepos()
-        val src = app.createSrcRepo("bc-src", mapOf("a/b/c/deep.txt" to "x\n"))
+        // 各階層に兄弟ファイルを置き、単一子フォルダ畳み込みが起きないようにする(パンくす検証に集中)。
+        val src = app.createSrcRepo(
+            "bc-src",
+            mapOf("a/x.txt" to "x\n", "a/b/y.txt" to "y\n", "a/b/c/deep.txt" to "z\n"),
+        )
         app.addFixtureRepo("bc-fixture", src)
         compose.onNodeWithText("bc-fixture").performClick()
         waitFor("a")

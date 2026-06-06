@@ -38,6 +38,8 @@ data class FileEntry(
     val isSubmodule: Boolean = false,
     /** Git LFS のポインタファイル（実体は未取得・Viewer では開かない）。 */
     val isLfs: Boolean = false,
+    /** 一覧表示名。単一子フォルダ連鎖を畳むと "src/main/java" のような連結になる（既定は name）。 */
+    val displayName: String = name,
 )
 
 /** LFS ポインタファイルの先頭シグネチャ。 */
@@ -274,6 +276,41 @@ class RepoRepository(
                 )
             }
             .sortedWith(compareByDescending<FileEntry> { it.isDir }.thenBy { it.name.lowercase() })
+            // 単一子フォルダ連鎖(src/main/java 等)を1エントリに畳む。タップで最深へ直行。
+            .map { e ->
+                if (e.isDir && !e.isSubmodule) {
+                    val (display, target) = collapseDirChain(root, e.relPath, subPaths)
+                    if (target != e.relPath) {
+                        e.copy(name = target.substringAfterLast('/'), relPath = target, displayName = display)
+                    } else {
+                        e
+                    }
+                } else {
+                    e
+                }
+            }
+    }
+
+    /**
+     * フォルダ [startRel] が「中身が単一のサブフォルダだけ」である限り降り、連結表示名と最深パスを返す。
+     * submodule は越えない。深さは安全のため上限を設ける。
+     */
+    private fun collapseDirChain(root: File, startRel: String, subPaths: Set<String>): Pair<String, String> {
+        val names = ArrayList<String>()
+        names.add(startRel.substringAfterLast('/'))
+        var rel = startRel
+        var guard = 0
+        while (guard++ < 24) {
+            val kids = File(root, rel).listFiles().orEmpty().filterNot { it.name == ".git" }
+            if (kids.size != 1) break
+            val only = kids[0]
+            if (!only.isDirectory) break
+            val childRel = joinRel(rel, only.name)
+            if (childRel in subPaths) break // submodule の中へは畳まない
+            names.add(only.name)
+            rel = childRel
+        }
+        return names.joinToString("/") to rel
     }
 
     /** 小さなファイルの先頭を読み、Git LFS ポインタかを判定する。 */

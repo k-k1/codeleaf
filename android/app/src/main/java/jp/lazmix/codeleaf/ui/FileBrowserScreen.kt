@@ -31,7 +31,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -57,11 +56,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -360,65 +356,18 @@ private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             FileEntryIcon(entry, iconSet)
-            // 末尾だけ違う長いファイル名を判別できるよう、中央を省略して先頭と末尾を残す。
-            MiddleEllipsisText(
-                text = entry.name,
+            // 省略せず全文を表示する(長い名前は複数行に折り返す)。畳んだ連鎖は "src/main/java"。
+            Text(
+                entry.displayName,
                 color = textColor,
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
+                softWrap = true,
                 modifier = Modifier.weight(1f),
             )
             chip?.let { (label, color) -> MarkChip(label, color) }
         }
     }
-}
-
-/**
- * 1行に収まらない文字列を「先頭…末尾」で省略表示する(中央省略)。Compose 1.7 には
- * TextOverflow.MiddleEllipsis が無いため TextMeasurer で幅を測り二分探索で詰める。
- * 末尾(版番号・拡張子)を必ず残すので、末尾だけ違う長いファイル名を判別できる。
- */
-@Composable
-private fun MiddleEllipsisText(
-    text: String,
-    color: Color,
-    fontWeight: FontWeight?,
-    fontStyle: FontStyle?,
-    modifier: Modifier = Modifier,
-) {
-    val measurer = rememberTextMeasurer()
-    val style = LocalTextStyle.current.merge(
-        TextStyle(color = color, fontWeight = fontWeight, fontStyle = fontStyle),
-    )
-    // onSizeChanged で実幅を得る(BoxWithConstraints は IntrinsicSize.Min 行で使えないため)。
-    var widthPx by remember { mutableStateOf(0) }
-    val display = remember(text, widthPx, style) {
-        fun fits(s: String): Boolean =
-            measurer.measure(s, style, softWrap = false, maxLines = 1).size.width <= widthPx
-        if (widthPx <= 0 || fits(text)) {
-            text
-        } else {
-            val ell = "…"
-            var lo = 0
-            var hi = text.length - 1
-            var best = ell
-            while (lo <= hi) {
-                val keep = (lo + hi) / 2
-                val head = keep / 2
-                val tail = keep - head
-                val cand = text.take(head) + ell + text.takeLast(tail)
-                if (fits(cand)) { best = cand; lo = keep + 1 } else { hi = keep - 1 }
-            }
-            best
-        }
-    }
-    Text(
-        display,
-        style = style,
-        maxLines = 1,
-        softWrap = false,
-        modifier = modifier.onSizeChanged { if (it.width != widthPx) widthPx = it.width },
-    )
 }
 
 /** AI/機密などの分類を示す小さなピル。枠線＋淡い背景でアクセント色を主張しすぎない。 */
