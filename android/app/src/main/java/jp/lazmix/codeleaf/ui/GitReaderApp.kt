@@ -425,6 +425,7 @@ fun GitReaderApp() {
             @Composable
             fun ViewerPane(file: Screen.View, showBack: Boolean) {
                 key(file.repo.id, file.filePath) {
+                    val repoMemos by vm.observeMemos(file.repo.id).collectAsState(initial = emptyList())
                     FileViewerScreen(
                         repo = file.repo,
                         filePath = file.filePath,
@@ -453,6 +454,13 @@ fun GitReaderApp() {
                             if (detailStack.isNotEmpty()) {
                                 detailStack[detailStack.lastIndex] = Screen.View(file.repo, path)
                             }
+                        },
+                        memos = repoMemos,
+                        onAddMemoEntry = { memoId, ls, le, quote, comment ->
+                            vm.addMemoEntry(memoId, file.filePath, ls, le, quote, comment)
+                        },
+                        onCreateMemoWithEntry = { title, ls, le, quote, comment ->
+                            vm.createMemoWithEntry(file.repo.id, title, file.filePath, ls, le, quote, comment)
                         },
                     )
                 }

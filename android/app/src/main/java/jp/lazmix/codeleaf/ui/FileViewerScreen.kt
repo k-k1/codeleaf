@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -37,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +66,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -71,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.lazmix.codeleaf.data.LinkOpenMode
 import jp.lazmix.codeleaf.data.TableMode
+import jp.lazmix.codeleaf.data.db.MemoWithCount
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.render.CodeHighlight
 import jp.lazmix.codeleaf.render.CodeView
@@ -111,6 +115,14 @@ fun FileViewerScreen(
     loadSiblings: suspend () -> List<String> = { emptyList() },
     /** 前/次ファイルを開く(現在のビューアを置き換える)。 */
     onOpenSibling: (String) -> Unit = {},
+    /** メモ追加先の候補(このリポのメモ帳)。 */
+    memos: List<MemoWithCount> = emptyList(),
+    /** 既存メモ帳にエントリ追加(行は1始まり・lineEnd 含む)。 */
+    onAddMemoEntry: (memoId: Long, lineStart: Int, lineEnd: Int, quote: String, comment: String) -> Unit =
+        { _, _, _, _, _ -> },
+    /** 新規メモ帳を作って即エントリ追加。 */
+    onCreateMemoWithEntry: (title: String, lineStart: Int, lineEnd: Int, quote: String, comment: String) -> Unit =
+        { _, _, _, _, _ -> },
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
@@ -123,6 +135,9 @@ fun FileViewerScreen(
         error = null
         text = runCatching { loadText() }.getOrElse { error = it.message; null }
     }
+
+    // メモ追加の行選択範囲(0始まり)。非 null の間は追加シートを出す。
+    var addRange by remember(filePath) { mutableStateOf<IntRange?>(null) }
 
     // 同一フォルダの隣接ファイル(前/次送り用)。読み込めるまでは送りボタンを出さない。
     var siblings by remember(repo.id, filePath) { mutableStateOf<List<String>>(emptyList()) }
@@ -339,6 +354,8 @@ fun FileViewerScreen(
                     highlightLine = targetLine?.let { it - 1 },
                     wrap = wrap,
                     showLineNumbers = showLineNumbers,
+                    onLineLongPress = { idx -> addRange = idx..idx },
+                    selectedLines = addRange,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
@@ -352,6 +369,8 @@ fun FileViewerScreen(
                         highlightLine = targetLine?.let { it - 1 },
                         wrap = wrap,
                         showLineNumbers = showLineNumbers,
+                        onLineLongPress = { idx -> addRange = idx..idx },
+                        selectedLines = addRange,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -401,6 +420,179 @@ fun FileViewerScreen(
                 }
             }
         }
+    }
+
+    // 行を長押ししたら、その行を起点にメモ追加シートを開く(コード/Raw 表示のみ)。
+    val sheetRange = addRange
+    if (sheetRange != null && text != null) {
+        AddMemoSheet(
+            fileName = fileName,
+            lines = remember(text) { text!!.split("\n") },
+            initialRange = sheetRange,
+            memos = memos,
+            onSave = { lineStart, lineEnd, quote, comment, memoId, newTitle ->
+                if (memoId != null) {
+                    onAddMemoEntry(memoId, lineStart, lineEnd, quote, comment)
+                } else {
+                    onCreateMemoWithEntry(newTitle, lineStart, lineEnd, quote, comment)
+                }
+                addRange = null
+            },
+            onDismiss = { addRange = null },
+        )
+    }
+}
+
+/**
+ * メモ追加シート。長押しした行を起点に、開始/終了行の微調整・引用プレビュー・コメント入力・
+ * 追加先メモ帳(既存 or 新規)の選択を行い、[onSave] で確定する。行は表示用に 1 始まり。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddMemoSheet(
+    fileName: String,
+    lines: List<String>,
+    initialRange: IntRange,
+    memos: List<MemoWithCount>,
+    onSave: (lineStart: Int, lineEnd: Int, quote: String, comment: String, memoId: Long?, newTitle: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val total = lines.size.coerceAtLeast(1)
+    var start1 by remember { mutableIntStateOf((initialRange.first + 1).coerceIn(1, total)) }
+    var end1 by remember { mutableIntStateOf((initialRange.last + 1).coerceIn(start1, total)) }
+    var comment by remember { mutableStateOf("") }
+    var selectedMemoId by remember { mutableStateOf(memos.firstOrNull()?.memo?.id) }
+    var newTitle by remember { mutableStateOf("") }
+    var pickerOpen by remember { mutableStateOf(false) }
+
+    val s0 = (start1 - 1).coerceIn(0, total - 1)
+    val e0 = (end1 - 1).coerceIn(s0, total - 1)
+    val quote = remember(s0, e0, lines) { lines.subList(s0, e0 + 1).joinToString("\n") }
+    val creatingNew = selectedMemoId == null
+    val canSave = !creatingNew || newTitle.isNotBlank()
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("メモを追加", style = MaterialTheme.typography.titleMedium)
+            Text(
+                fileName,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            // 行範囲の微調整(開始 ≤ 終了 ≤ 総行数)。
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("行", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(12.dp))
+                LineStepper(
+                    value = start1,
+                    onDec = { start1 = (start1 - 1).coerceAtLeast(1) },
+                    onInc = { start1 = (start1 + 1).coerceAtMost(end1) },
+                )
+                Text("〜", Modifier.padding(horizontal = 8.dp))
+                LineStepper(
+                    value = end1,
+                    onDec = { end1 = (end1 - 1).coerceAtLeast(start1) },
+                    onInc = { end1 = (end1 + 1).coerceAtMost(total) },
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "全 $total 行",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // 引用プレビュー。
+            Text(
+                quote,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 140.dp)
+                    .verticalScroll(rememberScrollState())
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                label = { Text("コメント") },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            // 追加先メモ帳: 既存から選ぶ or 新規作成。
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("メモ帳", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(12.dp))
+                Box {
+                    TextButton(onClick = { pickerOpen = true }) {
+                        val label = if (creatingNew) {
+                            "新しいメモ帳"
+                        } else {
+                            memos.firstOrNull { it.memo.id == selectedMemoId }?.memo?.title ?: "メモ帳"
+                        }
+                        Text(label)
+                    }
+                    DropdownMenu(expanded = pickerOpen, onDismissRequest = { pickerOpen = false }) {
+                        memos.forEach { m ->
+                            DropdownMenuItem(
+                                text = { Text(m.memo.title.ifBlank { "(無題)" }) },
+                                onClick = { selectedMemoId = m.memo.id; pickerOpen = false },
+                            )
+                        }
+                        if (memos.isNotEmpty()) HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("＋ 新しいメモ帳") },
+                            onClick = { selectedMemoId = null; pickerOpen = false },
+                        )
+                    }
+                }
+            }
+            if (creatingNew) {
+                OutlinedTextField(
+                    value = newTitle,
+                    onValueChange = { newTitle = it },
+                    label = { Text("新しいメモ帳のタイトル") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) { Text("キャンセル") }
+                Spacer(Modifier.width(8.dp))
+                TextButton(
+                    enabled = canSave,
+                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim()) },
+                ) { Text("保存") }
+            }
+        }
+    }
+}
+
+/** 行番号の増減ステッパ(−[値]＋)。 */
+@Composable
+private fun LineStepper(value: Int, onDec: () -> Unit, onInc: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = onDec, contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) { Text("−") }
+        Text("$value", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        TextButton(onClick = onInc, contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) { Text("＋") }
     }
 }
 

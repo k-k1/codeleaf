@@ -7,6 +7,7 @@ import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -541,6 +543,10 @@ fun CodeView(
     highlightLine: Int? = null,
     wrap: Boolean = true,
     showLineNumbers: Boolean = false,
+    /** 行(0始まり)を長押ししたとき呼ぶ。メモ追加の行選択に使う。 */
+    onLineLongPress: ((Int) -> Unit)? = null,
+    /** 選択中の行範囲(0始まり)。背景強調する。 */
+    selectedLines: IntRange? = null,
     modifier: Modifier = Modifier,
 ) {
     val theme = remember(dark) { CodeHighlight.theme(dark) }
@@ -567,12 +573,20 @@ fun CodeView(
         .let { if (wrap) it else it.horizontalScroll(hScroll) }
     LazyColumn(state = listState, modifier = listModifier) {
         itemsIndexed(lines) { idx, line ->
-            val rowBg = if (idx == highlightLine) Modifier.background(highlightBg) else Modifier
+            val emphasized = idx == highlightLine || selectedLines?.contains(idx) == true
+            val rowBg = if (emphasized) Modifier.background(highlightBg) else Modifier
+            // 長押しでその行をメモ追加の起点にする(タップは無反応・縦スクロールは阻害しない)。
+            val rowPress = if (onLineLongPress != null) {
+                Modifier.pointerInput(idx) { detectTapGestures(onLongPress = { onLineLongPress(idx) }) }
+            } else {
+                Modifier
+            }
             if (showLineNumbers) {
                 Row(
                     Modifier
                         .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
                         .then(rowBg)
+                        .then(rowPress)
                         .padding(horizontal = 12.dp, vertical = 1.dp),
                 ) {
                     Text(
@@ -604,6 +618,7 @@ fun CodeView(
                     modifier = Modifier
                         .then(if (wrap) Modifier.fillMaxWidth() else Modifier)
                         .then(rowBg)
+                        .then(rowPress)
                         .padding(horizontal = 12.dp, vertical = 1.dp),
                 )
             }
