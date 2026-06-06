@@ -14,7 +14,7 @@ class GitHubApi(private val http: ApiHttp = HttpUrlConnectionApiHttp()) {
             while (out.size < maxRepos) {
                 val url = "$REPOS_URL&page=$page"
                 val res = http.getJson(url, "Bearer $accessToken")
-                if (res.status !in 200..299) {
+                if (!res.status.isHttpSuccess()) {
                     return Result.failure(OAuthException(OAuthError.Http(res.status, res.body)))
                 }
                 val repos = parseGitHubRepoPage(res.body)
@@ -42,12 +42,7 @@ fun parseGitHubRepoPage(body: String): List<RemoteRepo> {
     return buildList {
         for (i in 0 until arr.length()) {
             val r = arr.getJSONObject(i)
-            val fullName = r.optString("full_name", "")
-            val name = r.optString("name", "").ifEmpty { fullName.substringAfterLast('/') }
-            val cloneUrl = r.optString("clone_url", "")
-            if (fullName.isNotEmpty() && cloneUrl.isNotEmpty()) {
-                add(RemoteRepo(fullName, name, stripUserInfo(cloneUrl)))
-            }
+            buildRemoteRepo(r, r.optString("clone_url", ""))?.let { add(it) }
         }
     }
 }

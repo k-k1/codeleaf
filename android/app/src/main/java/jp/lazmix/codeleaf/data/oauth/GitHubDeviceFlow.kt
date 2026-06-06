@@ -60,7 +60,7 @@ sealed interface GitHubPollResult {
 
 /** device/code 応答(status, body)を [GitHubDeviceCode] に変換する。 */
 fun parseDeviceCodeResponse(status: Int, body: String): Result<GitHubDeviceCode> {
-    if (status !in 200..299) {
+    if (!status.isHttpSuccess()) {
         return Result.failure(OAuthException(OAuthError.Http(status, body)))
     }
     return runCatching {

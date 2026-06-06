@@ -8,7 +8,7 @@ import org.json.JSONObject
  * refresh token 失効を返すため InvalidGrant に振り分ける。
  */
 fun parseTokenResponse(status: Int, body: String): Result<OAuthTokens> {
-    if (status !in 200..299) {
+    if (!status.isHttpSuccess()) {
         val errCode = runCatching { JSONObject(body).optString("error") }.getOrDefault("")
         return Result.failure(
             OAuthException(

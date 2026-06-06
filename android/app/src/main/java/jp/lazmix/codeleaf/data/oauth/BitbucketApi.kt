@@ -2,8 +2,6 @@ package jp.lazmix.codeleaf.data.oauth
 
 import org.json.JSONObject
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 
 /** Bitbucket のリモートリポ1件（一覧選択用）。cloneUrl は userinfo を除いた HTTPS。 */
 data class RemoteRepo(val fullName: String, val name: String, val cloneUrl: String)
@@ -16,18 +14,9 @@ interface ApiHttp {
 
 class HttpUrlConnectionApiHttp : ApiHttp {
     override fun getJson(url: String, authHeader: String): HttpResult {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 15_000
-            readTimeout = 15_000
-            setRequestProperty("Authorization", authHeader)
-            setRequestProperty("Accept", "application/json")
-        }
+        val conn = openJsonConnection(url, "GET", authHeader)
         try {
-            val status = conn.responseCode
-            val stream = if (status in 200..299) conn.inputStream else conn.errorStream
-            val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-            return HttpResult(status, body)
+            return conn.readHttpResult()
         } finally {
             conn.disconnect()
         }
@@ -53,7 +42,7 @@ class BitbucketApi(private val http: ApiHttp = HttpUrlConnectionApiHttp()) {
             var wsUrl: String? = WORKSPACES_PAGE
             while (wsUrl != null) {
                 val res = http.getJson(wsUrl, auth)
-                if (res.status !in 200..299) {
+                if (!res.status.isHttpSuccess()) {
                     return Result.failure(OAuthException(OAuthError.Http(res.status, res.body)))
                 }
                 val (s, next) = parseWorkspaceSlugs(res.body)
@@ -66,7 +55,7 @@ class BitbucketApi(private val http: ApiHttp = HttpUrlConnectionApiHttp()) {
                 var url: String? = repoPageUrl(slug)
                 while (url != null && out.size < maxRepos) {
                     val res = http.getJson(url, auth)
-                    if (res.status !in 200..299) break
+                    if (!res.status.isHttpSuccess()) break
                     val (repos, next) = parseRepoPage(res.body)
                     out.addAll(repos)
                     url = next
@@ -110,16 +99,19 @@ fun parseRepoPage(body: String): Pair<List<RemoteRepo>, String?> {
     val repos = buildList {
         for (i in 0 until (arr?.length() ?: 0)) {
             val r = arr!!.getJSONObject(i)
-            val fullName = r.optString("full_name", "")
-            val name = r.optString("name", "").ifEmpty { fullName.substringAfterLast('/') }
-            val href = httpsCloneHref(r)
-            if (fullName.isNotEmpty() && href != null) {
-                add(RemoteRepo(fullName, name, stripUserInfo(href)))
-            }
+            buildRemoteRepo(r, httpsCloneHref(r))?.let { add(it) }
         }
     }
     val next = o.optString("next", "").ifEmpty { null }
     return repos to next
+}
+
+/** リポ JSON 1件 + clone URL から RemoteRepo を作る。full_name か clone URL が空なら null。GitHub/Bitbucket 共通。 */
+internal fun buildRemoteRepo(r: JSONObject, cloneUrl: String?): RemoteRepo? {
+    val fullName = r.optString("full_name", "")
+    if (fullName.isEmpty() || cloneUrl.isNullOrEmpty()) return null
+    val name = r.optString("name", "").ifEmpty { fullName.substringAfterLast('/') }
+    return RemoteRepo(fullName, name, stripUserInfo(cloneUrl))
 }
 
 private fun httpsCloneHref(repo: JSONObject): String? {
