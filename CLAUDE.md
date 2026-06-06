@@ -38,7 +38,9 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   **instrumented E2E は portrait(compact)前提** — landscape で実行すると2/3ペインになり一部 assert が崩れる。
 - **kapt** は `kotlin("kapt")` を **version なし**で適用(catalog alias は失敗)。
   `configurations.all { exclude(group="org.jetbrains", module="annotations-java5") }` で dex 重複を回避。
-- **Prism4j 同梱言語のみ**ハイライト可(bash / typescript / rust は不可)。
+- **ハイライト**: Prism4j 2.0.0 同梱文法を `@PrismBundle`(`PrismGrammarLocator`)で生成。未同梱の
+  **bash / typescript / rust は手書き文法**を `CodeGrammarLocator`(GrammarLocatorDef をラップ)で重ねる
+  (`CustomGrammars`、文字列内の変数補間など細部は未対応の実用サブセット)。別名/拡張子マップは `CodeHighlight.languageForFile`。
 - **Markdown 本文は `AndroidView(TextView)`** で Compose セマンティクスから不可視 → 本文/リンクは Compose test で検証不可。
   検証は (a)ロジックを純粋関数化し JVM 単体, (b)到達は Compose ノード(CodeView/表/frontmatter/見出し), (c)実機 uiautomator。
 - **リンク**: `setTextIsSelectable(true)` は MovementMethod を奪う → 使わず setMarkdown 後に `LinkMovementMethod` を明示。

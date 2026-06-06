@@ -397,8 +397,11 @@ class RepoLinkResolver(
  */
 object CodeHighlight {
 
-    /** GrammarLocatorDef は kapt(prism4j-bundler)が PrismGrammarLocator から生成する。 */
-    val prism4j: Prism4j by lazy { Prism4j(GrammarLocatorDef()) }
+    /**
+     * GrammarLocatorDef は kapt(prism4j-bundler)が PrismGrammarLocator から生成する。
+     * [CodeGrammarLocator] で重ねて未同梱の bash/typescript/rust を補う。
+     */
+    val prism4j: Prism4j by lazy { Prism4j(CodeGrammarLocator()) }
 
     fun theme(dark: Boolean): Prism4jTheme =
         if (dark) Prism4jThemeDarkula.create() else Prism4jThemeDefault.create()
@@ -408,8 +411,13 @@ object CodeHighlight {
         Prism4jSyntaxHighlight.create(prism4j, theme(dark)).highlight(language ?: "", code)
 
     /** ファイル名(拡張子)から Prism4j の言語 ID を推定する。未対応は null。 */
-    fun languageForFile(name: String): String? =
-        when (name.substringAfterLast('.', "").lowercase()) {
+    fun languageForFile(name: String): String? {
+        // 拡張子を持たない特殊ファイル名(Makefile 等)を先に拾う。
+        when (name.substringAfterLast('/').lowercase()) {
+            "makefile", "makefile.am", "gnumakefile" -> return "makefile"
+            ".bashrc", ".bash_profile", ".zshrc", ".profile" -> return "bash"
+        }
+        return when (name.substringAfterLast('.', "").lowercase()) {
             "kt", "kts" -> "kotlin"
             "java" -> "java"
             "groovy", "gradle" -> "groovy"
@@ -418,6 +426,9 @@ object CodeHighlight {
             "cpp", "cc", "cxx", "hpp", "hh" -> "cpp"
             "cs" -> "csharp"
             "js", "mjs", "cjs", "jsx" -> "javascript"
+            "ts", "tsx", "mts", "cts" -> "typescript"
+            "rs" -> "rust"
+            "sh", "bash", "zsh" -> "bash"
             "json" -> "json"
             "css" -> "css"
             "html", "htm", "xml", "xhtml", "svg" -> "markup"
@@ -427,9 +438,14 @@ object CodeHighlight {
             "yml", "yaml" -> "yaml"
             "swift" -> "swift"
             "dart" -> "dart"
+            "mk" -> "makefile"
+            "tex" -> "latex"
+            "clj", "cljs", "cljc", "edn" -> "clojure"
+            "diff", "patch" -> "git"
             "md", "markdown" -> "markdown"
             else -> null
         }
+    }
 }
 
 /**
