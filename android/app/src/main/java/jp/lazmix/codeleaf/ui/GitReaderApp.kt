@@ -468,6 +468,7 @@ fun GitReaderApp() {
                     onBack = { handleBack() },
                     selectedSha = selectedSha,
                     onSelectCommit = onSelect,
+                    onSync = { vm.syncNow(repo) },
                 )
             }
 
@@ -532,6 +533,7 @@ fun GitReaderApp() {
                     onSelectCommit = onSelect,
                     onBack = { pop() },
                     selectedSha = selSha,
+                    onSync = { vm.syncNow(repo) },
                 )
             }
 

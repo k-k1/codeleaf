@@ -2,6 +2,7 @@ package jp.lazmix.codeleaf.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,18 +20,23 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.git.CommitInfo
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,9 +46,14 @@ fun HistoryScreen(
     onSelectCommit: (CommitInfo) -> Unit,
     onBack: () -> Unit,
     selectedSha: String? = null,
+    /** 引っ張って更新(同期)する処理。null なら pull-to-refresh を出さない。 */
+    onSync: (suspend () -> Unit)? = null,
 ) {
     var commits by remember(filePath) { mutableStateOf<List<CommitInfo>?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(filePath) {
         error = null
@@ -60,35 +71,54 @@ fun HistoryScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            val list = commits
-            when {
-                error != null -> Text("履歴取得失敗: $error", Modifier.padding(16.dp))
-                list == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                list.isEmpty() -> Text("履歴がありません", Modifier.padding(16.dp))
-                else -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(list, key = { it.sha }) { c ->
-                        val selected = c.sha == selectedSha
-                        Column(
-                            Modifier.fillMaxWidth()
-                                .clickable { onSelectCommit(c) }
-                                .then(
-                                    if (selected) {
-                                        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
-                                    } else {
-                                        Modifier
-                                    },
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = {
+                    if (onSync == null || refreshing) return@PullToRefreshBox
+                    scope.launch {
+                        refreshing = true
+                        val result = runCatching { onSync() }
+                        // 同期後はそのファイルの履歴が増減しうるので再読込。
+                        commits = runCatching { loadHistory() }.getOrElse { error = it.message; emptyList() }
+                        refreshing = false
+                        snackbar.showSnackbar(
+                            result.exceptionOrNull()?.let { "同期失敗: ${it.message}" } ?: "同期完了",
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                val list = commits
+                when {
+                    error != null -> Text("履歴取得失敗: $error", Modifier.padding(16.dp))
+                    list == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                    list.isEmpty() -> Text("履歴がありません", Modifier.padding(16.dp))
+                    else -> LazyColumn(Modifier.fillMaxSize()) {
+                        items(list, key = { it.sha }) { c ->
+                            val selected = c.sha == selectedSha
+                            Column(
+                                Modifier.fillMaxWidth()
+                                    .clickable { onSelectCommit(c) }
+                                    .then(
+                                        if (selected) {
+                                            Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                            ) {
+                                Text(c.shortMessage, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    "${c.sha.take(7)} · ${c.author} · ${relativeTimeMillis(c.committedAt.toEpochMilli())}",
+                                    style = MaterialTheme.typography.bodySmall,
                                 )
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                        ) {
-                            Text(c.shortMessage, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                "${c.sha.take(7)} · ${c.author} · ${relativeTimeMillis(c.committedAt.toEpochMilli())}",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                            }
+                            HorizontalDivider()
                         }
-                        HorizontalDivider()
                     }
                 }
             }
