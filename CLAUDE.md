@@ -78,8 +78,10 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   行描画(`EntryRow`)で 先頭バー＋文字色＋チップ等を付与。AI=tertiary+「AI」, 機密(.env/鍵)=error+「!」,
   生成物/ロック=減光斜体, README等=太字, ドット始まり=薄グレー。種別アイコン自体は変えない。
 - **メモ**(`data/db/Memo*`・`ui/Memos*`): リポ→**メモ帳**(`memos`)→**エントリ**(`memo_entries`: file/行範囲/引用/コメント)の2階層。
-  Room **v5**(`MIGRATION_4_5`・親削除で CASCADE)。追加は **CodeView の行長押し**(整形 Markdown は不可・Raw 表示で可)→
-  `AddMemoSheet`(行範囲微調整＋メモ帳選択/新規)。共有/コピーは `MemoFormat`(Markdown 風・純粋関数)。入口はビューア⋮と FileBrowser⋮の「メモ」。
+  Room **v5**(`MIGRATION_4_5`・親削除で CASCADE)。追加は **行/ブロックの長押し** → `AddMemoSheet`(行範囲微調整＋メモ帳選択/新規)。
+  コード/Raw は `CodeView` の行長押し、**整形 Markdown は `MarkdownView`(TextView)の `OnLongClickListener`**＋`blockLineRange`(ブロックを全文検索しソース行算出)。
+  共有/コピーは `MemoFormat`(Markdown 風・純粋関数)。入口はビューア⋮と FileBrowser⋮の「メモ」。
+  ※整形本文は Compose セマンティクス不可視 → E2E はビュー階層から TextView を探し `performLongClick()`(`MarkdownMemoE2EInstrumentedTest`)。
 - **E2E**: `Git.init().setInitialBranch("main")` で端末上にローカルリポを作り `file パス`で clone(NW 不要・credentials 無視)。
   @Before で `container.repoRepository` の既存リポを一掃して決定論化。
 

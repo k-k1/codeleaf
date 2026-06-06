@@ -471,12 +471,15 @@ fun MarkdownView(
     fontScale: Float,
     onNavigateToFile: (String) -> Unit,
     onExternalLink: (String) -> Unit,
+    /** このブロックを長押ししたとき呼ぶ(整形 Markdown でのメモ追加)。null なら無効。 */
+    onLongPress: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     // コールバックの最新参照を保持(Markwon は再生成せず、resolver から間接参照する)
     val latestNavigate by rememberUpdatedState(onNavigateToFile)
     val latestExternal by rememberUpdatedState(onExternalLink)
+    val latestLongPress by rememberUpdatedState(onLongPress)
     val scheme = MaterialTheme.colorScheme
     val colors = MarkdownColors(
         link = scheme.primary.toArgb(),
@@ -509,6 +512,8 @@ fun MarkdownView(
             markwon.setMarkdown(tv, rendered)
             // リンク(相対リンク=アプリ内遷移 / 外部=ブラウザ)をタップ可能にする。
             tv.movementMethod = LinkMovementMethod.getInstance()
+            // 長押しはメモ追加に使う(リンクのタップ=短押しとは競合しない)。
+            tv.setOnLongClickListener { latestLongPress?.invoke(); latestLongPress != null }
         },
     )
 }

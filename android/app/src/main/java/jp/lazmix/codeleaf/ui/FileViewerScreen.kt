@@ -311,6 +311,9 @@ fun FileViewerScreen(
                                             fontScale = fontScale,
                                             onNavigateToFile = onNavigateToFile,
                                             onExternalLink = openExternal,
+                                            // 長押しでこのブロックのソース行を起点にメモ追加。
+                                            onLongPress = blockLineRange(body, block.markdown)
+                                                ?.let { range -> { addRange = range } },
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                         is MdBlock.Mermaid -> MermaidWebView(
@@ -441,6 +444,19 @@ fun FileViewerScreen(
             onDismiss = { addRange = null },
         )
     }
+}
+
+/**
+ * 整形 Markdown のブロック(markdown 文字列)を全文から探し、0始まりのソース行範囲を返す。
+ * 見つからない(空・重複等)場合は null。範囲はメモ追加シートで微調整できる。
+ */
+internal fun blockLineRange(fullText: String, blockMarkdown: String): IntRange? {
+    val blk = blockMarkdown.trim('\n')
+    if (blk.isEmpty()) return null
+    val idx = fullText.indexOf(blk)
+    if (idx < 0) return null
+    val start = fullText.substring(0, idx).count { it == '\n' }
+    return start..(start + blk.count { it == '\n' })
 }
 
 /**
