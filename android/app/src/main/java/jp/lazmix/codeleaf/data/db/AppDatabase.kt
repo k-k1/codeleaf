@@ -40,8 +40,32 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
-@Database(entities = [Repo::class], version = 4, exportSchema = false)
+/** v4→v5: メモ帳(memos)とそのエントリ(memo_entries)を追加。いずれも親削除で CASCADE。 */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `memos` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`repoId` INTEGER NOT NULL, `title` TEXT NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`repoId`) REFERENCES `repos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_memos_repoId` ON `memos` (`repoId`)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `memo_entries` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`memoId` INTEGER NOT NULL, `filePath` TEXT NOT NULL, " +
+                "`lineStart` INTEGER NOT NULL, `lineEnd` INTEGER NOT NULL, " +
+                "`quote` TEXT NOT NULL, `comment` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`memoId`) REFERENCES `memos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_memo_entries_memoId` ON `memo_entries` (`memoId`)")
+    }
+}
+
+@Database(entities = [Repo::class, Memo::class, MemoEntry::class], version = 5, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun repoDao(): RepoDao
+    abstract fun memoDao(): MemoDao
 }
