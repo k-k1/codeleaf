@@ -27,6 +27,8 @@ data class AppSettings(
     val defaultTheme: ThemeMode = ThemeMode.SYSTEM,
     val fontScale: FontScale = FontScale.MEDIUM,
     val wrapByDefault: Boolean = true,
+    /** diff 表示の折り返し。ファイル閲覧(wrapByDefault)とは別管理で永続化する。 */
+    val diffWrap: Boolean = true,
     val linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     val showLineNumbers: Boolean = false,
     val tableMode: TableMode = TableMode.INLINE,
@@ -53,6 +55,7 @@ class SettingsStore(context: Context) {
         defaultTheme = enumOrDefault(prefs.getString(KEY_THEME, null), ThemeMode.SYSTEM),
         fontScale = enumOrDefault(prefs.getString(KEY_FONT, null), FontScale.MEDIUM),
         wrapByDefault = prefs.getBoolean(KEY_WRAP, true),
+        diffWrap = prefs.getBoolean(KEY_DIFFWRAP, true),
         linkOpenMode = enumOrDefault(prefs.getString(KEY_LINK, null), LinkOpenMode.IN_APP),
         showLineNumbers = prefs.getBoolean(KEY_LINENUM, false),
         tableMode = enumOrDefault(prefs.getString(KEY_TABLE, null), TableMode.INLINE),
@@ -76,6 +79,11 @@ class SettingsStore(context: Context) {
     fun setWrapByDefault(wrap: Boolean) {
         prefs.edit().putBoolean(KEY_WRAP, wrap).apply()
         _settings.value = _settings.value.copy(wrapByDefault = wrap)
+    }
+
+    fun setDiffWrap(wrap: Boolean) {
+        prefs.edit().putBoolean(KEY_DIFFWRAP, wrap).apply()
+        _settings.value = _settings.value.copy(diffWrap = wrap)
     }
 
     fun setLinkOpenMode(mode: LinkOpenMode) {
@@ -118,6 +126,7 @@ class SettingsStore(context: Context) {
         const val KEY_THEME = "default_theme"
         const val KEY_FONT = "font_scale"
         const val KEY_WRAP = "wrap_by_default"
+        const val KEY_DIFFWRAP = "diff_wrap"
         const val KEY_LINK = "link_open_mode"
         const val KEY_LINENUM = "show_line_numbers"
         const val KEY_TABLE = "table_mode"

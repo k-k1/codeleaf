@@ -93,6 +93,8 @@ fun FileViewerScreen(
     loadText: suspend () -> String,
     fontScale: Float,
     defaultWrap: Boolean = true,
+    /** 折り返しトグルの変更を保存する(ファイル閲覧の折り返し設定として永続化)。 */
+    onToggleWrap: (Boolean) -> Unit = {},
     linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     showLineNumbers: Boolean = false,
     tableMode: TableMode = TableMode.INLINE,
@@ -225,7 +227,7 @@ fun FileViewerScreen(
                 // 右: 折り返し(コード/Raw時のみ)。整形/Raw 切替は右上 ⋮ メニューへ移動。
                 if (!isMarkdown || raw) {
                     TextButton(
-                        onClick = { wrap = !wrap },
+                        onClick = { wrap = !wrap; onToggleWrap(wrap) },
                         modifier = Modifier.padding(end = 8.dp),
                     ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
                 }

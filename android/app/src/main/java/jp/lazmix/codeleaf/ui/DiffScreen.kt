@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.runtime.mutableStateMapOf
@@ -43,9 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jp.lazmix.codeleaf.GitReaderApplication
 import jp.lazmix.codeleaf.git.CommitInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -214,8 +215,10 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
     val rows = remember(diff) { parseDiffRows(diff) }
     val files = remember(rows) { groupDiffByFile(rows) }
     val collapsed = remember(diff) { mutableStateMapOf<Int, Boolean>() }
-    // 折り返しの好みはコミットを跨いで保持(diff をキーにしない)。既定は折り返しON(従来の挙動)。
-    var wrap by rememberSaveable { mutableStateOf(true) }
+    // 折り返しは diff 専用設定として永続化(ファイル閲覧の wrapByDefault とは別管理)。既定 ON。
+    val context = LocalContext.current
+    val settingsStore = remember { (context.applicationContext as GitReaderApplication).container.settingsStore }
+    var wrap by remember { mutableStateOf(settingsStore.settings.value.diffWrap) }
     val base = MaterialTheme.colorScheme.onSurface
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val hunkBg = MaterialTheme.colorScheme.surfaceVariant
@@ -318,7 +321,7 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
         SlimBottomBar {
             Spacer(Modifier.weight(1f))
             TextButton(
-                onClick = { wrap = !wrap },
+                onClick = { wrap = !wrap; settingsStore.setDiffWrap(wrap) },
                 modifier = Modifier.padding(end = 8.dp),
             ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
         }

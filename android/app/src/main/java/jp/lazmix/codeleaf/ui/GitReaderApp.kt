@@ -384,6 +384,7 @@ fun GitReaderApp() {
                         loadText = { vm.readFile(file.repo, file.filePath) },
                         fontScale = settings.fontScale.scale,
                         defaultWrap = settings.wrapByDefault,
+                        onToggleWrap = vm::setWrapByDefault,
                         linkOpenMode = settings.linkOpenMode,
                         showLineNumbers = settings.showLineNumbers,
                         tableMode = settings.tableMode,
