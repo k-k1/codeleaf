@@ -39,6 +39,9 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   **状態永続化**: `Screen`/`Repo`/`GraphCommit` を `@Parcelize`(`kotlin("plugin.parcelize")`, Instant は `InstantParceler`)、
   `backStack`/`detailStack`/`graphSelected`/`focusMode` を `rememberSaveable` でプロセス死から復元。
   **instrumented E2E は portrait(compact)前提** — landscape で実行すると2/3ペインになり一部 assert が崩れる。
+- **ブラウザ**(`FileBrowserScreen`): 上部に GitHub 風パンくず(`PathBreadcrumb`・🏠＋各フォルダ、祖先タップで `onNavigateToDir`→`navigateToDir` が
+  スタックを当該 Browse まで畳む/無ければ置換)。ファイル名は **`MiddleEllipsisText`**(`TextOverflow.MiddleEllipsis` は Compose1.7 に無い→
+  `TextMeasurer`＋`onSizeChanged` で中央省略・末尾保持。`BoxWithConstraints` は `IntrinsicSize.Min` 行で不可)。
 - **kapt** は `kotlin("kapt")` を **version なし**で適用(catalog alias は失敗)。
   `configurations.all { exclude(group="org.jetbrains", module="annotations-java5") }` で dex 重複を回避。
 - **ハイライト**: Prism4j 2.0.0 同梱文法を `@PrismBundle`(`PrismGrammarLocator`)で生成。未同梱の

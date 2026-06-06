@@ -169,6 +169,17 @@ fun GitReaderApp() {
         detailStack.add(Screen.View(repo, path, line))
     }
 
+    // パンくずから任意の階層へ。スタックに同じ Browse があればそこまで戻り(GitHub 風の上り)、
+    // 無ければ現在の Browse を置換する。開いているファイル(detailStack)はそのまま。
+    fun navigateToDir(repo: Repo, path: String) {
+        val idx = backStack.indexOfLast { it is Screen.Browse && it.repo.id == repo.id && it.path == path }
+        if (idx >= 0) {
+            while (backStack.lastIndex > idx) backStack.removeAt(backStack.lastIndex)
+        } else {
+            backStack[backStack.lastIndex] = Screen.Browse(repo, path)
+        }
+    }
+
     // リポを出てリポ一覧へ戻る(Browse チェーンを畳む)。ブラウザ ← の動作。
     fun leaveRepo() {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
@@ -401,6 +412,7 @@ fun GitReaderApp() {
                     onSearch = { navigate(Screen.Search(repo)) },
                     onGraph = { graphSelected = null; navigate(Screen.Graph(repo)) },
                     onMemos = { navigate(Screen.Memos(repo)) },
+                    onNavigateToDir = { target -> navigateToDir(repo, target) },
                     onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
                     onOpenFile = {

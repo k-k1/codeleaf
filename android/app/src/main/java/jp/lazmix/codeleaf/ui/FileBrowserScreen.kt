@@ -3,6 +3,8 @@ package jp.lazmix.codeleaf.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -28,8 +31,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -52,8 +57,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +88,8 @@ fun FileBrowserScreen(
     onSearch: () -> Unit,
     onGraph: () -> Unit,
     onMemos: () -> Unit,
+    /** パンくずのセグメントから任意の階層へ移動(repo ルート相対パス, 空=ルート)。 */
+    onNavigateToDir: (String) -> Unit,
     onSetTheme: (ThemeMode) -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
@@ -108,6 +118,7 @@ fun FileBrowserScreen(
 
     Scaffold(
         topBar = {
+          Column {
             TopAppBar(
                 title = {
                     Column {
@@ -165,17 +176,21 @@ fun FileBrowserScreen(
                     }
                 },
             )
+            PathBreadcrumb(path = path, onNavigate = onNavigateToDir)
+          }
         },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             SlimBottomBar {
-                // ルート(path 空)では親が無いので無効化。
+                // 片手操作用にひとつ上へ。階層飛ばしは上部パンくずから。ルートでは無効。
                 IconButton(onClick = onUp, enabled = path.isNotEmpty()) {
                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "ひとつ上へ")
                 }
+                Spacer(Modifier.width(4.dp))
                 Text(
-                    text = "/" + path,
+                    text = if (path.isEmpty()) "ルート" else path.substringAfterLast('/'),
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(end = 16.dp),
@@ -256,6 +271,57 @@ fun FileBrowserScreen(
     }
 }
 
+/**
+ * GitHub 風のパンくず。ルート(ホーム)＋各フォルダ名をセグメント表示し、祖先をタップで
+ * その階層へ一気に移動する。現在地は太字・非リンク。深いパスは右端(現在地)へ自動スクロール。
+ */
+@Composable
+private fun PathBreadcrumb(path: String, onNavigate: (String) -> Unit) {
+    val parts = if (path.isEmpty()) emptyList() else path.split("/")
+    val scroll = rememberScrollState()
+    // 内容が伸びた(=階層が深くなった)ら末尾の現在地が見えるよう右端へ。
+    LaunchedEffect(scroll.maxValue) { scroll.scrollTo(scroll.maxValue) }
+    val cs = MaterialTheme.colorScheme
+    Surface(color = cs.surface) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.Home,
+                    contentDescription = "ルート",
+                    tint = if (parts.isEmpty()) cs.onSurface else cs.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .clickable(enabled = parts.isNotEmpty()) { onNavigate("") }
+                        .padding(2.dp)
+                        .size(18.dp),
+                )
+                var acc = ""
+                parts.forEachIndexed { i, part ->
+                    Text("/", color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+                    acc = if (acc.isEmpty()) part else "$acc/$part"
+                    val target = acc
+                    val last = i == parts.lastIndex
+                    Text(
+                        part,
+                        color = if (last) cs.onSurface else cs.primary,
+                        fontWeight = if (last) FontWeight.Bold else null,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable(enabled = !last) { onNavigate(target) }
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                    )
+                }
+            }
+            HorizontalDivider()
+        }
+    }
+}
+
 @Composable
 private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
@@ -294,18 +360,65 @@ private fun EntryRow(entry: FileEntry, iconSet: IconSet, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             FileEntryIcon(entry, iconSet)
-            Text(
-                entry.name,
+            // 末尾だけ違う長いファイル名を判別できるよう、中央を省略して先頭と末尾を残す。
+            MiddleEllipsisText(
+                text = entry.name,
                 color = textColor,
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             chip?.let { (label, color) -> MarkChip(label, color) }
         }
     }
+}
+
+/**
+ * 1行に収まらない文字列を「先頭…末尾」で省略表示する(中央省略)。Compose 1.7 には
+ * TextOverflow.MiddleEllipsis が無いため TextMeasurer で幅を測り二分探索で詰める。
+ * 末尾(版番号・拡張子)を必ず残すので、末尾だけ違う長いファイル名を判別できる。
+ */
+@Composable
+private fun MiddleEllipsisText(
+    text: String,
+    color: Color,
+    fontWeight: FontWeight?,
+    fontStyle: FontStyle?,
+    modifier: Modifier = Modifier,
+) {
+    val measurer = rememberTextMeasurer()
+    val style = LocalTextStyle.current.merge(
+        TextStyle(color = color, fontWeight = fontWeight, fontStyle = fontStyle),
+    )
+    // onSizeChanged で実幅を得る(BoxWithConstraints は IntrinsicSize.Min 行で使えないため)。
+    var widthPx by remember { mutableStateOf(0) }
+    val display = remember(text, widthPx, style) {
+        fun fits(s: String): Boolean =
+            measurer.measure(s, style, softWrap = false, maxLines = 1).size.width <= widthPx
+        if (widthPx <= 0 || fits(text)) {
+            text
+        } else {
+            val ell = "…"
+            var lo = 0
+            var hi = text.length - 1
+            var best = ell
+            while (lo <= hi) {
+                val keep = (lo + hi) / 2
+                val head = keep / 2
+                val tail = keep - head
+                val cand = text.take(head) + ell + text.takeLast(tail)
+                if (fits(cand)) { best = cand; lo = keep + 1 } else { hi = keep - 1 }
+            }
+            best
+        }
+    }
+    Text(
+        display,
+        style = style,
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier.onSizeChanged { if (it.width != widthPx) widthPx = it.width },
+    )
 }
 
 /** AI/機密などの分類を示す小さなピル。枠線＋淡い背景でアクセント色を主張しすぎない。 */
