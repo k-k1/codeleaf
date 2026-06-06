@@ -40,7 +40,7 @@ add / commit / push は行わない。ローカルの変更は同期時に常に
 | Mermaid | アプリ内同梱 `mermaid.min.js` + **WebView** | オフライン描画、テーマ連動 CSS |
 | 永続化 | Room | リポジトリ/設定/ブランチキャッシュ |
 | 認証保存 | Android Keystore + EncryptedSharedPreferences | token を暗号化 |
-| min SDK | **33 (Android 13)** / target 35 | 個人向けのため高め |
+| min SDK | **31 (Android 12)** / target 35 | 12+ 端末対応 |
 
 ---
 

@@ -37,6 +37,9 @@ class WrapToggleE2EInstrumentedTest {
     fun setUp() {
         val repo = app.container.repoRepository
         runBlocking {
+            // 他テスト(WrapDefault)が折り返し既定を OFF に変えたまま終わると、
+            // ファイルが「折り返しOFF」で開きこのテストの前提が崩れる。既定 ON に戻す。
+            app.container.settingsStore.setWrapByDefault(true)
             repo.observeRepos().first().forEach { repo.delete(it) }
             srcRepo = File(app.cacheDir, "wrap-src").apply { deleteRecursively(); mkdirs() }
             Git.init().setInitialBranch("main").setDirectory(srcRepo).call().use { git ->
@@ -59,6 +62,13 @@ class WrapToggleE2EInstrumentedTest {
         }
     }
 
+    /** 下部バーのトグルが実際にビューポートに表示されるまで待つ(遷移アニメ整定を許容)。 */
+    private fun waitUntilDisplayed(text: String) {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            runCatching { compose.onNodeWithText(text).assertIsDisplayed() }.isSuccess
+        }
+    }
+
     @Test
     fun toggleWrap_switchesAndRendersWithoutCrash() {
         compose.onNodeWithText("wrap-fixture").performClick()
@@ -71,14 +81,13 @@ class WrapToggleE2EInstrumentedTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("val wrapcheck = 123").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("折り返しON").assertIsDisplayed()
+        // 折り返しトグルは画面下部バー。コード行の semantics 出現直後はまだファイル遷移
+        // アニメが整定しておらず一瞬「未表示」になり得る(高負荷時)。安定するまで待って検証。
+        waitUntilDisplayed("折り返しON")
 
         // OFF(横スクロール)に切替 → 行は引き続き表示(クラッシュしない)
         compose.onNodeWithText("折り返しON").performClick()
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("折り返しOFF").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText("折り返しOFF").assertIsDisplayed()
+        waitUntilDisplayed("折り返しOFF")
         compose.onNodeWithText("val wrapcheck = 123").assertIsDisplayed()
 
         // ON に戻せる

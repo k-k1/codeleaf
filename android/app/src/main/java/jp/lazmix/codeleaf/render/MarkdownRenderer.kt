@@ -239,7 +239,7 @@ object MarkdownRenderer {
      * その下のブロックリスト(`- item`)を簡易にパースする。
      */
     fun extractFrontmatter(markdown: String): Pair<List<FrontmatterEntry>?, String> {
-        val text = markdown.removePrefix("﻿")
+        val text = markdown.removePrefix("\uFEFF")
         val lines = text.split("\n")
         if (lines.isEmpty() || lines[0].trim() != "---") return null to markdown
 

@@ -12,7 +12,7 @@
 ## 技術スタック
 Kotlin + Jetpack Compose(Material3) / MVVM + StateFlow / 手動DI(`GitReaderApplication.container = AppContainer`)。
 JGit 7.6 / Markwon 4.6.2(+WebView で Mermaid) / Prism4j(kapt) / Room / token は AndroidKeystore 暗号化。
-package `jp.lazmix.codeleaf` / minSdk 33 / targetSdk 35。ソースは `android/app/src/main/java/jp/lazmix/codeleaf/`(data/git/render/ui)。
+package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/app/src/main/java/jp/lazmix/codeleaf/`(data/git/render/ui)。
 
 ## ビルド / テスト (PowerShell・cd android 前提)
 - 環境: `$env:JAVA_HOME="C:\programs\java\jdk-21.0.9+10"; $env:ANDROID_SDK_ROOT="C:\Android\Sdk"`
