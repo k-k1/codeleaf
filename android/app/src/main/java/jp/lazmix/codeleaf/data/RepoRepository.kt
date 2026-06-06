@@ -344,13 +344,6 @@ class RepoRepository(
         dao.update(repo.copy(groupName = group.trim()))
     }
 
-    /** 並べ替え結果を保存する(リストの並び順を sortOrder=index で書き込む)。 */
-    suspend fun saveOrder(orderedRepos: List<Repo>) = withContext(ioDispatcher) {
-        orderedRepos.forEachIndexed { index, repo ->
-            if (repo.sortOrder != index) dao.update(repo.copy(sortOrder = index))
-        }
-    }
-
     /**
      * 編集画面のセクション D&D 結果を保存する。`ordered` は表示順で、各 Repo の groupName は
      * ドロップ先セクションに更新済み。所属(groupName)と並び順(sortOrder=index)をまとめて書き込む。

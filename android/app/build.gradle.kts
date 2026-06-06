@@ -122,7 +122,6 @@ dependencies {
     implementation(libs.markwon.ext.strikethrough)
     implementation(libs.markwon.ext.tasklist)
     implementation(libs.markwon.html)
-    implementation(libs.markwon.linkify)
     implementation(libs.markwon.image)
     implementation(libs.markwon.syntax.highlight)
     implementation(libs.commonmark.ext.autolink)

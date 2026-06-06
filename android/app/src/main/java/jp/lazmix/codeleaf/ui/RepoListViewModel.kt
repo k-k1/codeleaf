@@ -3,7 +3,6 @@ package jp.lazmix.codeleaf.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -172,10 +171,6 @@ class RepoListViewModel(
     /** 編集画面のセクション D&D 結果(表示順＋所属)を保存する。 */
     fun saveRepoGroupsAndOrder(ordered: List<Repo>) {
         viewModelScope.launch { runCatching { repository.saveGroupsAndOrder(ordered) } }
-    }
-
-    fun saveRepoOrder(ordered: List<Repo>) {
-        viewModelScope.launch { runCatching { repository.saveOrder(ordered) } }
     }
 
     /** 直近順のリモートブランチ一覧。 */
