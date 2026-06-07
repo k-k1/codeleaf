@@ -30,8 +30,10 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
 ## ハマりどころ(コードから読み取りにくい点)
 - **ナビ/多ペイン**(`ui/GitReaderApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
   幅 `BoxWithConstraints` で `>=600dp`=2ペイン / `>=960dp`=3ペイン(左=リポ一覧レール｜中=一覧｜右=詳細)、未満は全画面。
-  **Browse は全ペインで `IconRail`(64dp・`RepoAvatar` 2文字+色/下に編集or＋・設定)を左に常設**しリポ即切替。3ペインだけ
-  `railCollapsed` で展開レール(`RepoListScreen` 再利用)↔IconRail を切替。テーマは レール=default/中右=repo に分割。
+  **1/2ペインの Browse はハンバーガー(`FileBrowserScreen` の `onMenu`=≡)→`ModalNavigationDrawer`**(中身は `RepoListScreen` 再利用・
+  `drawerState`/`drawerScope` は Browse 枝で保持、選択で `onItemSelected`→`drawerState.close()`、1ペインのファイル表示中だけ `gesturesEnabled=false`)。
+  **`IconRail`(64dp・`RepoAvatar`)は3ペイン専用**(`ThreePaneScaffold`・`railCollapsed` で展開レール↔IconRail)。テーマは レール/ドロワー=default/中右=repo に分割。
+  **お気に入りはリポ一覧(`RepoListScreen` の各 `RepoCard` の★・`onOpenFavorites`)から直行**(ドロワー/List全画面/3ペインレール共通)。
   **集中モード `focusMode`**(rememberSaveable): ファイル表示中にレール+一覧を隠し全幅ビューア(1/2/3共通)。下部左の `PaneToggleHandle` で開閉、
   **戻るは集中解除を優先**(`handleBack`: focus→detailStack→pop の順)。リポ退出/ブランチ切替で false に戻す。
   履歴(`Screen.History`)・グラフは2/3ペイン(左=一覧/右=`FileDiffPane`等、`historySelected`/`graphSelected`、各 `*ListCollapsed`)。

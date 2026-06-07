@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -105,6 +106,8 @@ fun FileBrowserScreen(
     onSwitchBranch: (String) -> Unit,
     /** リポを出てリポ一覧へ。3ペインではレールが担うため null で ← を非表示にする。 */
     onBack: (() -> Unit)?,
+    /** 1/2ペインのハンバーガー。非 null なら ← の代わりに ≡ を出しリポ一覧ドロワーを開く。 */
+    onMenu: (() -> Unit)? = null,
     /** ひとつ上のディレクトリへ(パスから親を算出して遷移)。ルートでは無効。 */
     onUp: () -> Unit,
     iconSet: IconSet = IconSet.MATERIAL,
@@ -141,7 +144,13 @@ fun FileBrowserScreen(
                     }
                 },
                 navigationIcon = {
-                    if (onBack != null) BackButton(onBack)
+                    // 1/2ペイン=≡(リポ一覧ドロワー)、それ以外で onBack があれば ←。階層の上りは下部▲/パンくず。
+                    when {
+                        onMenu != null -> IconButton(onClick = onMenu) {
+                            Icon(Icons.Default.Menu, contentDescription = "リポ一覧")
+                        }
+                        onBack != null -> BackButton(onBack)
+                    }
                 },
                 actions = {
                     IconButton(onClick = onSearch) {

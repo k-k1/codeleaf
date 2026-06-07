@@ -28,10 +28,14 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -42,6 +46,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -59,6 +64,7 @@ import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.ThemeMode
 import jp.lazmix.codeleaf.git.CommitInfo
 import jp.lazmix.codeleaf.git.GraphCommit
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
 // プロセス死から復元するため Parcelable(各メンバ @Parcelize)。
@@ -215,19 +221,21 @@ fun GitReaderApp() {
         settings.groups + orphans
     }
 
+    // onItemSelected はドロワー再利用時に「遷移したら閉じる」ために各導線の手前で呼ぶ(既定 no-op)。
     @Composable
-    fun RailPane(selectedRepoId: Long?, onCollapse: (() -> Unit)? = null) {
+    fun RailPane(selectedRepoId: Long?, onCollapse: (() -> Unit)? = null, onItemSelected: () -> Unit = {}) {
         // 選択中グループが消えていたら「すべて」に退避。
         val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in allGroups } ?: ""
         val shownRepos = if (selectedGroup.isEmpty()) repos else repos.filter { it.groupName == selectedGroup }
         RepoListScreen(
             repos = shownRepos,
             status = status,
-            onAddClick = { navigate(Screen.Add) },
-            onSettings = { navigate(Screen.Settings) },
-            onEdit = { navigate(Screen.RepoEdit) },
-            onOpen = { navigate(Screen.Browse(it, "")) },
-            onOpenGraph = { graphSelected = null; navigate(Screen.Graph(it)) },
+            onAddClick = { onItemSelected(); navigate(Screen.Add) },
+            onSettings = { onItemSelected(); navigate(Screen.Settings) },
+            onEdit = { onItemSelected(); navigate(Screen.RepoEdit) },
+            onOpen = { onItemSelected(); navigate(Screen.Browse(it, "")) },
+            onOpenGraph = { onItemSelected(); graphSelected = null; navigate(Screen.Graph(it)) },
+            onOpenFavorites = { onItemSelected(); navigate(Screen.Favorites(it)) },
             onSync = vm::sync,
             onMessageShown = vm::clearMessage,
             groups = allGroups,
@@ -386,6 +394,9 @@ fun GitReaderApp() {
 
         is Screen.Browse -> {
             val repo = current.repo
+            // 1/2ペインのリポ一覧ドロワー。≡ で開き、リポ選択や設定遷移で閉じる。
+            val drawerState = rememberDrawerState(DrawerValue.Closed)
+            val drawerScope = rememberCoroutineScope()
 
             // ひとつ上のディレクトリへ。直下が親なら pop、非線形なら親に置換。
             fun goUp() {
@@ -399,7 +410,7 @@ fun GitReaderApp() {
             }
 
             @Composable
-            fun BrowserPane(threePane: Boolean) {
+            fun BrowserPane(threePane: Boolean, onMenu: (() -> Unit)? = null) {
                 // ← の挙動:
                 //  サブフォルダ: どのペインでもひとつ上の階層へ。
                 //  ルート: 3ペインのみ非表示(レールがリポ切替/退出を担う)、1/2ペインはリポ一覧へ。
@@ -442,6 +453,7 @@ fun GitReaderApp() {
                         }
                     },
                     onBack = backAction,
+                    onMenu = onMenu,
                     onUp = { goUp() },
                 )
             }
@@ -538,27 +550,38 @@ fun GitReaderApp() {
                             Box(Modifier.weight(0.7f)) { ViewerArea(file, showBack = false) }
                         }
                     }
-                    // 1/2ペイン: アイコンレール常設(レール=default テーマ / 中右=repo テーマ)。
-                    else -> Row(Modifier.fillMaxSize()) {
-                        IconRail(repo.id)
-                        VerticalDivider()
-                        Box(Modifier.weight(1f)) {
-                            GitReaderTheme(repo.themeMode) {
-                                if (two) {
-                                    Row(Modifier.fillMaxSize()) {
-                                        Box(Modifier.weight(0.4f)) { BrowserPane(threePane = false) }
-                                        VerticalDivider()
-                                        Box(Modifier.weight(0.6f)) { ViewerArea(file, showBack = false) }
-                                    }
-                                } else if (file != null) {
-                                    // 1ペインでファイル表示: ←=閉じる + 集中ハンドルでレールを隠せる。
-                                    Box(Modifier.fillMaxSize()) {
-                                        ViewerPane(file, showBack = true)
-                                        FocusHandle()
-                                    }
-                                } else {
-                                    BrowserPane(threePane = false)
+                    // 1/2ペイン: 縦レールは廃し、≡ で開くリポ一覧ドロワー(=RepoListScreen 再利用)に集約。
+                    else -> ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        // 1ペインでファイル表示中はビューアの横スクロールと競合するためスワイプ無効。
+                        gesturesEnabled = !(file != null && !two),
+                        drawerContent = {
+                            ModalDrawerSheet {
+                                GitReaderTheme(settings.defaultTheme) {
+                                    RailPane(
+                                        selectedRepoId = repo.id,
+                                        onItemSelected = { drawerScope.launch { drawerState.close() } },
+                                    )
                                 }
+                            }
+                        },
+                    ) {
+                        GitReaderTheme(repo.themeMode) {
+                            val openDrawer: () -> Unit = { drawerScope.launch { drawerState.open() } }
+                            if (two) {
+                                Row(Modifier.fillMaxSize()) {
+                                    Box(Modifier.weight(0.4f)) { BrowserPane(threePane = false, onMenu = openDrawer) }
+                                    VerticalDivider()
+                                    Box(Modifier.weight(0.6f)) { ViewerArea(file, showBack = false) }
+                                }
+                            } else if (file != null) {
+                                // 1ペインでファイル表示: ←=閉じる + 集中ハンドル。ドロワーはブラウザに戻ってから。
+                                Box(Modifier.fillMaxSize()) {
+                                    ViewerPane(file, showBack = true)
+                                    FocusHandle()
+                                }
+                            } else {
+                                BrowserPane(threePane = false, onMenu = openDrawer)
                             }
                         }
                     }

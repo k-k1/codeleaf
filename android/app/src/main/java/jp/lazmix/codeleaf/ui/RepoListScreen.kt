@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -61,6 +62,7 @@ fun RepoListScreen(
     onEdit: () -> Unit,
     onOpen: (Repo) -> Unit,
     onOpenGraph: (Repo) -> Unit,
+    onOpenFavorites: (Repo) -> Unit = {},
     onSync: (Repo) -> Unit,
     onMessageShown: () -> Unit,
     /** 存在するグループ名(昇順)。空ならグループ機能の導線は出さない。 */
@@ -166,6 +168,7 @@ fun RepoListScreen(
                             selected = repo.id == selectedRepoId,
                             onOpen = { onOpen(repo) },
                             onOpenGraph = { onOpenGraph(repo) },
+                            onOpenFavorites = { onOpenFavorites(repo) },
                             onSync = { onSync(repo) },
                         )
                     }
@@ -177,7 +180,14 @@ fun RepoListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RepoCard(repo: Repo, selected: Boolean, onOpen: () -> Unit, onOpenGraph: () -> Unit, onSync: () -> Unit) {
+private fun RepoCard(
+    repo: Repo,
+    selected: Boolean,
+    onOpen: () -> Unit,
+    onOpenGraph: () -> Unit,
+    onOpenFavorites: () -> Unit,
+    onSync: () -> Unit,
+) {
     val accent = repo.colorTag.accent()
     val colors = if (selected) {
         // 選択パネルはリポ色で淡くハイライト(色なしは中立グレー)。primarycontainer(紫)固定は避ける。
@@ -200,6 +210,9 @@ private fun RepoCard(repo: Repo, selected: Boolean, onOpen: () -> Unit, onOpenGr
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text("同期: ${formatSync(repo.lastSyncedAt)}", style = MaterialTheme.typography.bodySmall)
+            }
+            IconButton(onClick = onOpenFavorites) {
+                Icon(Icons.Default.Star, contentDescription = "お気に入り")
             }
             IconButton(onClick = onOpenGraph) {
                 Icon(painterResource(R.drawable.ic_graph), contentDescription = "コミットグラフ")
