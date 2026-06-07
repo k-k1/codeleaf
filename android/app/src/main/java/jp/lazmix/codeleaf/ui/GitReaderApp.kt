@@ -369,6 +369,7 @@ fun GitReaderApp() {
             onSetTheme = vm::setDefaultTheme,
             onSetFontScale = vm::setFontScale,
             onSetWrapByDefault = vm::setWrapByDefault,
+            onSetDiffWrap = vm::setDiffWrap,
             onSetLinkOpenMode = vm::setLinkOpenMode,
             onSetShowLineNumbers = vm::setShowLineNumbers,
             onSetTableMode = vm::setTableMode,

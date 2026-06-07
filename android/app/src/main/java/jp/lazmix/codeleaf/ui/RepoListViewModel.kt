@@ -239,6 +239,8 @@ class RepoListViewModel(
 
     fun setWrapByDefault(wrap: Boolean) = settingsStore.setWrapByDefault(wrap)
 
+    fun setDiffWrap(wrap: Boolean) = settingsStore.setDiffWrap(wrap)
+
     fun setLinkOpenMode(mode: jp.lazmix.codeleaf.data.LinkOpenMode) = settingsStore.setLinkOpenMode(mode)
 
     fun setShowLineNumbers(show: Boolean) = settingsStore.setShowLineNumbers(show)

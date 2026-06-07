@@ -63,6 +63,7 @@ fun SettingsScreen(
     onSetTheme: (ThemeMode) -> Unit,
     onSetFontScale: (FontScale) -> Unit,
     onSetWrapByDefault: (Boolean) -> Unit,
+    onSetDiffWrap: (Boolean) -> Unit,
     onSetLinkOpenMode: (LinkOpenMode) -> Unit,
     onSetShowLineNumbers: (Boolean) -> Unit,
     onSetTableMode: (TableMode) -> Unit,
@@ -167,6 +168,17 @@ fun SettingsScreen(
                     )
                 }
                 Switch(checked = settings.wrapByDefault, onCheckedChange = onSetWrapByDefault)
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("diff の折り返し（既定）", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "差分・コミット・履歴の diff 表示を開いたときの初期状態。OFF は横スクロール。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = settings.diffWrap, onCheckedChange = onSetDiffWrap)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
