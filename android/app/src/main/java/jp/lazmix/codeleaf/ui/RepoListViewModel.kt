@@ -204,6 +204,9 @@ class RepoListViewModel(
     suspend fun readFile(repo: Repo, relPath: String): String =
         repository.readText(repo, relPath)
 
+    suspend fun probeFile(repo: Repo, relPath: String): jp.lazmix.codeleaf.data.FileInfo =
+        repository.probeFile(repo, relPath)
+
     suspend fun loadSearchCorpus(repo: Repo): List<TextFile> =
         repository.loadSearchCorpus(repo)
 

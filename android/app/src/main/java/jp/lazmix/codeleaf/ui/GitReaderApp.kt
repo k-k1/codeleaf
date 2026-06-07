@@ -448,6 +448,7 @@ fun GitReaderApp() {
                         filePath = file.filePath,
                         workDir = vm.workDirOf(file.repo),
                         loadText = { vm.readFile(file.repo, file.filePath) },
+                        probeFile = { vm.probeFile(file.repo, file.filePath) },
                         fontScale = settings.fontScale.scale,
                         defaultWrap = settings.wrapByDefault,
                         onToggleWrap = vm::setWrapByDefault,

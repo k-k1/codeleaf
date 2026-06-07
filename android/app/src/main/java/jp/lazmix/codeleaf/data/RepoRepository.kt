@@ -329,6 +329,27 @@ class RepoRepository(
     }
 
     /**
+     * ファイルの先頭を読んで種別(テキスト/画像/バイナリ)とサイズを判定する。
+     * 全読みせず先頭 [FileClassifier.PROBE_BYTES] だけ読むので巨大バイナリでも軽い。
+     */
+    suspend fun probeFile(repo: Repo, relPath: String): FileInfo = withContext(ioDispatcher) {
+        val f = File(workDir(repo), relPath)
+        val size = f.length()
+        val buf = ByteArray(FileClassifier.PROBE_BYTES)
+        val n = f.inputStream().use { ins ->
+            var read = 0
+            while (read < buf.size) {
+                val r = ins.read(buf, read, buf.size - read)
+                if (r < 0) break
+                read += r
+            }
+            read
+        }
+        val head = buf.copyOf(n)
+        FileInfo(FileClassifier.classify(relPath.substringAfterLast('/'), head, size), size, head)
+    }
+
+    /**
      * 作業ツリーのテキストファイル本文をメモリに読み込む（インクリメンタル検索用コーパス）。
      * .git・巨大ファイル(>1MB)・バイナリ(NULを含む)は除外し、合計サイズ上限で打ち切る。
      * relPath 昇順で返す。

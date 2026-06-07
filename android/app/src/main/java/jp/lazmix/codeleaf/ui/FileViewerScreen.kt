@@ -3,6 +3,8 @@ package jp.lazmix.codeleaf.ui
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
@@ -55,9 +59,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -72,8 +80,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jp.lazmix.codeleaf.data.FileInfo
+import jp.lazmix.codeleaf.data.FileKind
 import jp.lazmix.codeleaf.data.LinkOpenMode
 import jp.lazmix.codeleaf.data.TableMode
+import jp.lazmix.codeleaf.data.humanSize
 import jp.lazmix.codeleaf.data.db.MemoWithCount
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.render.CodeHighlight
@@ -85,6 +96,10 @@ import jp.lazmix.codeleaf.render.MarkdownView
 import jp.lazmix.codeleaf.render.MdBlock
 import jp.lazmix.codeleaf.render.MdSection
 import jp.lazmix.codeleaf.render.MermaidWebView
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
@@ -96,6 +111,8 @@ fun FileViewerScreen(
     filePath: String,
     workDir: File,
     loadText: suspend () -> String,
+    /** ファイル種別(テキスト/画像/バイナリ)とサイズを先読みで判定する。 */
+    probeFile: suspend () -> FileInfo,
     fontScale: Float,
     defaultWrap: Boolean = true,
     /** 折り返しトグルの変更を保存する(ファイル閲覧の折り返し設定として永続化)。 */
@@ -125,16 +142,25 @@ fun FileViewerScreen(
         { _, _, _, _, _ -> },
 ) {
     var text by remember(filePath) { mutableStateOf<String?>(null) }
+    var info by remember(filePath) { mutableStateOf<FileInfo?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
     // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
     var raw by remember(filePath) { mutableStateOf(targetLine != null) }
     var wrap by remember(filePath) { mutableStateOf(defaultWrap) }
     var menuExpanded by remember { mutableStateOf(false) }
 
+    // まず種別を判定し、テキストのときだけ本文を読み込む(画像/バイナリは全読みしない)。
     LaunchedEffect(repo.id, filePath) {
         error = null
-        text = runCatching { loadText() }.getOrElse { error = it.message; null }
+        text = null
+        info = null
+        val probed = runCatching { probeFile() }.getOrElse { error = it.message; null }
+        info = probed
+        if (probed?.kind is FileKind.Text) {
+            text = runCatching { loadText() }.getOrElse { error = it.message; null }
+        }
     }
+    val isTextFile = info?.kind is FileKind.Text
 
     // メモ追加の行選択範囲(0始まり)。非 null の間は追加シートを出す。
     var addRange by remember(filePath) { mutableStateOf<IntRange?>(null) }
@@ -226,7 +252,7 @@ fun FileViewerScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        if (isMarkdown) {
+                        if (isMarkdown && isTextFile) {
                             DropdownMenuItem(
                                 text = { Text(if (raw) "整形で表示" else "Raw で表示") },
                                 onClick = { menuExpanded = false; raw = !raw },
@@ -236,10 +262,12 @@ fun FileViewerScreen(
                             text = { Text("履歴") },
                             onClick = { menuExpanded = false; onHistory() },
                         )
-                        DropdownMenuItem(
-                            text = { Text("メモ") },
-                            onClick = { menuExpanded = false; onMemos() },
-                        )
+                        if (isTextFile) {
+                            DropdownMenuItem(
+                                text = { Text("メモ") },
+                                onClick = { menuExpanded = false; onMemos() },
+                            )
+                        }
                     }
                 },
             )
@@ -247,13 +275,14 @@ fun FileViewerScreen(
         bottomBar = {
             SlimBottomBar {
                 // 左: 目次(整形 Markdown) / 折り返し(コード・Raw)。同じ左位置に揃える。
-                if (isMarkdown && !raw && tocEntries.isNotEmpty()) {
+                // 画像/バイナリでは本文操作が無いので出さない。
+                if (isTextFile && isMarkdown && !raw && tocEntries.isNotEmpty()) {
                     TextButton(
                         onClick = { showToc = true },
                         modifier = Modifier.padding(start = 4.dp),
                     ) { Text("☰ 目次") }
                 }
-                if (!isMarkdown || raw) {
+                if (isTextFile && (!isMarkdown || raw)) {
                     TextButton(
                         onClick = { wrap = !wrap; onToggleWrap(wrap) },
                         modifier = Modifier.padding(start = 4.dp),
@@ -274,8 +303,21 @@ fun FileViewerScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             val body = text
+            val kind = info?.kind
             when {
                 error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
+                kind == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                kind is FileKind.Image -> ImageViewer(
+                    file = File(workDir, filePath),
+                    contentDescription = fileName,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                kind is FileKind.Binary -> BinaryInfoView(
+                    typeLabel = kind.typeLabel,
+                    size = info!!.size,
+                    head = info!!.head,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 body == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 isMarkdown && !raw -> Box(Modifier.fillMaxSize()) {
                     val (frontmatter, sections) = mdModel!!
@@ -457,6 +499,115 @@ internal fun blockLineRange(fullText: String, blockMarkdown: String): IntRange? 
     if (idx < 0) return null
     val start = fullText.substring(0, idx).count { it == '\n' }
     return start..(start + blk.count { it == '\n' })
+}
+
+/**
+ * 画像ファイルを表示する。初期はビューア領域にフィット(ContentScale.Fit)し、ピンチで拡大/縮小、
+ * 拡大中はドラッグでパン、ダブルタップで等倍↔2.5倍をトグルする。SVG も Coil の SvgDecoder で描画。
+ */
+@Composable
+private fun ImageViewer(file: File, contentDescription: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val loader = remember(context.applicationContext) {
+        ImageLoader.Builder(context.applicationContext)
+            .components { add(SvgDecoder.Factory()) }
+            .build()
+    }
+    var scale by remember(file.path) { mutableFloatStateOf(1f) }
+    var offset by remember(file.path) { mutableStateOf(Offset.Zero) }
+    Box(
+        modifier
+            .clipToBounds()
+            .pointerInput(file.path) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val next = (scale * zoom).coerceIn(1f, 6f)
+                    // 拡大時のみパン可。等倍に戻ったら中央へ戻す。
+                    offset = if (next > 1f) offset + pan else Offset.Zero
+                    scale = next
+                }
+            }
+            .pointerInput(file.path) {
+                detectTapGestures(onDoubleTap = {
+                    if (scale > 1f) {
+                        scale = 1f
+                        offset = Offset.Zero
+                    } else {
+                        scale = 2.5f
+                    }
+                })
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(file).build(),
+            imageLoader = loader,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                },
+        )
+    }
+}
+
+/**
+ * 画像以外のバイナリは本文を出さず、file(1) 風の種別・サイズ・先頭バイトの 16 進プレビューだけを示す。
+ */
+@Composable
+private fun BinaryInfoView(typeLabel: String, size: Long, head: ByteArray, modifier: Modifier = Modifier) {
+    Column(
+        modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Spacer(Modifier.height(24.dp))
+        Icon(
+            Icons.Default.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(40.dp),
+        )
+        Text(typeLabel, style = MaterialTheme.typography.titleLarge)
+        Text(
+            "${humanSize(size)} ・ テキストとして表示できません",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (head.isNotEmpty()) {
+            Text(
+                "先頭バイト",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text(
+                    hexPreview(head, 96),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+        }
+    }
+}
+
+/** 先頭 [max] バイトを 16 進ダンプ(16 バイト毎に改行)する。 */
+private fun hexPreview(bytes: ByteArray, max: Int): String {
+    val n = minOf(bytes.size, max)
+    val sb = StringBuilder()
+    for (i in 0 until n) {
+        sb.append("%02X".format(bytes[i].toInt() and 0xFF))
+        sb.append(if ((i + 1) % 16 == 0) "\n" else " ")
+    }
+    return sb.toString().trimEnd()
 }
 
 /**
