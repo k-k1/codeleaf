@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -84,6 +85,7 @@ import jp.lazmix.codeleaf.data.FileInfo
 import jp.lazmix.codeleaf.data.FileKind
 import jp.lazmix.codeleaf.data.LinkOpenMode
 import jp.lazmix.codeleaf.data.TableMode
+import jp.lazmix.codeleaf.data.TextLoad
 import jp.lazmix.codeleaf.data.humanSize
 import jp.lazmix.codeleaf.data.db.MemoWithCount
 import jp.lazmix.codeleaf.data.db.Repo
@@ -104,14 +106,20 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
 
+/** これを超えるテキストは自動で読まず確認を挟む。 */
+private const val LARGE_TEXT_THRESHOLD = 1_500_000L
+
+/** 確認後でも実際に読み込む上限。超過分は切り捨て(truncated)。 */
+private const val MAX_TEXT_BYTES = 5_000_000L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileViewerScreen(
     repo: Repo,
     filePath: String,
     workDir: File,
-    /** 推定エンコード(Charset 名・null は UTF-8)で本文を読む。 */
-    loadText: suspend (charsetName: String?) -> String,
+    /** 推定エンコード(Charset 名・null は UTF-8)で本文を読む。maxBytes 超は先頭のみ。 */
+    loadText: suspend (charsetName: String?, maxBytes: Long) -> TextLoad,
     /** ファイル種別(テキスト/画像/バイナリ)とサイズを先読みで判定する。 */
     probeFile: suspend () -> FileInfo,
     fontScale: Float,
@@ -145,20 +153,35 @@ fun FileViewerScreen(
     var text by remember(filePath) { mutableStateOf<String?>(null) }
     var info by remember(filePath) { mutableStateOf<FileInfo?>(null) }
     var error by remember(filePath) { mutableStateOf<String?>(null) }
+    // 大きいテキストは自動で読まず確認を挟む。truncated は上限で先頭のみ読んだ印。
+    var awaitingLargeConfirm by remember(filePath) { mutableStateOf(false) }
+    var truncated by remember(filePath) { mutableStateOf(false) }
     // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
     var raw by remember(filePath) { mutableStateOf(targetLine != null) }
     var wrap by remember(filePath) { mutableStateOf(defaultWrap) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     // まず種別を判定し、テキストのときだけ本文を読み込む(画像/バイナリは全読みしない)。
+    // 大きいテキストは自動で読まず確認を挟む。
     LaunchedEffect(repo.id, filePath) {
         error = null
         text = null
         info = null
+        truncated = false
+        awaitingLargeConfirm = false
         val probed = runCatching { probeFile() }.getOrElse { error = it.message; null }
         info = probed
         if (probed?.kind is FileKind.Text) {
-            text = runCatching { loadText(probed.text?.charsetName) }.getOrElse { error = it.message; null }
+            if (probed.size > LARGE_TEXT_THRESHOLD) {
+                awaitingLargeConfirm = true
+            } else {
+                val load = runCatching { loadText(probed.text?.charsetName, MAX_TEXT_BYTES) }
+                    .getOrElse { error = it.message; null }
+                if (load != null) {
+                    text = load.text
+                    truncated = load.truncated
+                }
+            }
         }
     }
     val isTextFile = info?.kind is FileKind.Text
@@ -277,13 +300,13 @@ fun FileViewerScreen(
             SlimBottomBar {
                 // 左: 目次(整形 Markdown) / 折り返し(コード・Raw)。同じ左位置に揃える。
                 // 画像/バイナリでは本文操作が無いので出さない。
-                if (isTextFile && isMarkdown && !raw && tocEntries.isNotEmpty()) {
+                if (isTextFile && text != null && isMarkdown && !raw && tocEntries.isNotEmpty()) {
                     TextButton(
                         onClick = { showToc = true },
                         modifier = Modifier.padding(start = 4.dp),
                     ) { Text("☰ 目次") }
                 }
-                if (isTextFile && (!isMarkdown || raw)) {
+                if (isTextFile && text != null && (!isMarkdown || raw)) {
                     TextButton(
                         onClick = { wrap = !wrap; onToggleWrap(wrap) },
                         modifier = Modifier.padding(start = 4.dp),
@@ -307,9 +330,28 @@ fun FileViewerScreen(
             val kind = info?.kind
             // 上部メタバー: テキストはエンコード/BOM/改行/サイズ、画像はフォーマット/寸法/サイズ。
             info?.let { fi -> fileMetaLine(fi)?.let { FileMetaBar(it) } }
+            // 上限で先頭のみ読んだときの注意バー。
+            if (truncated && body != null) {
+                FileMetaBar("先頭のみ表示中(全体 ${humanSize(info?.size ?: 0)})")
+            }
             when {
                 error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
                 kind == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                awaitingLargeConfirm -> LargeFileGuard(
+                    size = info!!.size,
+                    onShow = {
+                        awaitingLargeConfirm = false
+                        scope.launch {
+                            val load = runCatching { loadText(info?.text?.charsetName, MAX_TEXT_BYTES) }
+                                .getOrElse { error = it.message; null }
+                            if (load != null) {
+                                text = load.text
+                                truncated = load.truncated
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
                 kind is FileKind.Image -> ImageViewer(
                     file = File(workDir, filePath),
                     contentDescription = fileName,
@@ -642,6 +684,31 @@ private fun BinaryInfoView(typeLabel: String, size: Long, head: ByteArray, modif
                 )
             }
         }
+    }
+}
+
+/** 大きいテキストは自動で読まず、サイズを示して明示操作で開かせる(誤タップでの重い読込を防ぐ)。 */
+@Composable
+private fun LargeFileGuard(size: Long, onShow: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Spacer(Modifier.height(24.dp))
+        Icon(
+            Icons.Default.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(40.dp),
+        )
+        Text("大きいファイル", style = MaterialTheme.typography.titleLarge)
+        Text(
+            "${humanSize(size)} ・ 表示すると重くなる場合があります",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onShow) { Text("表示する") }
     }
 }
 

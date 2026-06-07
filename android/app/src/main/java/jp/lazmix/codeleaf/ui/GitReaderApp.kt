@@ -447,7 +447,7 @@ fun GitReaderApp() {
                         repo = file.repo,
                         filePath = file.filePath,
                         workDir = vm.workDirOf(file.repo),
-                        loadText = { cs -> vm.readFile(file.repo, file.filePath, cs) },
+                        loadText = { cs, max -> vm.readFile(file.repo, file.filePath, cs, max) },
                         probeFile = { vm.probeFile(file.repo, file.filePath) },
                         fontScale = settings.fontScale.scale,
                         defaultWrap = settings.wrapByDefault,

@@ -25,6 +25,9 @@ enum class Eol(val label: String) {
     LF("LF"), CRLF("CRLF"), CR("CR"), MIXED("混在"), NONE("改行なし")
 }
 
+/** 本文読み込み結果。[truncated] はサイズ上限で先頭だけ読んだ(末尾を切った)ことを示す。 */
+data class TextLoad(val text: String, val truncated: Boolean)
+
 /** テキストファイルのメタ情報(上部バー表示・本文の再デコードに使う)。 */
 data class TextMeta(
     /** 表示用のエンコード名(UTF-8 / Shift_JIS / EUC-JP / ASCII / 不明 等)。 */

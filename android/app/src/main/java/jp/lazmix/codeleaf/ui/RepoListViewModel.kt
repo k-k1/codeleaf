@@ -201,8 +201,13 @@ class RepoListViewModel(
     suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> =
         repository.listDir(repo, relPath, collapse = settingsStore.settings.value.collapseFolders)
 
-    suspend fun readFile(repo: Repo, relPath: String, charsetName: String? = null): String =
-        repository.readText(repo, relPath, resolveCharset(charsetName))
+    suspend fun readFile(
+        repo: Repo,
+        relPath: String,
+        charsetName: String? = null,
+        maxBytes: Long = Long.MAX_VALUE,
+    ): jp.lazmix.codeleaf.data.TextLoad =
+        repository.readText(repo, relPath, resolveCharset(charsetName), maxBytes)
 
     private fun resolveCharset(name: String?): java.nio.charset.Charset =
         name?.let { runCatching { java.nio.charset.Charset.forName(it) }.getOrNull() } ?: Charsets.UTF_8

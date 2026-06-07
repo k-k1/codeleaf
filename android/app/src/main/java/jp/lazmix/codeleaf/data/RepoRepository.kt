@@ -325,14 +325,33 @@ class RepoRepository(
         return isLfsPointerHead(text)
     }
 
-    /** テキストファイルを指定 [charset](既定 UTF-8)で読み込む。先頭 BOM は除去する。 */
+    /**
+     * テキストファイルを指定 [charset](既定 UTF-8)で読み込む。先頭 BOM は除去する。
+     * [maxBytes] を超えるファイルは先頭だけ読み、[TextLoad.truncated] を立てる
+     * (巨大ファイルでの OOM/フリーズ回避)。
+     */
     suspend fun readText(
         repo: Repo,
         relPath: String,
         charset: Charset = Charsets.UTF_8,
-    ): String = withContext(ioDispatcher) {
-        val s = File(workDir(repo), relPath).readText(charset)
-        if (s.isNotEmpty() && s[0] == '﻿') s.substring(1) else s
+        maxBytes: Long = Long.MAX_VALUE,
+    ): TextLoad = withContext(ioDispatcher) {
+        val f = File(workDir(repo), relPath)
+        val size = f.length()
+        val cap = minOf(size, maxBytes, Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(0)
+        val buf = ByteArray(cap)
+        val n = f.inputStream().use { ins ->
+            var read = 0
+            while (read < buf.size) {
+                val r = ins.read(buf, read, buf.size - read)
+                if (r < 0) break
+                read += r
+            }
+            read
+        }
+        var s = String(buf, 0, n, charset)
+        if (s.isNotEmpty() && s[0] == '﻿') s = s.substring(1)
+        TextLoad(s, truncated = size > n.toLong())
     }
 
     /**
