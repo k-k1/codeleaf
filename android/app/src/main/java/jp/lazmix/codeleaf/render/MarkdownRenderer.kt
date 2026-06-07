@@ -419,6 +419,8 @@ object CodeHighlight {
             "makefile", "makefile.am", "gnumakefile" -> return "makefile"
             ".bashrc", ".bash_profile", ".zshrc", ".profile" -> return "bash"
             "dockerfile", "containerfile" -> return "dockerfile"
+            "gemfile", "rakefile", "guardfile", "capfile", "vagrantfile", "podfile", "brewfile", "berksfile" ->
+                return "ruby"
         }
         return when (name.substringAfterLast('.', "").lowercase()) {
             "kt", "kts" -> "kotlin"
@@ -431,6 +433,10 @@ object CodeHighlight {
             "js", "mjs", "cjs", "jsx" -> "javascript"
             "ts", "tsx", "mts", "cts" -> "typescript"
             "rs" -> "rust"
+            "rb", "rake", "gemspec", "podspec", "ru" -> "ruby"
+            "php", "phtml", "php3", "php4", "php5", "phps" -> "php"
+            "lua" -> "lua"
+            "tf", "tfvars", "hcl" -> "hcl"
             "sh", "bash", "zsh" -> "bash"
             "json" -> "json"
             "css" -> "css"

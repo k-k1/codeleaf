@@ -37,7 +37,14 @@ class CodeGrammarLocatorTest {
     fun locator_exposes_custom_and_bundled_languages() {
         val langs = CodeGrammarLocator().languages()
         // 手書き
-        assertTrue(langs.containsAll(listOf("bash", "typescript", "rust", "toml", "ini", "dockerfile", "diff")))
+        assertTrue(
+            langs.containsAll(
+                listOf(
+                    "bash", "typescript", "rust", "toml", "ini", "dockerfile", "diff",
+                    "ruby", "php", "lua", "hcl",
+                ),
+            ),
+        )
         // 新規同梱(bundler が @PrismBundle から生成)
         assertTrue(langs.containsAll(listOf("git", "makefile", "latex", "clojure")))
         // 既存同梱も引き続き解決できる
@@ -176,6 +183,95 @@ class CodeGrammarLocatorTest {
     }
 
     @Test
+    fun ruby_highlights_core_tokens() {
+        val types = tokenTypes(
+            "ruby",
+            """
+            # a greeter
+            class Greeter
+              def initialize(name)
+                @name = name
+              end
+
+              def greet
+                puts "hello #{'$'}{@name}"
+                :done
+              end
+            end
+            """.trimIndent(),
+        )
+        assertTrue("comment", "comment" in types)
+        assertTrue("keyword (class/def/end)", "keyword" in types)
+        assertTrue("string", "string" in types)
+        assertTrue("variable (@name)", "variable" in types)
+        assertTrue("symbol (:done)", "symbol" in types)
+        assertTrue("class-name (Greeter)", "class-name" in types)
+    }
+
+    @Test
+    fun php_highlights_core_tokens() {
+        val types = tokenTypes(
+            "php",
+            """
+            <?php
+            // greet
+            function greet(${'$'}name) {
+                ${'$'}msg = "hello ${'$'}name";
+                return ${'$'}msg;
+            }
+            ?>
+            """.trimIndent(),
+        )
+        assertTrue("delimiter", "delimiter" in types)
+        assertTrue("comment", "comment" in types)
+        assertTrue("keyword (function/return)", "keyword" in types)
+        assertTrue("variable (${'$'}name)", "variable" in types)
+        assertTrue("string", "string" in types)
+    }
+
+    @Test
+    fun lua_highlights_core_tokens() {
+        val types = tokenTypes(
+            "lua",
+            """
+            -- greet
+            local function greet(name)
+              local msg = "hello " .. name
+              print(msg)
+              return true
+            end
+            """.trimIndent(),
+        )
+        assertTrue("comment", "comment" in types)
+        assertTrue("keyword (local/function/end)", "keyword" in types)
+        assertTrue("string", "string" in types)
+        assertTrue("boolean (true)", "boolean" in types)
+        assertTrue("function (print)", "function" in types)
+    }
+
+    @Test
+    fun hcl_highlights_core_tokens() {
+        val types = tokenTypes(
+            "hcl",
+            """
+            # an instance
+            resource "aws_instance" "web" {
+              ami           = "ami-123456"
+              instance_type = "t3.micro"
+              count         = 2
+              enabled       = true
+            }
+            """.trimIndent(),
+        )
+        assertTrue("comment", "comment" in types)
+        assertTrue("keyword (resource)", "keyword" in types)
+        assertTrue("property (ami/count)", "property" in types)
+        assertTrue("string", "string" in types)
+        assertTrue("number", "number" in types)
+        assertTrue("boolean (true)", "boolean" in types)
+    }
+
+    @Test
     fun languageForFile_maps_new_extensions() {
         assertEquals("typescript", CodeHighlight.languageForFile("app.ts"))
         assertEquals("typescript", CodeHighlight.languageForFile("App.tsx"))
@@ -191,6 +287,13 @@ class CodeGrammarLocatorTest {
         assertEquals("ini", CodeHighlight.languageForFile("app.ini"))
         assertEquals("dockerfile", CodeHighlight.languageForFile("Dockerfile"))
         assertEquals("dockerfile", CodeHighlight.languageForFile("docker/Dockerfile"))
+        assertEquals("ruby", CodeHighlight.languageForFile("app.rb"))
+        assertEquals("ruby", CodeHighlight.languageForFile("Gemfile"))
+        assertEquals("ruby", CodeHighlight.languageForFile("lib/Rakefile"))
+        assertEquals("php", CodeHighlight.languageForFile("index.php"))
+        assertEquals("lua", CodeHighlight.languageForFile("init.lua"))
+        assertEquals("hcl", CodeHighlight.languageForFile("main.tf"))
+        assertEquals("hcl", CodeHighlight.languageForFile("vars.tfvars"))
         assertNull(CodeHighlight.languageForFile("notes.unknownext"))
     }
 }

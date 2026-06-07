@@ -25,12 +25,17 @@ class CodeGrammarLocator(
             "ini", "cfg", "conf", "properties" -> CustomGrammars.ini(prism4j)
             "dockerfile", "docker" -> CustomGrammars.dockerfile(prism4j)
             "diff", "patch" -> CustomGrammars.diff(prism4j)
+            "ruby", "rb" -> CustomGrammars.ruby(prism4j)
+            "php" -> CustomGrammars.php(prism4j)
+            "lua" -> CustomGrammars.lua(prism4j)
+            "hcl", "terraform", "tf" -> CustomGrammars.hcl(prism4j)
             else -> base.grammar(prism4j, language)
         }
 
     override fun languages(): Set<String> =
         base.languages() + setOf(
             "bash", "typescript", "rust", "toml", "ini", "dockerfile", "diff",
+            "ruby", "php", "lua", "hcl",
         )
 }
 
@@ -310,5 +315,222 @@ object CustomGrammars {
         ),
         token("inserted", p("^\\+[^\\r\\n]*", flags = ML)),
         token("deleted", p("^-[^\\r\\n]*", flags = ML)),
+    )
+
+    // ---- ruby ----------------------------------------------------------------
+
+    /** PrismJS ruby component の実用サブセット(%リテラル/補間の細部は簡略化)。 */
+    fun ruby(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "ruby",
+        token(
+            "comment",
+            p("^=begin[\\s\\S]*?^=end", flags = ML),
+            p("#.*"),
+        ),
+        token(
+            "string",
+            // %w[] %i() %q{} など(区切りは括弧4種のみ対応)
+            p("%[qQwWiIrsx]?(?:\\([^)]*\\)|\\[[^\\]]*\\]|\\{[^}]*\\}|<[^>]*>)", greedy = true),
+            p("\"(?:\\\\[\\s\\S]|#\\{[^}]*\\}|[^\\\\\"])*\"", greedy = true),
+            p("'(?:\\\\[\\s\\S]|[^\\\\'])*'", greedy = true),
+        ),
+        token(
+            "symbol",
+            p("(^|[^:]):[a-zA-Z_]\\w*[?!=]?", lookbehind = true),
+        ),
+        token(
+            "variable",
+            p("@@?[a-zA-Z_]\\w*"),
+            p("\\$[a-zA-Z_]\\w*"),
+        ),
+        token(
+            "keyword",
+            p(
+                "\\b(?:alias|and|begin|BEGIN|break|case|class|def|defined|do|else|elsif|end|END|ensure|extend|for|if|in|include|module|new|next|nil|not|or|prepend|private|protected|public|raise|redo|require|require_relative|rescue|retry|return|self|super|then|throw|undef|unless|until|when|while|yield)\\b",
+            ),
+        ),
+        token(
+            "boolean",
+            p("\\b(?:true|false)\\b"),
+        ),
+        token(
+            "function",
+            p("(\\bdef\\s+)[a-zA-Z_]\\w*[?!=]?", lookbehind = true),
+            p("\\b[a-zA-Z_]\\w*[?!]?(?=\\s*\\()"),
+        ),
+        token(
+            "class-name",
+            p("\\b[A-Z]\\w*\\b"),
+        ),
+        token(
+            "number",
+            p("\\b(?:0x[\\da-fA-F_]+|0b[01_]+|0o[0-7_]+|\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?)\\b"),
+        ),
+        token(
+            "operator",
+            p("&&|\\|\\||<=>|===?|=~|!~|=>|\\*\\*=?|\\.\\.\\.?|[-+*/%!=<>&|^~]=?|::|[?&]"),
+        ),
+        token(
+            "punctuation",
+            p("[{}\\[\\];(),.]"),
+        ),
+    )
+
+    // ---- php ------------------------------------------------------------------
+
+    /** PrismJS php component の実用サブセット(markup 混在は扱わずスタンドアロン着色)。 */
+    fun php(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "php",
+        token(
+            "delimiter",
+            p("<\\?(?:php|=)?|\\?>", alias = "important"),
+        ),
+        token(
+            "comment",
+            p("(^|[^\\\\])(?:/\\*[\\s\\S]*?\\*/|(?://|#).*)", lookbehind = true, greedy = true),
+        ),
+        token(
+            "string",
+            // ヒアドキュメント/ナウドキュメント(簡易)
+            p("<<<'?\"?(\\w+)\"?'?[\\r\\n][\\s\\S]*?[\\r\\n][ \\t]*\\1\\b", greedy = true),
+            p("\"(?:\\\\[\\s\\S]|[^\\\\\"])*\"", greedy = true),
+            p("'(?:\\\\[\\s\\S]|[^\\\\'])*'", greedy = true),
+        ),
+        token(
+            "variable",
+            p("\\$+[a-zA-Z_]\\w*"),
+        ),
+        token(
+            "keyword",
+            p(
+                "\\b(?:abstract|and|array|as|break|callable|case|catch|class|clone|const|continue|declare|default|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|enum|extends|final|finally|fn|for|foreach|function|global|goto|if|implements|include|include_once|instanceof|insteadof|interface|isset|list|match|namespace|new|or|print|private|protected|public|readonly|require|require_once|return|static|switch|throw|trait|try|unset|use|var|while|xor|yield)\\b",
+                flags = JPattern.CASE_INSENSITIVE,
+            ),
+        ),
+        token(
+            "boolean",
+            p("\\b(?:true|false|null)\\b", flags = JPattern.CASE_INSENSITIVE),
+        ),
+        token(
+            "class-name",
+            p("(\\b(?:class|interface|trait|extends|implements|new|enum|instanceof)\\s+)[A-Za-z_]\\w*", lookbehind = true),
+        ),
+        token(
+            "function",
+            p("\\b[a-zA-Z_]\\w*(?=\\s*\\()"),
+        ),
+        token(
+            "constant",
+            p("\\b[A-Z_][A-Z0-9_]*\\b"),
+        ),
+        token(
+            "number",
+            p("\\b(?:0x[\\da-fA-F]+|0b[01]+|0o[0-7]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b"),
+        ),
+        token(
+            "operator",
+            p("\\?\\?=?|->|=>|::|\\*\\*=?|&&|\\|\\||<=>|===?|!==?|<<|>>|[-+*/%.!=<>&|^~?:]=?"),
+        ),
+        token(
+            "punctuation",
+            p("[{}\\[\\];(),\\\\]"),
+        ),
+    )
+
+    // ---- lua ------------------------------------------------------------------
+
+    /** PrismJS lua component の実用サブセット(長括弧文字列/コメントに対応)。 */
+    fun lua(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "lua",
+        token(
+            "comment",
+            p("--\\[(=*)\\[[\\s\\S]*?\\]\\1\\]", greedy = true),
+            p("--.*"),
+        ),
+        token(
+            "string",
+            p("\\[(=*)\\[[\\s\\S]*?\\]\\1\\]", greedy = true),
+            p("\"(?:\\\\[\\s\\S]|[^\\\\\"\\r\\n])*\"", greedy = true),
+            p("'(?:\\\\[\\s\\S]|[^\\\\'\\r\\n])*'", greedy = true),
+        ),
+        token(
+            "keyword",
+            p(
+                "\\b(?:and|break|do|else|elseif|end|for|function|goto|if|in|local|not|or|repeat|return|then|until|while)\\b",
+            ),
+        ),
+        token(
+            "boolean",
+            p("\\b(?:true|false|nil)\\b"),
+        ),
+        token(
+            "function",
+            p("\\b[a-zA-Z_]\\w*(?=\\s*[({\"'])"),
+        ),
+        token(
+            "number",
+            p(
+                "\\b0x[a-fA-F\\d]+(?:\\.[a-fA-F\\d]*)?(?:[pP][+-]?\\d+)?\\b|\\b\\d+(?:\\.\\d*)?(?:[eE][+-]?\\d+)?\\b|\\.\\d+(?:[eE][+-]?\\d+)?",
+            ),
+        ),
+        token(
+            "operator",
+            p("==|~=|<=|>=|\\.\\.\\.?|//|[-+*/%^#<>=]"),
+        ),
+        token(
+            "punctuation",
+            p("[{}\\[\\]();:,.]"),
+        ),
+    )
+
+    // ---- hcl / terraform -----------------------------------------------------
+
+    /** PrismJS hcl component の実用サブセット(Terraform 等。ブロック型/属性/補間を着色)。 */
+    fun hcl(@Suppress("UNUSED_PARAMETER") prism4j: Prism4j): Prism4j.Grammar = grammar(
+        "hcl",
+        token(
+            "comment",
+            p("(?:#|//).*|/\\*[\\s\\S]*?\\*/", greedy = true),
+        ),
+        token(
+            "heredoc",
+            p("<<-?(\\w+)[\\s\\S]*?^[ \\t]*\\1", flags = ML, greedy = true, alias = "string"),
+        ),
+        token(
+            "keyword",
+            p(
+                "(^[ \\t]*)(?:resource|provider|variable|output|module|data|terraform|locals|backend|provisioner|connection|dynamic)\\b",
+                lookbehind = true,
+                flags = ML,
+            ),
+        ),
+        token(
+            "property",
+            p("(^[ \\t]*)[\\w-]+(?=[ \\t]*=(?!=))", lookbehind = true, flags = ML),
+        ),
+        token(
+            "string",
+            p("\"(?:\\\\[\\s\\S]|\\$\\{[^}]*\\}|[^\\\\\"])*\"", greedy = true),
+        ),
+        token(
+            "boolean",
+            p("\\b(?:true|false|null)\\b"),
+        ),
+        token(
+            "number",
+            p("\\b\\d+(?:\\.\\d+)?\\b"),
+        ),
+        token(
+            "type",
+            p("\\b(?:string|number|bool|list|map|set|object|tuple|any)\\b", alias = "class-name"),
+        ),
+        token(
+            "operator",
+            p("=>|==|!=|<=|>=|&&|\\|\\||[-+*/%!=<>?:]"),
+        ),
+        token(
+            "punctuation",
+            p("[{}\\[\\](),.]"),
+        ),
     )
 }
