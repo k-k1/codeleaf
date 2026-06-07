@@ -16,6 +16,7 @@ import jp.lazmix.codeleaf.data.oauth.needsRefresh
 import jp.lazmix.codeleaf.data.oauth.normalizeRepoUrl
 import jp.lazmix.codeleaf.git.BranchInfo
 import jp.lazmix.codeleaf.git.CommitInfo
+import android.graphics.BitmapFactory
 import jp.lazmix.codeleaf.git.GraphCommit
 import jp.lazmix.codeleaf.git.JgitClient
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -27,6 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
 
 /** ファイルブラウザ1エントリ。relPath はリポジトリルートからの相対パス（'/'区切り）。 */
@@ -323,14 +325,20 @@ class RepoRepository(
         return isLfsPointerHead(text)
     }
 
-    /** テキストファイルを UTF-8 で読み込む。 */
-    suspend fun readText(repo: Repo, relPath: String): String = withContext(ioDispatcher) {
-        File(workDir(repo), relPath).readText()
+    /** テキストファイルを指定 [charset](既定 UTF-8)で読み込む。先頭 BOM は除去する。 */
+    suspend fun readText(
+        repo: Repo,
+        relPath: String,
+        charset: Charset = Charsets.UTF_8,
+    ): String = withContext(ioDispatcher) {
+        val s = File(workDir(repo), relPath).readText(charset)
+        if (s.isNotEmpty() && s[0] == '﻿') s.substring(1) else s
     }
 
     /**
      * ファイルの先頭を読んで種別(テキスト/画像/バイナリ)とサイズを判定する。
      * 全読みせず先頭 [FileClassifier.PROBE_BYTES] だけ読むので巨大バイナリでも軽い。
+     * テキストはエンコード/改行コードを、ラスタ画像は寸法を併せて返す。
      */
     suspend fun probeFile(repo: Repo, relPath: String): FileInfo = withContext(ioDispatcher) {
         val f = File(workDir(repo), relPath)
@@ -346,7 +354,19 @@ class RepoRepository(
             read
         }
         val head = buf.copyOf(n)
-        FileInfo(FileClassifier.classify(relPath.substringAfterLast('/'), head, size), size, head)
+        val kind = FileClassifier.classify(relPath.substringAfterLast('/'), head, size)
+        val textMeta = if (kind is FileKind.Text) FileClassifier.textMeta(head) else null
+        var w: Int? = null
+        var h: Int? = null
+        if (kind is FileKind.Image && kind.format != "svg") {
+            val opt = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(f.absolutePath, opt)
+            if (opt.outWidth > 0 && opt.outHeight > 0) {
+                w = opt.outWidth
+                h = opt.outHeight
+            }
+        }
+        FileInfo(kind, size, head, textMeta, w, h)
     }
 
     /**

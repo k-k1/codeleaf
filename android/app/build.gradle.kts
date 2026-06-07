@@ -133,6 +133,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
 
+    // テキストの文字コード推定(UTF-8/Shift_JIS/EUC-JP 等)
+    implementation(libs.juniversalchardet)
+
     // git
     implementation(libs.jgit)
     implementation(libs.slf4j.simple)

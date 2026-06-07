@@ -64,4 +64,47 @@ class FileClassifierTest {
         assertEquals("1 MB", humanSize(1024L * 1024))
         assertEquals("2.5 MB", humanSize((2.5 * 1024 * 1024).toLong()))
     }
+
+    // --- textMeta: 改行コード ---
+
+    @Test fun eol_lf() {
+        assertEquals(Eol.LF, FileClassifier.textMeta(ascii("a\nb\nc")).eol)
+    }
+
+    @Test fun eol_crlf() {
+        assertEquals(Eol.CRLF, FileClassifier.textMeta(ascii("a\r\nb\r\n")).eol)
+    }
+
+    @Test fun eol_cr() {
+        assertEquals(Eol.CR, FileClassifier.textMeta(ascii("a\rb\r")).eol)
+    }
+
+    @Test fun eol_mixed() {
+        assertEquals(Eol.MIXED, FileClassifier.textMeta(ascii("a\r\nb\nc")).eol)
+    }
+
+    @Test fun eol_none() {
+        assertEquals(Eol.NONE, FileClassifier.textMeta(ascii("single line")).eol)
+    }
+
+    // --- textMeta: エンコード ---
+
+    @Test fun encoding_utf8Bom() {
+        val m = FileClassifier.textMeta(bytes(0xEF, 0xBB, 0xBF, 'h'.code, 'i'.code))
+        assertEquals("UTF-8", m.encodingLabel)
+        assertEquals(true, m.hasBom)
+    }
+
+    @Test fun encoding_ascii() {
+        val m = FileClassifier.textMeta(ascii("plain ascii content here\n"))
+        assertEquals("ASCII", m.encodingLabel)
+        assertEquals(false, m.hasBom)
+    }
+
+    @Test fun encoding_shiftJis() {
+        // 十分な長さの日本語(Shift_JIS)なら自動判定が効く。
+        val text = "これはシフトジスで保存された日本語のテキストです。文字コード判定の確認に使います。".repeat(2)
+        val m = FileClassifier.textMeta(text.toByteArray(charset("Shift_JIS")))
+        assertEquals("SHIFT_JIS", m.charsetName?.uppercase())
+    }
 }

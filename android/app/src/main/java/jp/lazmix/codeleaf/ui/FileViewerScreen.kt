@@ -110,7 +110,8 @@ fun FileViewerScreen(
     repo: Repo,
     filePath: String,
     workDir: File,
-    loadText: suspend () -> String,
+    /** 推定エンコード(Charset 名・null は UTF-8)で本文を読む。 */
+    loadText: suspend (charsetName: String?) -> String,
     /** ファイル種別(テキスト/画像/バイナリ)とサイズを先読みで判定する。 */
     probeFile: suspend () -> FileInfo,
     fontScale: Float,
@@ -157,7 +158,7 @@ fun FileViewerScreen(
         val probed = runCatching { probeFile() }.getOrElse { error = it.message; null }
         info = probed
         if (probed?.kind is FileKind.Text) {
-            text = runCatching { loadText() }.getOrElse { error = it.message; null }
+            text = runCatching { loadText(probed.text?.charsetName) }.getOrElse { error = it.message; null }
         }
     }
     val isTextFile = info?.kind is FileKind.Text
@@ -304,6 +305,8 @@ fun FileViewerScreen(
         Column(Modifier.fillMaxSize().padding(padding)) {
             val body = text
             val kind = info?.kind
+            // 上部メタバー: テキストはエンコード/BOM/改行/サイズ、画像はフォーマット/寸法/サイズ。
+            info?.let { fi -> fileMetaLine(fi)?.let { FileMetaBar(it) } }
             when {
                 error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
                 kind == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -499,6 +502,44 @@ internal fun blockLineRange(fullText: String, blockMarkdown: String): IntRange? 
     if (idx < 0) return null
     val start = fullText.substring(0, idx).count { it == '\n' }
     return start..(start + blk.count { it == '\n' })
+}
+
+/**
+ * 上部メタバーの1行を組み立てる(純粋関数)。テキストはエンコード/BOM/改行/サイズ、
+ * 画像はフォーマット/寸法/サイズ。バイナリは概要カードに出すので null。
+ */
+internal fun fileMetaLine(info: FileInfo): String? = when (val k = info.kind) {
+    is FileKind.Text -> buildList {
+        info.text?.let { m ->
+            add(m.encodingLabel)
+            add(if (m.hasBom) "BOM" else "BOMなし")
+            add(m.eol.label)
+        }
+        add(humanSize(info.size))
+    }.joinToString(" ・ ")
+    is FileKind.Image -> buildList {
+        add(k.format.uppercase())
+        if (info.imageWidth != null && info.imageHeight != null) {
+            add("${info.imageWidth}×${info.imageHeight}")
+        }
+        add(humanSize(info.size))
+    }.joinToString(" ・ ")
+    is FileKind.Binary -> null
+}
+
+/** 本文上部に出す1行のメタ情報バー。 */
+@Composable
+private fun FileMetaBar(text: String) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        )
+    }
 }
 
 /**

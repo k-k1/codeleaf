@@ -1,5 +1,7 @@
 package jp.lazmix.codeleaf.data
 
+import org.mozilla.universalchardet.UniversalDetector
+
 /**
  * ビューアが扱うファイル種別。テキストは本文を文字列として読み、画像は描画し、
  * それ以外のバイナリは file(1) 風の概要だけを表示する(本文は読まない)。
@@ -15,11 +17,35 @@ sealed interface FileKind {
     data class Binary(val typeLabel: String) : FileKind
 }
 
+/** 改行コード。[label] は上部メタバーの表示用。 */
+enum class Eol(val label: String) {
+    LF("LF"), CRLF("CRLF"), CR("CR"), MIXED("混在"), NONE("改行なし")
+}
+
+/** テキストファイルのメタ情報(上部バー表示・本文の再デコードに使う)。 */
+data class TextMeta(
+    /** 表示用のエンコード名(UTF-8 / Shift_JIS / EUC-JP / ASCII / 不明 等)。 */
+    val encodingLabel: String,
+    /** 本文デコードに使う Charset 名。null なら UTF-8 でフォールバック。 */
+    val charsetName: String?,
+    /** 先頭に BOM があるか。 */
+    val hasBom: Boolean,
+    val eol: Eol,
+)
+
 /**
  * ファイルの先頭バイトとサイズから判定した種別。[head] は判定に使った先頭バイト
- * (バイナリの 16 進プレビューにも使う)。
+ * (バイナリの 16 進プレビューにも使う)。[text] はテキストのときのメタ情報、
+ * [imageWidth]/[imageHeight] はラスタ画像の寸法(取得できたときのみ)。
  */
-class FileInfo(val kind: FileKind, val size: Long, val head: ByteArray)
+class FileInfo(
+    val kind: FileKind,
+    val size: Long,
+    val head: ByteArray,
+    val text: TextMeta? = null,
+    val imageWidth: Int? = null,
+    val imageHeight: Int? = null,
+)
 
 /** ファイル名・先頭バイト・サイズからファイル種別を判定する(純粋関数・テスト可能)。 */
 object FileClassifier {
@@ -31,6 +57,64 @@ object FileClassifier {
         imageFormat(name, head)?.let { return FileKind.Image(it) }
         if (isBinary(head)) return FileKind.Binary(magicLabel(name, head))
         return FileKind.Text
+    }
+
+    /** 先頭バイトからテキストのエンコード(BOM→自動判定)と改行コードを推定する。 */
+    fun textMeta(head: ByteArray): TextMeta {
+        val (label, charset, bom) = detectEncoding(head)
+        return TextMeta(label, charset, bom, detectEol(head))
+    }
+
+    /** (表示ラベル, Charset 名, BOM 有無)。BOM 優先・無ければ universalchardet で推定。 */
+    private fun detectEncoding(h: ByteArray): Triple<String, String?, Boolean> {
+        when {
+            h.startsWith(0xEF, 0xBB, 0xBF) -> return Triple("UTF-8", "UTF-8", true)
+            h.startsWith(0xFF, 0xFE, 0x00, 0x00) -> return Triple("UTF-32LE", "UTF-32LE", true)
+            h.startsWith(0x00, 0x00, 0xFE, 0xFF) -> return Triple("UTF-32BE", "UTF-32BE", true)
+            h.startsWith(0xFF, 0xFE) -> return Triple("UTF-16LE", "UTF-16LE", true)
+            h.startsWith(0xFE, 0xFF) -> return Triple("UTF-16BE", "UTF-16BE", true)
+        }
+        val detected = runCatching {
+            UniversalDetector(null).run {
+                handleData(h, 0, h.size)
+                dataEnd()
+                detectedCharset.also { reset() }
+            }
+        }.getOrNull()
+        if (!detected.isNullOrBlank()) {
+            val label = if (detected.equals("US-ASCII", true)) "ASCII" else detected
+            return Triple(label, detected, false)
+        }
+        // 判定不能。純 ASCII なら ASCII、そうでなければ不明(本文は UTF-8 で読む)。
+        return if (h.all { it >= 0 }) Triple("ASCII", "US-ASCII", false) else Triple("不明", null, false)
+    }
+
+    /** 先頭バイトを走査して改行コードを判定する。複数種が混在すれば MIXED。 */
+    private fun detectEol(h: ByteArray): Eol {
+        var crlf = 0
+        var cr = 0
+        var lf = 0
+        var i = 0
+        while (i < h.size) {
+            val b = h[i]
+            if (b == 0x0D.toByte()) {
+                if (i + 1 < h.size && h[i + 1] == 0x0A.toByte()) {
+                    crlf++; i += 2; continue
+                }
+                cr++
+            } else if (b == 0x0A.toByte()) {
+                lf++
+            }
+            i++
+        }
+        val kinds = listOf(crlf, cr, lf).count { it > 0 }
+        return when {
+            kinds == 0 -> Eol.NONE
+            kinds > 1 -> Eol.MIXED
+            crlf > 0 -> Eol.CRLF
+            cr > 0 -> Eol.CR
+            else -> Eol.LF
+        }
     }
 
     /** 画像なら小文字フォーマット名、そうでなければ null。magic 優先・無ければ拡張子。 */
