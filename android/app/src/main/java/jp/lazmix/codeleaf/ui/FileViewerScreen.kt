@@ -315,6 +315,10 @@ fun FileViewerScreen(
                     contentDescription = fileName,
                     modifier = Modifier.fillMaxSize(),
                 )
+                kind is FileKind.Pdf -> PdfViewer(
+                    file = File(workDir, filePath),
+                    modifier = Modifier.fillMaxSize(),
+                )
                 kind is FileKind.Binary -> BinaryInfoView(
                     typeLabel = kind.typeLabel,
                     size = info!!.size,
@@ -524,6 +528,7 @@ internal fun fileMetaLine(info: FileInfo): String? = when (val k = info.kind) {
         }
         add(humanSize(info.size))
     }.joinToString(" ・ ")
+    is FileKind.Pdf -> "PDF ・ ${humanSize(info.size)}"
     is FileKind.Binary -> null
 }
 

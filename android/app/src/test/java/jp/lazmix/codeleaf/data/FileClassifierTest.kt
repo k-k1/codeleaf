@@ -32,9 +32,9 @@ class FileClassifierTest {
         assertEquals(FileKind.Image("svg"), FileClassifier.classify("logo.svg", ascii("<svg></svg>"), 11))
     }
 
-    @Test fun pdf_isBinaryWithLabel() {
+    @Test fun pdf_isPdfKind() {
         val head = ascii("%PDF-1.7") + bytes(0x00)
-        assertEquals(FileKind.Binary("PDF 文書"), FileClassifier.classify("doc.pdf", head, 100))
+        assertEquals(FileKind.Pdf, FileClassifier.classify("doc.pdf", head, 100))
     }
 
     @Test fun zipJarExtension_labelsJar() {

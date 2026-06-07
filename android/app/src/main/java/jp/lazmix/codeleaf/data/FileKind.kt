@@ -13,7 +13,10 @@ sealed interface FileKind {
     /** 画像。[format] は表示用の小文字フォーマット名(png/jpeg/svg 等)。 */
     data class Image(val format: String) : FileKind
 
-    /** 画像以外のバイナリ。[typeLabel] は file(1) 風の種別名(「PDF 文書」「ELF 実行ファイル」等)。 */
+    /** PDF。PdfRenderer でページを描画する。 */
+    data object Pdf : FileKind
+
+    /** 画像/PDF 以外のバイナリ。[typeLabel] は file(1) 風の種別名(「ELF 実行ファイル」等)。 */
     data class Binary(val typeLabel: String) : FileKind
 }
 
@@ -55,6 +58,7 @@ object FileClassifier {
 
     fun classify(name: String, head: ByteArray, size: Long): FileKind {
         imageFormat(name, head)?.let { return FileKind.Image(it) }
+        if (head.startsWith(0x25, 0x50, 0x44, 0x46)) return FileKind.Pdf // %PDF
         if (isBinary(head)) return FileKind.Binary(magicLabel(name, head))
         return FileKind.Text
     }
@@ -146,7 +150,6 @@ object FileClassifier {
 
     /** magic / 拡張子から file(1) 風の種別ラベルを返す。判別不能は「バイナリ」。 */
     private fun magicLabel(name: String, h: ByteArray): String = when {
-        h.startsWith(0x25, 0x50, 0x44, 0x46) -> "PDF 文書" // %PDF
         h.startsWith(0x50, 0x4B, 0x03, 0x04) ||
             h.startsWith(0x50, 0x4B, 0x05, 0x06) ||
             h.startsWith(0x50, 0x4B, 0x07, 0x08) -> zipLabel(name)

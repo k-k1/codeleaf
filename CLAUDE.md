@@ -48,6 +48,10 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
 - **ハイライト**: Prism4j 2.0.0 同梱文法を `@PrismBundle`(`PrismGrammarLocator`)で生成。未同梱の
   **bash / typescript / rust は手書き文法**を `CodeGrammarLocator`(GrammarLocatorDef をラップ)で重ねる
   (`CustomGrammars`、文字列内の変数補間など細部は未対応の実用サブセット)。別名/拡張子マップは `CodeHighlight.languageForFile`。
+- **ファイル種別ビューア**(`FileViewerScreen`+`data/FileKind.kt`): `probeFile`(先頭8KB)で Text/Image/Pdf/Binary を判定
+  (`FileClassifier`・magic+拡張子・純粋関数)。テキストは BOM→`juniversalchardet` でエンコード推定し**非UTF-8は再デコード**、
+  上部スリムバー(`fileMetaLine`)にエンコード/BOM/改行/サイズ、画像はフォーマット/寸法/サイズ。画像は Coil で fit＋ピンチズーム、
+  PDF は `PdfViewer`(`PdfRenderer`・**ARGB_8888必須**・同時1ページ→Mutex直列化・−/＋ で1〜3倍)、非画像バイナリは種別/サイズ/16進カード。
 - **Markdown 本文は `AndroidView(TextView)`** で Compose セマンティクスから不可視 → 本文/リンクは Compose test で検証不可。
   検証は (a)ロジックを純粋関数化し JVM 単体, (b)到達は Compose ノード(CodeView/表/frontmatter/見出し), (c)実機 uiautomator。
 - **リンク**: `setTextIsSelectable(true)` は MovementMethod を奪う → 使わず setMarkdown 後に `LinkMovementMethod` を明示。

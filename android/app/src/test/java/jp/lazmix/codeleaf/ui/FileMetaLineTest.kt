@@ -48,8 +48,13 @@ class FileMetaLineTest {
         assertEquals("SVG ・ 2 KB", fileMetaLine(info))
     }
 
+    @Test fun pdf_showsPdfAndSize() {
+        val info = FileInfo(kind = FileKind.Pdf, size = 4096, head = empty)
+        assertEquals("PDF ・ 4 KB", fileMetaLine(info))
+    }
+
     @Test fun binary_hasNoBar() {
-        val info = FileInfo(kind = FileKind.Binary("PDF 文書"), size = 4096, head = empty)
+        val info = FileInfo(kind = FileKind.Binary("ELF 実行ファイル"), size = 4096, head = empty)
         assertNull(fileMetaLine(info))
     }
 }
