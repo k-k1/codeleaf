@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import jp.lazmix.codeleaf.GitReaderApplication
 import jp.lazmix.codeleaf.data.AppSettings
+import jp.lazmix.codeleaf.data.FavoriteRepository
 import jp.lazmix.codeleaf.data.FileEntry
 import jp.lazmix.codeleaf.data.FontScale
 import jp.lazmix.codeleaf.data.MemoRepository
@@ -53,6 +54,7 @@ class RepoListViewModel(
     private val repository: RepoRepository,
     private val settingsStore: SettingsStore,
     private val memos: MemoRepository,
+    private val favorites: FavoriteRepository,
     private val oauthService: BitbucketOAuthService? = null,
     private val githubOAuthService: GitHubDeviceFlowService? = null,
     oauthResults: Channel<Result<OAuthAccount>>? = null,
@@ -334,6 +336,21 @@ class RepoListViewModel(
         viewModelScope.launch { memos.deleteEntry(id) }
     }
 
+    // --- お気に入り ---
+    fun observeFavorites(repoId: Long) = favorites.observeFavorites(repoId)
+
+    /** ファイル/フォルダのお気に入り登録をトグルする(登録済みなら解除)。 */
+    fun toggleFavorite(repoId: Long, relPath: String, isDir: Boolean) {
+        viewModelScope.launch { favorites.toggle(repoId, relPath, isDir) }
+    }
+
+    fun deleteFavorite(id: Long) {
+        viewModelScope.launch { favorites.delete(id) }
+    }
+
+    /** お気に入りの実体が作業ツリーに残っているか(一覧のグレーアウト判定)。 */
+    suspend fun favoriteExists(repo: Repo, relPath: String): Boolean = repository.exists(repo, relPath)
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -342,6 +359,7 @@ class RepoListViewModel(
                     app.container.repoRepository,
                     app.container.settingsStore,
                     app.container.memoRepository,
+                    app.container.favoriteRepository,
                     app.container.bitbucketOAuthService,
                     app.container.githubOAuthService,
                     app.container.oauthResults,

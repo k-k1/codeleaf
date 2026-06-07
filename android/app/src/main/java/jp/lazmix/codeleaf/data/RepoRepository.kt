@@ -149,6 +149,11 @@ class RepoRepository(
 
     fun workDir(repo: Repo): File = File(reposRoot, repo.id.toString())
 
+    /** 作業ツリーに relPath の実体(ファイル/フォルダ)が存在するか(お気に入りの生存判定)。 */
+    suspend fun exists(repo: Repo, relPath: String): Boolean = withContext(ioDispatcher) {
+        relPath.isNotEmpty() && File(workDir(repo), relPath).exists()
+    }
+
     /** 登録 → clone → 既定ブランチ確定。失敗時は行と暗号化トークンを巻き戻す。 */
     suspend fun addAndClone(input: NewRepo): Repo = withContext(ioDispatcher) {
         val id = dao.insert(

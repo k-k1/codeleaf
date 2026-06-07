@@ -1,8 +1,10 @@
 package jp.lazmix.codeleaf.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
@@ -89,6 +92,11 @@ fun FileBrowserScreen(
     onSearch: () -> Unit,
     onGraph: () -> Unit,
     onMemos: () -> Unit,
+    onFavorites: () -> Unit,
+    /** 現在登録済みのお気に入り relPath 集合(行に★を出すため)。 */
+    favoritePaths: Set<String> = emptySet(),
+    /** 行の長押しメニューからお気に入り登録/解除をトグルする。 */
+    onToggleFavorite: (FileEntry) -> Unit = {},
     /** パンくずのセグメントから任意の階層へ移動(repo ルート相対パス, 空=ルート)。 */
     onNavigateToDir: (String) -> Unit,
     onSetTheme: (ThemeMode) -> Unit,
@@ -158,6 +166,10 @@ fun FileBrowserScreen(
                             text = { Text("メモ") },
                             onClick = { menuExpanded = false; onMemos() },
                         )
+                        DropdownMenuItem(
+                            text = { Text("お気に入り") },
+                            onClick = { menuExpanded = false; onFavorites() },
+                        )
                         HorizontalDivider()
                         Text(
                             "テーマ",
@@ -222,19 +234,26 @@ fun FileBrowserScreen(
                     entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.fillMaxSize()) {
                         items(entries!!, key = { it.relPath }) { e ->
-                            EntryRow(e, iconSet, fileNameDisplay, onClick = {
-                                // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
-                                if (!locked) {
-                                    when {
-                                        // LFS は実体未取得のため Viewer では開かず、その旨を通知する
-                                        e.isLfs -> scope.launch {
-                                            snackbar.showSnackbar("Git LFS ファイルです（実体は未取得のため表示できません）")
+                            EntryRow(
+                                entry = e,
+                                iconSet = iconSet,
+                                nameDisplay = fileNameDisplay,
+                                isFavorite = e.relPath in favoritePaths,
+                                onClick = {
+                                    // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
+                                    if (!locked) {
+                                        when {
+                                            // LFS は実体未取得のため Viewer では開かず、その旨を通知する
+                                            e.isLfs -> scope.launch {
+                                                snackbar.showSnackbar("Git LFS ファイルです（実体は未取得のため表示できません）")
+                                            }
+                                            e.isDir -> onOpenDir(e.relPath)
+                                            else -> onOpenFile(e.relPath)
                                         }
-                                        e.isDir -> onOpenDir(e.relPath)
-                                        else -> onOpenFile(e.relPath)
                                     }
-                                }
-                            })
+                                },
+                                onToggleFavorite = { onToggleFavorite(e) },
+                            )
                             HorizontalDivider()
                         }
                     }
@@ -324,15 +343,19 @@ private fun PathBreadcrumb(path: String, onNavigate: (String) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun EntryRow(
     entry: FileEntry,
     iconSet: IconSet,
     nameDisplay: FileNameDisplay,
+    isFavorite: Boolean,
     onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val mark = FileIcons.mark(entry.name)
+    var rowMenu by remember { mutableStateOf(false) }
 
     // 分類ごとの描画スタイル(先頭バー/文字色/字形/チップ)を解決する。
     val barColor: Color? = when (mark) {
@@ -355,27 +378,46 @@ private fun EntryRow(
         else -> null
     }
 
-    Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // 先頭アクセントバー(非対象は透明で確保し、アイコン位置を全行で揃える)。
-        Box(Modifier.width(3.dp).fillMaxHeight().background(barColor ?: Color.Transparent))
+    Box {
         Row(
-            Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 12.dp),
+            // タップで開く・長押しでお気に入りトグルのメニューを出す。
+            Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+                .combinedClickable(onClick = onClick, onLongClick = { rowMenu = true }),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            FileEntryIcon(entry, iconSet)
-            FileNameText(
-                text = entry.displayName,
-                mode = nameDisplay,
-                color = textColor,
-                fontWeight = fontWeight,
-                fontStyle = fontStyle,
-                modifier = Modifier.weight(1f),
+            // 先頭アクセントバー(非対象は透明で確保し、アイコン位置を全行で揃える)。
+            Box(Modifier.width(3.dp).fillMaxHeight().background(barColor ?: Color.Transparent))
+            Row(
+                Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                FileEntryIcon(entry, iconSet)
+                FileNameText(
+                    text = entry.displayName,
+                    mode = nameDisplay,
+                    color = textColor,
+                    fontWeight = fontWeight,
+                    fontStyle = fontStyle,
+                    modifier = Modifier.weight(1f),
+                )
+                // 登録済みは小さな★で示す(チップの手前)。
+                if (isFavorite) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = "お気に入り",
+                        tint = cs.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                chip?.let { (label, color) -> MarkChip(label, color) }
+            }
+        }
+        DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
+            DropdownMenuItem(
+                text = { Text(if (isFavorite) "お気に入りから解除" else "お気に入りに追加") },
+                onClick = { rowMenu = false; onToggleFavorite() },
             )
-            chip?.let { (label, color) -> MarkChip(label, color) }
         }
     }
 }
@@ -458,7 +500,7 @@ private fun MarkChip(label: String, color: Color) {
 private val ICON_SIZE = 24.dp
 
 @Composable
-private fun FileEntryIcon(entry: FileEntry, iconSet: IconSet) {
+internal fun FileEntryIcon(entry: FileEntry, iconSet: IconSet) {
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     when {
         // submodule は git ロゴで「ネストした git リポジトリ」と分かるようにする

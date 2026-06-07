@@ -2,6 +2,7 @@ package jp.lazmix.codeleaf
 
 import android.app.Application
 import androidx.room.Room
+import jp.lazmix.codeleaf.data.FavoriteRepository
 import jp.lazmix.codeleaf.data.MemoRepository
 import jp.lazmix.codeleaf.data.RepoRepository
 import jp.lazmix.codeleaf.data.SettingsStore
@@ -11,6 +12,7 @@ import jp.lazmix.codeleaf.data.db.MIGRATION_1_2
 import jp.lazmix.codeleaf.data.db.MIGRATION_2_3
 import jp.lazmix.codeleaf.data.db.MIGRATION_3_4
 import jp.lazmix.codeleaf.data.db.MIGRATION_4_5
+import jp.lazmix.codeleaf.data.db.MIGRATION_5_6
 import jp.lazmix.codeleaf.data.oauth.BitbucketOAuthService
 import jp.lazmix.codeleaf.data.oauth.BitbucketOAuthTokenExchanger
 import jp.lazmix.codeleaf.data.oauth.GitHubDeviceFlowService
@@ -24,7 +26,7 @@ import java.io.File
 class AppContainer(app: Application) {
     private val db: AppDatabase = Room.databaseBuilder(
         app, AppDatabase::class.java, "codeleaf.db",
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
 
     private val reposRoot: File = File(app.filesDir, "repos").apply { mkdirs() }
 
@@ -67,6 +69,8 @@ class AppContainer(app: Application) {
     val settingsStore: SettingsStore = SettingsStore(app)
 
     val memoRepository: MemoRepository = MemoRepository(db.memoDao())
+
+    val favoriteRepository: FavoriteRepository = FavoriteRepository(db.favoriteDao())
 }
 
 class GitReaderApplication : Application() {

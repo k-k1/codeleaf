@@ -63,9 +63,32 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
-@Database(entities = [Repo::class, Memo::class, MemoEntry::class], version = 5, exportSchema = false)
+/** v5→v6: お気に入り(favorites)を追加。リポ削除で CASCADE・(repoId, relPath) 一意。 */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `favorites` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`repoId` INTEGER NOT NULL, `relPath` TEXT NOT NULL, " +
+                "`isDir` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`repoId`) REFERENCES `repos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_favorites_repoId` ON `favorites` (`repoId`)")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_favorites_repoId_relPath` " +
+                "ON `favorites` (`repoId`, `relPath`)",
+        )
+    }
+}
+
+@Database(
+    entities = [Repo::class, Memo::class, MemoEntry::class, Favorite::class],
+    version = 6,
+    exportSchema = false,
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun repoDao(): RepoDao
     abstract fun memoDao(): MemoDao
+    abstract fun favoriteDao(): FavoriteDao
 }

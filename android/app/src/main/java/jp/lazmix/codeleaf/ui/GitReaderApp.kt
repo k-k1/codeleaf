@@ -99,6 +99,9 @@ private sealed interface Screen : Parcelable {
     @Parcelize data class MemoDetail(override val repo: Repo, val memoId: Long, val memoTitle: String) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
+    @Parcelize data class Favorites(override val repo: Repo) : WithRepo {
+        override fun withRepo(updated: Repo) = copy(repo = updated)
+    }
 }
 
 /** 2ペイン(左=一覧/右=詳細)・3ペイン(左=リポ一覧/中=一覧/右=詳細)のしきい値。 */
@@ -159,7 +162,7 @@ fun GitReaderApp() {
 
     // メモのエントリから該当ファイルの行を開く。メモ画面を畳んで Browse に戻り(無ければ作る)、
     // ビューア(detailStack)に View を積む。
-    fun openFileAt(repo: Repo, path: String, line: Int) {
+    fun openFileAt(repo: Repo, path: String, line: Int? = null) {
         while (backStack.size > 1 && backStack.last() !is Screen.Browse) {
             backStack.removeAt(backStack.lastIndex)
         }
@@ -405,6 +408,7 @@ fun GitReaderApp() {
                     threePane -> null
                     else -> ({ leaveRepo() })
                 }
+                val favorites by vm.observeFavorites(repo.id).collectAsState(initial = emptyList())
                 FileBrowserScreen(
                     repo = repo,
                     path = current.path,
@@ -415,6 +419,9 @@ fun GitReaderApp() {
                     onSearch = { navigate(Screen.Search(repo)) },
                     onGraph = { graphSelected = null; navigate(Screen.Graph(repo)) },
                     onMemos = { navigate(Screen.Memos(repo)) },
+                    onFavorites = { navigate(Screen.Favorites(repo)) },
+                    favoritePaths = favorites.mapTo(HashSet()) { it.relPath },
+                    onToggleFavorite = { e -> vm.toggleFavorite(repo.id, e.relPath, e.isDir) },
                     onNavigateToDir = { target -> navigateToDir(repo, target) },
                     onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
@@ -732,6 +739,28 @@ fun GitReaderApp() {
                 onDeleteEntry = { vm.deleteMemoEntry(it) },
                 onRenameMemo = { vm.renameMemo(current.memoId, it) },
                 onDeleteMemo = { vm.deleteMemo(current.memoId); pop() },
+                onBack = { pop() },
+            )
+        }
+
+        is Screen.Favorites -> GitReaderTheme(current.repo.themeMode) {
+            val repo = current.repo
+            val favList by vm.observeFavorites(repo.id).collectAsState(initial = emptyList())
+            FavoritesScreen(
+                repoName = repo.name,
+                favorites = favList,
+                iconSet = settings.iconSet,
+                checkExists = { rel -> vm.favoriteExists(repo, rel) },
+                onOpen = { fav ->
+                    // お気に入り画面を閉じてから対象へ遷移する。
+                    pop()
+                    if (fav.isDir) {
+                        navigate(Screen.Browse(repo, fav.relPath))
+                    } else {
+                        openFileAt(repo, fav.relPath)
+                    }
+                },
+                onDelete = { id -> vm.deleteFavorite(id) },
                 onBack = { pop() },
             )
         }
