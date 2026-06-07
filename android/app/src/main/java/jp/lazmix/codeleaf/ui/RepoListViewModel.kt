@@ -117,7 +117,7 @@ class RepoListViewModel(
             ok.exceptionOrNull()?.let { android.util.Log.w("GitReader", "addAndClone failed", it) }
             _status.value = UiStatus(
                 busy = false,
-                message = ok.exceptionOrNull()?.let { "失敗: ${it.message}" },
+                message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) },
             )
             onDone(ok.isSuccess)
         }

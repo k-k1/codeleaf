@@ -163,11 +163,16 @@ fun AddRepoScreen(
     }
     val effectiveMethod = if (showAccordion) authMethod else AuthMethod.TOKEN
     val usernameRequired = host == GitHost.BITBUCKET && effectiveMethod == AuthMethod.TOKEN
+    // TOKEN 手入力のときだけ URL 形式を検査する(OAuth は選択リポの URL を使う)。
+    val urlError = if (effectiveMethod == AuthMethod.TOKEN) repoUrlError(url) else null
     val canSubmit = !status.busy && when (effectiveMethod) {
         // OAuth はプルダウンで選んだリポを clone（URL 手入力不要）。
         AuthMethod.OAUTH -> oauth != null && selectedRepo != null
-        AuthMethod.TOKEN -> url.isNotBlank() && token.isNotBlank() && (!usernameRequired || username.isNotBlank())
+        AuthMethod.TOKEN -> url.isNotBlank() && urlError == null && token.isNotBlank() &&
+            (!usernameRequired || username.isNotBlank())
     }
+    // 直近の submit 後だけ clone エラーを出す(他フローの古い status を表示しない)。
+    var attempted by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -265,6 +270,7 @@ fun AddRepoScreen(
                     tokenContent = {
                         ManualAuthFields(
                             url = url, onUrl = { url = it; if (!nameEdited) name = repoNameFromUrl(it) },
+                            urlError = urlError,
                             username = username, onUsername = { username = it },
                             token = token, onToken = { token = it },
                             usernameRequired = host == GitHost.BITBUCKET, // token 方式の Bitbucket は username 必須
@@ -281,6 +287,7 @@ fun AddRepoScreen(
                 }
                 ManualAuthFields(
                     url = url, onUrl = { url = it; if (!nameEdited) name = repoNameFromUrl(it) },
+                    urlError = urlError,
                     username = username, onUsername = { username = it },
                     token = token, onToken = { token = it },
                     usernameRequired = usernameRequired,
@@ -304,8 +311,21 @@ fun AddRepoScreen(
                 }
             }
 
+            // clone 失敗メッセージ(直近の submit 後のみ)。
+            if (attempted && !status.busy) {
+                status.message?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
             Button(
                 onClick = {
+                    attempted = true
                     val acct = oauth
                     val picked = selectedRepo
                     onSubmit(
@@ -503,6 +523,7 @@ private fun GitHubLoginPanel(
 private fun ManualAuthFields(
     url: String,
     onUrl: (String) -> Unit,
+    urlError: String?,
     username: String,
     onUsername: (String) -> Unit,
     token: String,
@@ -512,6 +533,8 @@ private fun ManualAuthFields(
     OutlinedTextField(
         value = url, onValueChange = onUrl,
         label = { Text("URL (https://...)") },
+        isError = urlError != null,
+        supportingText = urlError?.let { { Text(it) } },
         singleLine = true, modifier = Modifier.fillMaxWidth(),
     )
     OutlinedTextField(
