@@ -40,6 +40,19 @@ class RepoInputValidationTest {
         assertNull(repoUrlError("git@github.com:owner/repo.git"))
     }
 
+    @Test fun localAbsolutePath_ok() {
+        // 端末上のローカル git リポ(file:// clone 用)。E2E もこの経路を通す。
+        assertNull(repoUrlError("/data/user/0/jp.lazmix.codeleaf/cache/e2e-src"))
+    }
+
+    @Test fun fileUrl_ok() {
+        assertNull(repoUrlError("file:///path/to/repo"))
+    }
+
+    @Test fun fileUrl_nonAbsolute_isError() {
+        assertNotNull(repoUrlError("file://relative/repo"))
+    }
+
     // --- cloneErrorMessage ---
 
     @Test fun auth_maps() {

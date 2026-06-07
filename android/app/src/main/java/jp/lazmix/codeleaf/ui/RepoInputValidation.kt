@@ -10,6 +10,13 @@ internal fun repoUrlError(url: String): String? {
     if (u.isEmpty()) return null
     if (u.any { it.isWhitespace() }) return "URL に空白が含まれています"
     val lower = u.lowercase()
+    // ローカル clone ソース(端末上の git リポ)を許可: file:// URL とベタの絶対パス。
+    // JGit はどちらも clone 可能。到達性は確認せず、明らかな形式違いだけ弾く方針に合わせる。
+    if (lower.startsWith("file://")) {
+        return if (u.substringAfter("://").startsWith("/")) null
+        else "file:// の後ろは絶対パスにしてください（例: file:///path/to/repo）"
+    }
+    if (u.startsWith("/")) return null
     val hasScheme = lower.startsWith("https://") || lower.startsWith("http://") ||
         lower.startsWith("ssh://") || lower.startsWith("git://")
     if (hasScheme) {
