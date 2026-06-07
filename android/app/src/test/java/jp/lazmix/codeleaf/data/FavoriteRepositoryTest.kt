@@ -36,6 +36,14 @@ class FavoriteRepositoryTest {
 
         override suspend fun count(repoId: Long, relPath: String): Int =
             rows.count { it.repoId == repoId && it.relPath == relPath }
+
+        override suspend fun minSortOrder(repoId: Long): Int? =
+            rows.filter { it.repoId == repoId }.minOfOrNull { it.sortOrder }
+
+        override suspend fun setSortOrder(id: Long, order: Int) {
+            val i = rows.indexOfFirst { it.id == id }
+            if (i >= 0) rows[i] = rows[i].copy(sortOrder = order)
+        }
     }
 
     @Test
@@ -72,5 +80,36 @@ class FavoriteRepositoryTest {
         assertEquals(2, dao.rows.size)
         assertTrue(dao.rows.none { it.repoId == 1L && it.relPath == "docs" })
         assertTrue(dao.rows.any { it.repoId == 2L && it.relPath == "docs" })
+    }
+
+    @Test
+    fun newFavoriteGoesToHeadViaDecreasingSortOrder() = runBlocking {
+        val dao = FakeFavoriteDao()
+        val repo = FavoriteRepository(dao, now = { 0L })
+
+        repo.toggle(repoId = 1L, relPath = "a", isDir = false) // 最初は 0
+        repo.toggle(repoId = 1L, relPath = "b", isDir = false) // min(0)-1 = -1
+        repo.toggle(repoId = 1L, relPath = "c", isDir = false) // min(-1)-1 = -2
+
+        // sortOrder 昇順 = 新しい順(c, b, a)。
+        val ordered = dao.rows.sortedBy { it.sortOrder }.map { it.relPath }
+        assertEquals(listOf("c", "b", "a"), ordered)
+    }
+
+    @Test
+    fun reorderRewritesSortOrderToIndex() = runBlocking {
+        val dao = FakeFavoriteDao()
+        val repo = FavoriteRepository(dao, now = { 0L })
+        repo.toggle(repoId = 1L, relPath = "a", isDir = false)
+        repo.toggle(repoId = 1L, relPath = "b", isDir = false)
+        repo.toggle(repoId = 1L, relPath = "c", isDir = false)
+        val byPath = dao.rows.associateBy { it.relPath }
+
+        // a, b, c の順に並べ替える。
+        repo.reorder(listOf(byPath.getValue("a").id, byPath.getValue("b").id, byPath.getValue("c").id))
+
+        assertEquals(0, dao.rows.single { it.relPath == "a" }.sortOrder)
+        assertEquals(1, dao.rows.single { it.relPath == "b" }.sortOrder)
+        assertEquals(2, dao.rows.single { it.relPath == "c" }.sortOrder)
     }
 }

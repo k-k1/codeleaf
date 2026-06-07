@@ -81,9 +81,16 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+/** v6→v7: お気に入りに手動並べ替え順(sortOrder)を追加。既存行は 0(同順位は id 降順=従来順)。 */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE favorites ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Database(
     entities = [Repo::class, Memo::class, MemoEntry::class, Favorite::class],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

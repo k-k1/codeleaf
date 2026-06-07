@@ -15,13 +15,27 @@ class FavoriteRepository(
 ) {
     fun observeFavorites(repoId: Long): Flow<List<Favorite>> = dao.observeFavorites(repoId)
 
-    /** 登録/解除をトグルする。登録済みなら消し、未登録なら追加する。 */
+    /** 登録/解除をトグルする。登録済みなら消し、未登録なら先頭(最小 sortOrder-1)に追加する。 */
     suspend fun toggle(repoId: Long, relPath: String, isDir: Boolean) {
         if (dao.count(repoId, relPath) > 0) {
             dao.deleteByPath(repoId, relPath)
         } else {
-            dao.insert(Favorite(repoId = repoId, relPath = relPath, isDir = isDir, createdAt = now()))
+            val head = (dao.minSortOrder(repoId) ?: 0) - 1
+            dao.insert(
+                Favorite(
+                    repoId = repoId,
+                    relPath = relPath,
+                    isDir = isDir,
+                    createdAt = now(),
+                    sortOrder = head,
+                ),
+            )
         }
+    }
+
+    /** 並べ替え結果を保存する。[orderedIds] の並びどおりに sortOrder を 0..n へ振り直す。 */
+    suspend fun reorder(orderedIds: List<Long>) {
+        orderedIds.forEachIndexed { index, id -> dao.setSortOrder(id, index) }
     }
 
     suspend fun delete(id: Long) = dao.deleteById(id)

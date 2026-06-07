@@ -13,6 +13,7 @@ import jp.lazmix.codeleaf.data.db.MIGRATION_2_3
 import jp.lazmix.codeleaf.data.db.MIGRATION_3_4
 import jp.lazmix.codeleaf.data.db.MIGRATION_4_5
 import jp.lazmix.codeleaf.data.db.MIGRATION_5_6
+import jp.lazmix.codeleaf.data.db.MIGRATION_6_7
 import jp.lazmix.codeleaf.data.oauth.BitbucketOAuthService
 import jp.lazmix.codeleaf.data.oauth.BitbucketOAuthTokenExchanger
 import jp.lazmix.codeleaf.data.oauth.GitHubDeviceFlowService
@@ -26,7 +27,9 @@ import java.io.File
 class AppContainer(app: Application) {
     private val db: AppDatabase = Room.databaseBuilder(
         app, AppDatabase::class.java, "codeleaf.db",
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+    ).addMigrations(
+        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+    ).build()
 
     private val reposRoot: File = File(app.filesDir, "repos").apply { mkdirs() }
 

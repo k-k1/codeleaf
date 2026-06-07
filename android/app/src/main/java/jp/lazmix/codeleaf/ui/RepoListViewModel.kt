@@ -348,6 +348,11 @@ class RepoListViewModel(
         viewModelScope.launch { favorites.delete(id) }
     }
 
+    /** お気に入りの並べ替えを保存する([orderedIds] の並び順で sortOrder を振り直す)。 */
+    fun reorderFavorites(orderedIds: List<Long>) {
+        viewModelScope.launch { favorites.reorder(orderedIds) }
+    }
+
     /** お気に入りの実体が作業ツリーに残っているか(一覧のグレーアウト判定)。 */
     suspend fun favoriteExists(repo: Repo, relPath: String): Boolean = repository.exists(repo, relPath)
 

@@ -29,4 +29,6 @@ data class Favorite(
     /** フォルダなら true(タップ時に Browse へ、ファイルなら Viewer へ振り分ける)。 */
     val isDir: Boolean,
     val createdAt: Long,
+    /** 手動並べ替え順(昇順)。新規は最小-1 で先頭に積む。並べ替え保存で index に振り直す。 */
+    val sortOrder: Int = 0,
 )

@@ -761,6 +761,7 @@ fun GitReaderApp() {
                     }
                 },
                 onDelete = { id -> vm.deleteFavorite(id) },
+                onReorder = { ids -> vm.reorderFavorites(ids) },
                 onBack = { pop() },
             )
         }
