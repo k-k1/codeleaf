@@ -452,6 +452,7 @@ fun GitReaderApp() {
                     onOpenFile = {
                         if (detailStack.lastOrNull()?.filePath != it) detailStack.add(Screen.View(repo, it))
                     },
+                    onOpenHistory = { historySelected = null; navigate(Screen.History(repo, it)) },
                     iconSet = settings.iconSet,
                     fileNameDisplay = settings.fileNameDisplay,
                     onSwitchBranch = { branch ->

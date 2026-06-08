@@ -105,6 +105,8 @@ fun FileBrowserScreen(
     onSetTheme: (ThemeMode) -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
+    /** ファイル長押しメニューから、そのファイルのコミット履歴へ。 */
+    onOpenHistory: (String) -> Unit = {},
     onSwitchBranch: (String) -> Unit,
     /** リポを出てリポ一覧へ。3ペインではレールが担うため null で ← を非表示にする。 */
     onBack: (() -> Unit)?,
@@ -294,6 +296,8 @@ fun FileBrowserScreen(
                                     }
                                 },
                                 onToggleFavorite = { onToggleFavorite(e) },
+                                // 履歴はファイルのみ(ディレクトリ/サブモジュールは対象外)。
+                                onHistory = if (!e.isDir) ({ onOpenHistory(e.relPath) }) else null,
                             )
                             HorizontalDivider()
                         }
@@ -437,6 +441,7 @@ private fun EntryRow(
     isFavorite: Boolean,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onHistory: (() -> Unit)? = null,
 ) {
     val cs = MaterialTheme.colorScheme
     val mark = FileIcons.mark(entry.name)
@@ -500,6 +505,13 @@ private fun EntryRow(
             }
         }
         DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
+            onHistory?.let { history ->
+                DropdownMenuItem(
+                    text = { Text("履歴") },
+                    onClick = { rowMenu = false; history() },
+                )
+                HorizontalDivider()
+            }
             DropdownMenuItem(
                 text = { Text(if (isFavorite) "お気に入りから解除" else "お気に入りに追加") },
                 onClick = { rowMenu = false; onToggleFavorite() },
