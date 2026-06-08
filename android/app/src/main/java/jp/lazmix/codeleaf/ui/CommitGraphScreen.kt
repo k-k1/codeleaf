@@ -63,10 +63,11 @@ private val LANE_COLORS = listOf(
 private fun laneColor(lane: Int) = LANE_COLORS[(lane.coerceAtLeast(0)) % LANE_COLORS.size]
 
 private val ROW_HEIGHT = 56.dp
-private val LANE_WIDTH = 18.dp
+// lane 幅は詰めて、かつペイン幅依存で縦横が変わらないよう小さめに固定する(下の cap はほぼ非常時のみ)。
+private val LANE_WIDTH = 12.dp
 private val NODE_RADIUS = 5.dp
 private val LINE_WIDTH = 2.dp
-/** グラフ列が占めてよいペイン幅の上限割合(残りはメッセージ列)。lane が多いと lane 幅を縮める。 */
+/** グラフ列が占めてよいペイン幅の上限割合(残りはメッセージ列)。lane が極端に多い時だけ更に縮める安全弁。 */
 private const val GRAPH_MAX_FRACTION = 0.5f
 
 @OptIn(ExperimentalMaterial3Api::class)
