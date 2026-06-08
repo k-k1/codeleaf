@@ -224,7 +224,12 @@ fun GitReaderApp() {
 
     // onItemSelected はドロワー再利用時に「遷移したら閉じる」ために各導線の手前で呼ぶ(既定 no-op)。
     @Composable
-    fun RailPane(selectedRepoId: Long?, onCollapse: (() -> Unit)? = null, onItemSelected: () -> Unit = {}) {
+    fun RailPane(
+        selectedRepoId: Long?,
+        onCollapse: (() -> Unit)? = null,
+        onItemSelected: () -> Unit = {},
+        compact: Boolean = false,
+    ) {
         // 選択中グループが消えていたら「すべて」に退避。
         val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in allGroups } ?: ""
         val shownRepos = if (selectedGroup.isEmpty()) repos else repos.filter { it.groupName == selectedGroup }
@@ -246,6 +251,7 @@ fun GitReaderApp() {
             onSelectGroup = vm::setSelectedGroup,
             selectedRepoId = selectedRepoId,
             onCollapse = onCollapse,
+            compact = compact,
         )
     }
 
@@ -307,7 +313,7 @@ fun GitReaderApp() {
             if (!railCollapsed) {
                 Box(Modifier.weight(0.25f)) {
                     GitReaderTheme(settings.defaultTheme) {
-                        RailPane(selectedRepoId, onCollapse = { railCollapsed = true })
+                        RailPane(selectedRepoId, onCollapse = { railCollapsed = true }, compact = true)
                     }
                 }
                 VerticalDivider()
@@ -334,7 +340,7 @@ fun GitReaderApp() {
         Screen.List -> BoxWithConstraints {
             if (maxWidth >= THREE_PANE_MIN_WIDTH) {
                 Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(0.25f)) { RailPane(selectedRepoId = null) }
+                    Box(Modifier.weight(0.25f)) { RailPane(selectedRepoId = null, compact = true) }
                     VerticalDivider()
                     Box(Modifier.weight(0.75f)) { SelectPlaceholder("リポジトリを選択") }
                 }
