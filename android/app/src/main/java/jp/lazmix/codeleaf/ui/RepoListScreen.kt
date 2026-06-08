@@ -47,8 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.BuildConfig
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.db.CloneState
 import jp.lazmix.codeleaf.data.db.Repo
@@ -153,37 +155,47 @@ fun RepoListScreen(
             if (status.busy) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
-            if (repos.isEmpty()) {
-                Column(
-                    Modifier.fillMaxSize().padding(24.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("リポジトリが未登録です", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "右上の + から GitHub / Bitbucket のリポジトリを追加してください",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            } else {
-                LazyColumn(
-                    Modifier.fillMaxSize().padding(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(repos, key = { it.id }) { repo ->
-                        RepoCard(
-                            repo,
-                            selected = repo.id == selectedRepoId,
-                            onOpen = { onOpen(repo) },
-                            onOpenGraph = { onOpenGraph(repo) },
-                            onOpenFavorites = { onOpenFavorites(repo) },
-                            onSync = { onSync(repo) },
-                            onRetry = { onRetry(repo) },
-                            onDelete = { onDelete(repo) },
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                if (repos.isEmpty()) {
+                    Column(
+                        Modifier.fillMaxSize().padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("リポジトリが未登録です", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "右上の + から GitHub / Bitbucket のリポジトリを追加してください",
+                            style = MaterialTheme.typography.bodyMedium,
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(repos, key = { it.id }) { repo ->
+                            RepoCard(
+                                repo,
+                                selected = repo.id == selectedRepoId,
+                                onOpen = { onOpen(repo) },
+                                onOpenGraph = { onOpenGraph(repo) },
+                                onOpenFavorites = { onOpenFavorites(repo) },
+                                onSync = { onSync(repo) },
+                                onRetry = { onRetry(repo) },
+                                onDelete = { onDelete(repo) },
+                            )
+                        }
                     }
                 }
             }
+            // リポ一覧の拠点(全画面/≡ドロワー/3ペイン展開レール)の最下部にバージョンを常設。
+            Text(
+                "CodeLeaf ${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            )
         }
     }
 }
