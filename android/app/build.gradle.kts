@@ -21,6 +21,15 @@ fun secretProp(vararg names: String): String =
     (names.firstNotNullOfOrNull { localProps.getProperty(it)?.trim()?.takeIf { v -> v.isNotEmpty() } } ?: "")
         .replace("\\", "\\\\").replace("\"", "\\\"")
 
+// バージョンは一箇所で管理し、versionCode は versionName から機械的に算出する(付け忘れ防止)。
+// 例: 0.2.0 -> 0*10000 + 2*100 + 0 = 200。配布のたびに versionName を上げれば code も単調増加する。
+val appVersionName = "0.2.0"
+val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
+
+// リリース署名情報は local.properties(git管理外)から読む。未設定なら release は未署名のまま(CI等で安全)。
+fun localProp(name: String): String? = localProps.getProperty(name)?.trim()?.takeIf { it.isNotEmpty() }
+val releaseKeystorePath = localProp("RELEASE_KEYSTORE")
+
 android {
     namespace = "jp.lazmix.codeleaf"
     compileSdk = 35
@@ -29,14 +38,27 @@ android {
         applicationId = "jp.lazmix.codeleaf"
         minSdk = 31
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_ID", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_ID", "BITBUCKET_OAUTH_ID")}\"")
         buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_SECRET", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_SECRET", "BITBUCKET_OAUTH_SECRET")}\"")
         // GitHub Device Flow は client_id のみ（secret 不要・失効しない user token を使う）。
         buildConfigField("String", "GITHUB_OAUTH_CLIENT_ID", "\"${secretProp("GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_ID")}\"")
+    }
+
+    // リリース署名。鍵・パスワードは local.properties から読み、リポには入れない。
+    // keytool -genkeypair -v -keystore <path> -alias <alias> -keyalg RSA -keysize 2048 -validity 10000
+    signingConfigs {
+        if (releaseKeystorePath != null && file(releaseKeystorePath).exists()) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = localProp("RELEASE_STORE_PASSWORD")
+                keyAlias = localProp("RELEASE_KEY_ALIAS")
+                keyPassword = localProp("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -46,6 +68,21 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // 鍵が未設定なら null のまま=未署名(ビルドは通る。配布には署名が必要)。
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+
+    // APK のファイル名を codeleaf-<versionName>.apk にする(release は接尾辞なし)。
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = if (variant.buildType.name == "release") {
+                "codeleaf-${variant.versionName}.apk"
+            } else {
+                "codeleaf-${variant.versionName}-${variant.buildType.name}.apk"
+            }
         }
     }
 
