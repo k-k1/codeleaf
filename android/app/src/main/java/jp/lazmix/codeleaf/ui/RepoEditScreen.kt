@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import jp.lazmix.codeleaf.data.db.CloneState
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.RepoColor
 
@@ -325,8 +327,9 @@ private fun DropZoneRow() {
     }
 }
 
-/** リポ1枚のカード。選んだ色をリポ一覧と同等に反映(左アクセントバー＋淡い色地)。
- *  左にドラッグハンドル(セクション間移動)、名前の右に host・ブランチ、下に色ドット、右端に削除。 */
+/** リポ1枚のカード。選んだ色はリポ一覧と同様に左端の縦バーだけで示す(地は淡く塗らない)。
+ *  左にドラッグハンドル(セクション間移動)、名前の右に host・ブランチ、下に色ドット、右端に削除。
+ *  clone 中はリポ一覧と同様に下部へ進捗バーを出す。 */
 @Composable
 private fun RepoEditCard(
     repo: Repo,
@@ -337,14 +340,10 @@ private fun RepoEditCard(
     dragModifier: Modifier,
 ) {
     val accent = repo.colorTag.accent()
-    // リポ一覧の選択パネルと同じく、色付きは淡くハイライト(色なしは既定)。
-    val colors = if (accent != null) {
-        CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.22f))
-    } else {
-        CardDefaults.cardColors()
-    }
+    val cloning = repo.cloneState == CloneState.CLONING
     Card(
-        colors = colors,
+        // 地色は塗らず既定のまま。色はリポ一覧と同じく左端バーのみで主張を抑える。
+        colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(defaultElevation = if (dragging) 8.dp else 1.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -352,6 +351,7 @@ private fun RepoEditCard(
             .zIndex(if (dragging) 1f else 0f)
             .graphicsLayer { translationY = dragOffset },
     ) {
+      Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             // 左端のアクセント色バー(色なしは透明)。リポ一覧と揃える。
             Box(Modifier.width(6.dp).fillMaxHeight().background(accent ?: Color.Transparent))
@@ -394,10 +394,20 @@ private fun RepoEditCard(
                     }
                 }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "削除")
+            // clone 中は削除不可(完了前に消さない)。完了後/失敗時のみ削除ボタンを出す。
+            if (!cloning) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "削除")
+                }
             }
         }
+        // clone 中はリポ一覧と同様にカード下端へ進捗バーを出す。
+        if (cloning) {
+            LinearProgressIndicator(
+                Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+            )
+        }
+      }
     }
 }
 
