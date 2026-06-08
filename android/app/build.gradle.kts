@@ -131,6 +131,8 @@ android {
     // Gradle Managed Devices: system image は git に入れず、ここでデバイスを宣言する。
     // 実行: ./gradlew pixel6Api35DebugAndroidTest （Gradle が system image を自動取得しヘッドレス実行）
     testOptions {
+        // JVM 単体テストで android.util.Log 等の未モック呼び出しを例外でなくデフォルト値にする。
+        unitTests.isReturnDefaultValues = true
         managedDevices {
             localDevices {
                 create("pixel6Api35") {

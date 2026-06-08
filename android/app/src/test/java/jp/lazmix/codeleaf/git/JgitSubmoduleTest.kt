@@ -1,6 +1,7 @@
 package jp.lazmix.codeleaf.git
 
 import org.eclipse.jgit.api.Git
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -54,5 +55,19 @@ class JgitSubmoduleTest {
         // submodule が検出され、実体ファイルも取得されている
         assertTrue("vendor/sub" in client.submodulePaths(cloneDir))
         assertTrue(File(cloneDir, "vendor/sub/LIB.md").exists())
+    }
+
+    @Test
+    fun sshToHttps_convertsScpAndSshForms_leavesOthers() {
+        // scp 形式
+        assertEquals("https://bitbucket.org/ws/g3-core.git", sshToHttps("git@bitbucket.org:ws/g3-core.git"))
+        assertEquals("https://github.com/owner/repo.git", sshToHttps("git@github.com:owner/repo.git"))
+        // ssh:// 形式（user/port あり）
+        assertEquals("https://bitbucket.org/ws/g3-core.git", sshToHttps("ssh://git@bitbucket.org/ws/g3-core.git"))
+        assertEquals("https://github.com/owner/repo.git", sshToHttps("ssh://git@github.com:22/owner/repo.git"))
+        // HTTPS/相対/file はそのまま
+        assertEquals("https://bitbucket.org/ws/repo.git", sshToHttps("https://bitbucket.org/ws/repo.git"))
+        assertEquals("../g3-core.git", sshToHttps("../g3-core.git"))
+        assertEquals("file:///tmp/x", sshToHttps("file:///tmp/x"))
     }
 }

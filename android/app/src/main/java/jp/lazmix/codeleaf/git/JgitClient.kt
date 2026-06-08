@@ -87,6 +87,26 @@ internal fun graphRefDisplayName(fullName: String): String? = when {
  *   clone / sync(fetch+reset --hard+clean) / listBranches。
  * add/commit/push は提供しない。
  */
+private const val SUBMODULE_TAG = "JgitSubmodule"
+
+/**
+ * SSH 形式の git URL を HTTPS に変換する（変換不要ならそのまま返す）。submodule 用。
+ * 認証はトークン(HTTPS)で行うため、SSH のままだと JGit が取得できず submodule が空になる。
+ * 対応: scp 形式 `user@host:owner/repo(.git)` と `ssh://[user@]host[:port]/owner/repo(.git)`。
+ */
+internal fun sshToHttps(url: String): String {
+    val u = url.trim()
+    // scp 形式: user@host:path（"http(s)://..." は '/' を含むため [^@/] に阻まれ誤マッチしない）。
+    Regex("""^[^@/\s]+@([^:/\s]+):(.+)$""").matchEntire(u)?.let {
+        return "https://${it.groupValues[1]}/${it.groupValues[2].removePrefix("/")}"
+    }
+    // ssh://[user@]host[:port]/path
+    Regex("""^ssh://(?:[^@/\s]+@)?([^:/\s]+)(?::\d+)?/(.+)$""").matchEntire(u)?.let {
+        return "https://${it.groupValues[1]}/${it.groupValues[2]}"
+    }
+    return u
+}
+
 class JgitClient {
 
     private val allBranchesRefSpec = RefSpec("+refs/heads/*:refs/remotes/origin/*")
@@ -286,16 +306,36 @@ class JgitClient {
     }
 
     /**
-     * submodule を init + update（取得）。public submodule のみ想定の最小対応（1階層）。
-     * 読み取り専用リーダーのため、submodule の取得失敗は致命にせず無視する
-     * （親リポは利用可能なまま、当該 submodule ディレクトリが空になるだけ）。
+     * submodule を init + update（取得）。public/private submodule の HTTPS 取得を想定（1階層）。
+     * submoduleInit が .gitmodules の URL を .git/config へ展開する（相対URLは親originから解決）。
+     * その後、JGit が扱えない SSH URL（git@host:.. / ssh://..）を HTTPS に書き換えてから update する。
+     * 認証は親リポと同じ [cp]（token）を使う。読み取り専用リーダーのため取得失敗は致命にしない。
      */
     private fun updateSubmodules(git: Git, cp: CredentialsProvider?) {
-        runCatching {
+        try {
             val inited = git.submoduleInit().call()
-            if (inited.isNotEmpty()) {
-                git.submoduleUpdate().setCredentialsProvider(cp).call()
+            val cfg = git.repository.config
+            val names = cfg.getSubsections("submodule")
+            // SSH URL を HTTPS へ書き換える（JGit は SSH 未設定で SSH submodule を取得できないため）。
+            var changed = false
+            for (name in names) {
+                val url = cfg.getString("submodule", name, "url") ?: continue
+                val https = sshToHttps(url)
+                if (https != url) {
+                    cfg.setString("submodule", name, "url", https)
+                    changed = true
+                    android.util.Log.w(SUBMODULE_TAG, "rewrite submodule '$name': $url -> $https")
+                }
             }
+            if (changed) cfg.save()
+            android.util.Log.w(SUBMODULE_TAG, "init=${inited.size} submodules=$names")
+            if (names.isNotEmpty()) {
+                git.submoduleUpdate().setCredentialsProvider(cp).call()
+                android.util.Log.w(SUBMODULE_TAG, "submoduleUpdate done")
+            }
+        } catch (e: Exception) {
+            // 取得失敗は親リポを使えるよう致命にせず、原因究明のためログには残す。
+            android.util.Log.w(SUBMODULE_TAG, "submodule update failed: ${e.message}", e)
         }
     }
 
