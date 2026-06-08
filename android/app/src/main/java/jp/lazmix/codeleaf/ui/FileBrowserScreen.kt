@@ -517,7 +517,11 @@ private fun EntryRow(
                     )
                 }
                 // submodule はファイル名でなくフラグで分かるので、AI 等と同様にバッジで明示する。
-                if (entry.isSubmodule) MarkChip("submodule", cs.primary)
+                // 未取得(取得失敗で空)は赤の「未取得」にして再同期を促す。
+                if (entry.isSubmodule) {
+                    if (entry.submoduleUnfetched) MarkChip("未取得", cs.error)
+                    else MarkChip("SUB", cs.primary)
+                }
                 chip?.let { (label, color) -> MarkChip(label, color) }
             }
         }

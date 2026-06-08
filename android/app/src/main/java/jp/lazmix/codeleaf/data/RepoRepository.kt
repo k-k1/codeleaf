@@ -39,6 +39,8 @@ data class FileEntry(
     val isDir: Boolean,
     /** git submodule のルートディレクトリ。 */
     val isSubmodule: Boolean = false,
+    /** submodule だが中身が未取得（取得失敗等で空）。再同期で取得を促す表示に使う。 */
+    val submoduleUnfetched: Boolean = false,
     /** Git LFS のポインタファイル（実体は未取得・Viewer では開かない）。 */
     val isLfs: Boolean = false,
     /** 一覧表示名。単一子フォルダ連鎖を畳むと "src/main/java" のような連結になる（既定は name）。 */
@@ -293,11 +295,14 @@ class RepoRepository(
             val sorted = children
                 .map { f ->
                     val rel = joinRel(relPath, f.name)
+                    val isSub = f.isDirectory && rel in subPaths
                     FileEntry(
                         name = f.name,
                         relPath = rel,
                         isDir = f.isDirectory,
-                        isSubmodule = f.isDirectory && rel in subPaths,
+                        isSubmodule = isSub,
+                        // submodule なのに中身が空(.git のみ/空)＝未取得。取得失敗を一覧で気づけるようにする。
+                        submoduleUnfetched = isSub && f.listFiles().orEmpty().none { it.name != ".git" },
                         isLfs = !f.isDirectory && isLfsPointer(f),
                     )
                 }

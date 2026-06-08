@@ -80,7 +80,9 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   `RepoRepository.sync` はリポ毎 Mutex で直列化し、実行中は FileBrowser をブロックする。
 - **submodule**(`JgitClient.updateSubmodules`): clone/sync 後に init→update(1階層)。`.gitmodules` が **SSH URL**
   (`git@host:..`/`ssh://..`)だと JGit が取得できないため `sshToHttps` で **HTTPS に書換えてから** update(認証は親と同じ token cp)。
-  取得失敗は致命にせず `Log.w(JgitSubmodule)` に残す(親リポは使える)。メイン URL の https 選択は Bitbucket API 側(`httpsCloneHref`)。
+  **submodule 毎に個別 update＋リトライ**(`SUBMODULE_RETRIES`・1個の失敗が他を巻き込まない)。取得失敗は致命にせず `Log.w(JgitSubmodule)`。
+  **未取得の可視化**: `listDir` が空の submodule ディレクトリを `FileEntry.submoduleUnfetched` にし、ブラウザで赤「未取得」バッジ(通常は紫「SUB」)。
+  メイン URL の https 選択は Bitbucket API 側(`httpsCloneHref`)。
 - **diff 表示**(`DiffScreen.kt` `DiffText`/`parseDiffRows`): `diff --git`/index/---/+++ 等のノイズ行を畳みファイル名ヘッダ帯に
   (非ASCIIは `gitUnquotePath` で8進復元)。ファイル毎に折りたたみ(`groupDiffByFile`)、追加緑/削除赤背景、@@ から行番号ガター、長行は自動改行。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。

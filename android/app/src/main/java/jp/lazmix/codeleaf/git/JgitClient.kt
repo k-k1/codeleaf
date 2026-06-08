@@ -88,6 +88,7 @@ internal fun graphRefDisplayName(fullName: String): String? = when {
  * add/commit/push は提供しない。
  */
 private const val SUBMODULE_TAG = "JgitSubmodule"
+private const val SUBMODULE_RETRIES = 3
 
 /**
  * SSH 形式の git URL を HTTPS に変換する（変換不要ならそのまま返す）。submodule 用。
@@ -329,13 +330,29 @@ class JgitClient {
             }
             if (changed) cfg.save()
             android.util.Log.w(SUBMODULE_TAG, "init=${inited.size} submodules=$names")
-            if (names.isNotEmpty()) {
-                git.submoduleUpdate().setCredentialsProvider(cp).call()
-                android.util.Log.w(SUBMODULE_TAG, "submoduleUpdate done")
+            // submodule ごとに update する(1個の失敗が他を巻き込まないよう個別に)。
+            // 一時的なネットワーク失敗に備え数回リトライ(バックオフ)。失敗は致命にせず残す。
+            for (name in names) {
+                val path = cfg.getString("submodule", name, "path") ?: name
+                var ok = false
+                var lastErr: Throwable? = null
+                for (attempt in 1..SUBMODULE_RETRIES) {
+                    try {
+                        git.submoduleUpdate().addPath(path).setCredentialsProvider(cp).call()
+                        ok = true
+                        break
+                    } catch (e: Exception) {
+                        lastErr = e
+                        android.util.Log.w(SUBMODULE_TAG, "update '$path' attempt $attempt/$SUBMODULE_RETRIES failed: ${e.message}")
+                        if (attempt < SUBMODULE_RETRIES) runCatching { Thread.sleep(400L * attempt) }
+                    }
+                }
+                if (ok) android.util.Log.w(SUBMODULE_TAG, "submodule '$path' updated")
+                else android.util.Log.w(SUBMODULE_TAG, "submodule '$path' gave up after $SUBMODULE_RETRIES tries", lastErr)
             }
         } catch (e: Exception) {
-            // 取得失敗は親リポを使えるよう致命にせず、原因究明のためログには残す。
-            android.util.Log.w(SUBMODULE_TAG, "submodule update failed: ${e.message}", e)
+            // init 等の段階失敗は親リポを使えるよう致命にせず、原因究明のためログには残す。
+            android.util.Log.w(SUBMODULE_TAG, "submodule phase failed: ${e.message}", e)
         }
     }
 
