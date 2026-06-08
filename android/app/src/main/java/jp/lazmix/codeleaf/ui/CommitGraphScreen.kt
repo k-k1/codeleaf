@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.git.GraphCommit
 import jp.lazmix.codeleaf.render.GitGraphLayout
@@ -55,6 +57,8 @@ private val ROW_HEIGHT = 56.dp
 private val LANE_WIDTH = 18.dp
 private val NODE_RADIUS = 5.dp
 private val LINE_WIDTH = 2.dp
+/** グラフ列が占めてよいペイン幅の上限割合(残りはメッセージ列)。lane が多いと lane 幅を縮める。 */
+private const val GRAPH_MAX_FRACTION = 0.5f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,18 +107,24 @@ fun CommitGraphScreen(
                 // 同期後はコミットが増減しうるので再読込(rows/laneCount は commits から再算出)。
                 onReload = { commits = runCatching { loadGraph() }.getOrElse { error = it.message; emptyList() } },
             ) {
-                when {
-                    commits == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                    error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
-                    rows.isEmpty() -> Text("コミットがありません", Modifier.padding(16.dp))
-                    else -> LazyColumn(Modifier.fillMaxSize()) {
-                        items(rows, key = { it.commit.sha }) { row ->
-                            GraphCommitRow(
-                                row = row,
-                                laneCount = laneCount,
-                                selected = row.commit.sha == selectedSha,
-                                onClick = { onSelectCommit(row.commit) },
-                            )
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    // ブランチ(lane)が多いとグラフ列が広がりメッセージ列を潰すので、グラフ列は
+                    // ペイン幅の最大 GRAPH_MAX_FRACTION に抑え、収まらなければ lane 幅を縮める。
+                    val laneW = minOf(LANE_WIDTH, (maxWidth * GRAPH_MAX_FRACTION) / laneCount.coerceAtLeast(1))
+                    when {
+                        commits == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                        error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
+                        rows.isEmpty() -> Text("コミットがありません", Modifier.padding(16.dp))
+                        else -> LazyColumn(Modifier.fillMaxSize()) {
+                            items(rows, key = { it.commit.sha }) { row ->
+                                GraphCommitRow(
+                                    row = row,
+                                    laneCount = laneCount,
+                                    laneW = laneW,
+                                    selected = row.commit.sha == selectedSha,
+                                    onClick = { onSelectCommit(row.commit) },
+                                )
+                            }
                         }
                     }
                 }
@@ -124,14 +134,14 @@ fun CommitGraphScreen(
 }
 
 @Composable
-private fun GraphCommitRow(row: GraphRow, laneCount: Int, selected: Boolean, onClick: () -> Unit) {
+private fun GraphCommitRow(row: GraphRow, laneCount: Int, laneW: Dp, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .height(ROW_HEIGHT)
             .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .clickable(onClick = onClick),
     ) {
-        GraphCell(row, laneCount, Modifier.width(LANE_WIDTH * laneCount).fillMaxHeight())
+        GraphCell(row, laneCount, laneW, Modifier.width(laneW * laneCount).fillMaxHeight())
         Column(
             Modifier.weight(1f).fillMaxHeight().padding(end = 12.dp),
             verticalArrangement = Arrangement.Center,
@@ -182,12 +192,13 @@ internal fun RefChip(name: String) {
 }
 
 @Composable
-private fun GraphCell(row: GraphRow, laneCount: Int, modifier: Modifier) {
+private fun GraphCell(row: GraphRow, laneCount: Int, laneWidth: Dp, modifier: Modifier) {
     // 中空ノードの内側を塗って下のレーン線が透けないようにする色。
     val nodeFill = MaterialTheme.colorScheme.surface
     Canvas(modifier) {
-        val laneW = LANE_WIDTH.toPx()
-        val r = NODE_RADIUS.toPx()
+        val laneW = laneWidth.toPx()
+        // lane 幅を縮めたときはノードもはみ出さないよう半径を抑える。
+        val r = minOf(NODE_RADIUS.toPx(), laneW * 0.4f)
         val sw = LINE_WIDTH.toPx()
         val centerY = size.height / 2f
         fun laneX(i: Int) = laneW / 2f + i * laneW
