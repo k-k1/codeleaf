@@ -621,13 +621,15 @@ fun GitReaderApp() {
             LaunchedEffect(repo.id) { graphSelected = null }
 
             @Composable
-            fun GraphPane(selectedSha: String?, onSelect: (GraphCommit) -> Unit) {
+            fun GraphPane(selectedSha: String?, multiPane: Boolean, onSelect: (GraphCommit) -> Unit) {
                 // リポ毎に作り直す。これがないと別リポのグラフに切替えても LaunchedEffect が
                 // 再実行されず前リポのコミットが残り、タップ時に commitDiff が別リポ SHA で失敗する。
                 key(repo.id) {
                     CommitGraphScreen(
                         repoName = repo.name,
+                        branch = repo.branch,
                         accentColor = repoAvatarColor(repo),
+                        multiPane = multiPane,
                         loadGraph = { vm.commitGraph(repo) },
                         onBack = { handleBack() },
                         selectedSha = selectedSha,
@@ -644,7 +646,7 @@ fun GitReaderApp() {
                 @Composable
                 fun ContentPanes() {
                     if (!two) {
-                        GraphPane(selectedSha = null, onSelect = { navigate(Screen.CommitDetail(repo, it)) })
+                        GraphPane(selectedSha = null, multiPane = false, onSelect = { navigate(Screen.CommitDetail(repo, it)) })
                     } else {
                         val sel = graphSelected
                         // コミット選択中だけ一覧を畳める(未選択時は一覧を出す)。
@@ -652,7 +654,7 @@ fun GitReaderApp() {
                         Row(Modifier.fillMaxSize()) {
                             if (showList) {
                                 Box(Modifier.weight(0.45f)) {
-                                    GraphPane(selectedSha = sel?.sha, onSelect = { graphSelected = it })
+                                    GraphPane(selectedSha = sel?.sha, multiPane = true, onSelect = { graphSelected = it })
                                 }
                                 VerticalDivider()
                             }
