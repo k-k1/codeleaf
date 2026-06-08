@@ -44,8 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -160,6 +161,7 @@ fun CommitGraphScreen(
                                     row = row,
                                     laneCount = laneCount,
                                     laneW = laneW,
+                                    currentBranch = branch,
                                     selected = row.commit.sha == selectedSha,
                                     onClick = { onSelectCommit(row.commit) },
                                 )
@@ -173,7 +175,14 @@ fun CommitGraphScreen(
 }
 
 @Composable
-private fun GraphCommitRow(row: GraphRow, laneCount: Int, laneW: Dp, selected: Boolean, onClick: () -> Unit) {
+private fun GraphCommitRow(
+    row: GraphRow,
+    laneCount: Int,
+    laneW: Dp,
+    currentBranch: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth()
             .height(ROW_HEIGHT)
@@ -187,7 +196,7 @@ private fun GraphCommitRow(row: GraphRow, laneCount: Int, laneW: Dp, selected: B
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 row.commit.refs.forEach { ref ->
-                    RefChip(ref)
+                    RefChip(ref, isCurrent = ref == currentBranch)
                 }
                 Text(
                     row.commit.shortMessage,
@@ -214,10 +223,11 @@ private fun GraphCommitRow(row: GraphRow, laneCount: Int, laneW: Dp, selected: B
 }
 
 @Composable
-internal fun RefChip(name: String) {
+internal fun RefChip(name: String, isCurrent: Boolean = false) {
+    // 現在チェックアウト中ブランチは塗りつぶし(primary)＋太字で「現在地」を強調する。
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
         shape = RoundedCornerShape(4.dp),
         modifier = Modifier.padding(end = 4.dp),
     ) {
@@ -225,6 +235,7 @@ internal fun RefChip(name: String) {
             name,
             style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
+            fontWeight = if (isCurrent) FontWeight.Bold else null,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
         )
     }

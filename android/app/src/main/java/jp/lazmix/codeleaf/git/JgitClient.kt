@@ -65,6 +65,21 @@ data class GraphCommit(
 ) : Parcelable
 
 /**
+ * コミットグラフ chip 用の ref 表示名。読み取りミラーなので冗長さを避ける純粋関数:
+ * - ローカルブランチ(refs/heads 配下) は出さない(null) … リモートと重複するため
+ * - リモートブランチ(refs/remotes 配下) は remote 名を剥がす(origin/main → main)。origin/HEAD は除外
+ * - タグ(refs/tags 配下) はそのまま
+ * - それ以外(refs/stash 等) は出さない
+ */
+internal fun graphRefDisplayName(fullName: String): String? = when {
+    fullName.startsWith("refs/heads/") -> null
+    fullName.startsWith("refs/remotes/") ->
+        fullName.removePrefix("refs/remotes/").substringAfter('/').takeIf { it != "HEAD" }
+    fullName.startsWith("refs/tags/") -> fullName.removePrefix("refs/tags/")
+    else -> null
+}
+
+/**
  * JGit を薄くラップした git クライアント。全メソッドはブロッキング I/O のため、
  * 呼び出し側 (RepoRepository) で Dispatchers.IO に載せること。
  *
@@ -231,11 +246,13 @@ class JgitClient {
                 }
             }
 
-            // sha -> その位置を指す ref 短縮名
+            // sha -> その位置を指す ref 表示名。読み取りミラーなのでローカル(refs/heads)は出さず、
+            // リモートブランチは origin/ を剥がし、タグはそのまま(graphRefDisplayName)。
             val refNames = HashMap<String, MutableList<String>>()
             for (ref in allRefs) {
+                val display = graphRefDisplayName(ref.name) ?: continue
                 val id = repo.refDatabase.peel(ref).peeledObjectId ?: ref.objectId ?: continue
-                refNames.getOrPut(id.name) { ArrayList() }.add(Repository.shortenRefName(ref.name))
+                refNames.getOrPut(id.name) { ArrayList() }.add(display)
             }
 
             RevWalk(repo).use { rw ->
@@ -257,7 +274,7 @@ class JgitClient {
                             fullMessage = c.fullMessage,
                             author = c.authorIdent.name,
                             committedAt = c.committerIdent.whenAsInstant,
-                            refs = refNames[c.name].orEmpty().sorted(),
+                            refs = refNames[c.name].orEmpty().distinct().sorted(),
                             // HEAD を解決できなかった時(集合が空)は全て反映済み扱い(全グレー化を回避)。
                             inCurrentBranch = reachableFromHead.isEmpty() || c.name in reachableFromHead,
                         ),
