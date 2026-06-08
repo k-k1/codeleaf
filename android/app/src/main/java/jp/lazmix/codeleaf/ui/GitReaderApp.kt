@@ -546,7 +546,8 @@ fun GitReaderApp() {
                 val three = maxWidth >= THREE_PANE_MIN_WIDTH
                 val two = maxWidth >= TWO_PANE_MIN_WIDTH
                 val file = detailStack.lastOrNull()
-                val focused = focusMode && file != null
+                // 集中モード(全幅)は多ペインでのみ意味を持つ。1ペインは常に全幅なので無効化する。
+                val focused = focusMode && file != null && two
 
                 when {
                     // 集中モード: レール・一覧を隠して全幅ビューア。
@@ -589,11 +590,8 @@ fun GitReaderApp() {
                                     Box(Modifier.weight(0.6f)) { ViewerArea(file, showBack = false) }
                                 }
                             } else if (file != null) {
-                                // 1ペインでファイル表示: ←=閉じる + 集中ハンドル。ドロワーはブラウザに戻ってから。
-                                Box(Modifier.fillMaxSize()) {
-                                    ViewerPane(file, showBack = true)
-                                    FocusHandle()
-                                }
+                                // 1ペインでファイル表示: 常に全幅なので集中ハンドル(○<)は出さない。←=閉じる。
+                                ViewerPane(file, showBack = true)
                             } else {
                                 BrowserPane(threePane = false, onMenu = openDrawer)
                             }
