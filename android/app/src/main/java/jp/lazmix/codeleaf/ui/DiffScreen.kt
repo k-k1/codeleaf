@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -53,6 +57,10 @@ fun DiffScreen(
     onBack: () -> Unit,
 ) {
     Scaffold(
+        // 本文(DiffText)が自前の下部バーで navigationBars を padding するため、
+        // Scaffold 側のコンテンツインセットからは navigationBars を除外し二重計上を防ぐ
+        // (縦1ペインでバー下に余白が二重に入っていた)。
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.navigationBars),
         topBar = {
             TopAppBar(
                 title = { Text("diff ${shortSha(commit.sha)}") },
@@ -311,8 +319,21 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
                 Spacer(Modifier.height(12.dp))
             }
         }
-        // 下部バー: Viewer と同様に折り返しを切替。
+        // 下部バー: 左=全ファイルの折りたたみ一括操作(2ファイル以上のとき)/ 右=折り返し切替(Viewer と同様)。
         SlimBottomBar {
+            if (files.size > 1) {
+                // 1つでも展開中なら「すべて折りたたむ」、全て畳んでいれば「すべて展開」。
+                val allCollapsed = files.indices.all { collapsed[it] == true }
+                TextButton(onClick = { files.indices.forEach { collapsed[it] = !allCollapsed } }) {
+                    Icon(
+                        if (allCollapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (allCollapsed) "すべて展開" else "すべて折りたたむ")
+                }
+            }
             Spacer(Modifier.weight(1f))
             TextButton(
                 onClick = { wrap = !wrap; settingsStore.setDiffWrap(wrap) },
