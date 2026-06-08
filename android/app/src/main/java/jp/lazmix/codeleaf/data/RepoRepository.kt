@@ -456,9 +456,11 @@ class RepoRepository(
         updated
     }
 
-    /** カード色(プリセット)を変更して保存する。 */
-    suspend fun setColor(repo: Repo, color: RepoColor) = withContext(ioDispatcher) {
-        dao.update(repo.copy(colorTag = color))
+    /** カード色(プリセット)を変更して保存する。更新後の [Repo] を返す。 */
+    suspend fun setColor(repo: Repo, color: RepoColor): Repo = withContext(ioDispatcher) {
+        val updated = repo.copy(colorTag = color)
+        dao.update(updated)
+        updated
     }
 
     /** 所属グループ(Working Set)を変更して保存する。空=未分類。 */

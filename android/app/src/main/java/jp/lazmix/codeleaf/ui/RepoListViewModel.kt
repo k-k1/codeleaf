@@ -165,8 +165,10 @@ class RepoListViewModel(
         viewModelScope.launch { runCatching { repository.delete(repo) } }
     }
 
-    fun setRepoColor(repo: Repo, color: jp.lazmix.codeleaf.data.db.RepoColor) {
-        viewModelScope.launch { runCatching { repository.setColor(repo, color) } }
+    fun setRepoColor(repo: Repo, color: jp.lazmix.codeleaf.data.db.RepoColor, onDone: (Repo) -> Unit = {}) {
+        viewModelScope.launch {
+            runCatching { repository.setColor(repo, color) }.getOrNull()?.let(onDone)
+        }
     }
 
     /** リポ一覧で表示するグループを選択(空=すべて)。 */

@@ -232,8 +232,8 @@ fun GitReaderApp() {
         focusMode = false
     }
 
-    // リポ毎テーマ変更を backStack / detailStack 内の同一リポ全画面へ反映する。
-    fun applyThemeUpdate(updated: Repo) {
+    // リポ更新(テーマ/色など)を backStack / detailStack 内の同一リポ全画面スナップショットへ即反映する。
+    fun applyRepoUpdate(updated: Repo) {
         for (idx in backStack.indices) {
             val s = backStack[idx]
             if (s is Screen.WithRepo && s.repo.id == updated.id) backStack[idx] = s.withRepo(updated)
@@ -409,7 +409,7 @@ fun GitReaderApp() {
             repos = repos,
             groups = allGroups,
             onReorderAndGroup = vm::saveRepoGroupsAndOrder,
-            onSetColor = vm::setRepoColor,
+            onSetColor = { r, color -> vm.setRepoColor(r, color) { updated -> applyRepoUpdate(updated) } },
             onDelete = vm::delete,
             onAddGroup = vm::addGroup,
             onRenameGroup = vm::renameGroup,
@@ -473,7 +473,7 @@ fun GitReaderApp() {
                     favoritePaths = favorites.mapTo(HashSet()) { it.relPath },
                     onToggleFavorite = { e -> vm.toggleFavorite(repo.id, e.relPath, e.isDir) },
                     onNavigateToDir = { target -> navigateToDir(repo, target) },
-                    onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
+                    onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyRepoUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
                     onOpenFile = {
                         if (detailStack.lastOrNull()?.filePath != it) pushDetail(Screen.View(repo, it))

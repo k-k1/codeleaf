@@ -131,8 +131,9 @@ fun FileBrowserScreen(
     val snackbar = remember { SnackbarHostState() }
     // ブランチ切替(busy)や同期(refreshing)中は、同一作業ツリーへの並行操作を防ぐためロックする。
     val locked = busy || refreshing
-    // リポ色(NONE は名前ハッシュの自動色)。左端バーと同色で、パンくず上の横線に使う。
-    val accentColor = repoAvatarColor(repo)
+    // パンくず上の横線に使うリポ色。色なし(NONE)はリスト同様に中立グレー(outline)にする
+    // (名前ハッシュの自動色=アバター色は使わない。一覧カードと挙動を合わせる)。
+    val accentColor = repo.colorTag.accent() ?: MaterialTheme.colorScheme.outline
 
     LaunchedEffect(repo.id, path) {
         error = null
