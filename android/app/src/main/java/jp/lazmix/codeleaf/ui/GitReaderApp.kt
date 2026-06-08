@@ -134,6 +134,14 @@ fun GitReaderApp() {
             restore = { it.toMutableStateList() },
         ),
     ) { mutableStateListOf<Screen.View>() }
+    // detailStack と並走し、各ファイルを開いた時点の backStack 深さ(=フォルダ階層の深さ)を記録する。
+    // 戻る時に「ファイルを開いた後にフォルダを潜ったか」を深さ比較で判定するために使う。
+    val detailDepth = rememberSaveable(
+        saver = listSaver<SnapshotStateList<Int>, Int>(
+            save = { it.toList() },
+            restore = { it.toMutableStateList() },
+        ),
+    ) { mutableStateListOf<Int>() }
     // コミットグラフ2/3ペインで右に出す選択コミット。
     var graphSelected by rememberSaveable { mutableStateOf<GraphCommit?>(null) }
     // ファイル履歴2/3ペインで右に出す選択コミット(CommitInfo は非Parcelableのため非保存・回転は維持)。
@@ -150,20 +158,46 @@ fun GitReaderApp() {
     fun navigate(s: Screen) = backStack.add(s)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
 
+    // detailStack(開いているファイル)を深さ記録と同期して操作する。深さは戻る判定に使う。
+    fun pushDetail(v: Screen.View) { detailStack.add(v); detailDepth.add(backStack.size) }
+    fun popDetail() {
+        detailStack.removeAt(detailStack.lastIndex)
+        if (detailDepth.isNotEmpty()) detailDepth.removeAt(detailDepth.lastIndex)
+    }
+    fun clearDetails() { detailStack.clear(); detailDepth.clear() }
+
+    // 指定 Browse の親フォルダへ一つ上がる。直下が親なら pop、非線形なら親に置換する。
+    fun goUpBrowse(b: Screen.Browse) {
+        val parent = b.path.substringBeforeLast('/', "")
+        val below = backStack.getOrNull(backStack.lastIndex - 1)
+        if (below is Screen.Browse && below.repo.id == b.repo.id && below.path == parent) {
+            backStack.removeAt(backStack.lastIndex)
+        } else {
+            backStack[backStack.lastIndex] = Screen.Browse(b.repo, parent)
+        }
+    }
+
     // System Back と Viewer の戻る矢印を一本化する。
     fun handleBack() {
         val top = backStack.last()
         if (top is Screen.Browse && detailStack.isNotEmpty()) {
             // 集中モード中はまず集中を解除する(ファイルは開いたまま・レールと一覧を戻す)。
             if (focusMode) { focusMode = false; return }
-            detailStack.removeAt(detailStack.lastIndex) // 次に開いているファイルを1つ戻す
+            // 多ペイン: 開いているファイルより後にフォルダを潜っていれば(backStack が当時より深い)、
+            // ファイルを閉じる前にフォルダを一つ上げる(「フォルダ遷移直後の戻る」を直感に合わせる)。
+            val openedAtDepth = detailDepth.lastOrNull() ?: backStack.size
+            if (top.path.isNotEmpty() && backStack.size > openedAtDepth) {
+                goUpBrowse(top)
+                return
+            }
+            popDetail() // 次に開いているファイルを1つ戻す
             return
         }
         val before = top
         pop()
         // リポ閲覧から抜けたら開いていたファイルを掃除する。
         if (before is Screen.Browse && backStack.last() !is Screen.Browse) {
-            detailStack.clear()
+            clearDetails()
             focusMode = false
         }
     }
@@ -177,7 +211,7 @@ fun GitReaderApp() {
         if (backStack.last() !is Screen.Browse) {
             backStack.add(Screen.Browse(repo, path.substringBeforeLast('/', "")))
         }
-        detailStack.add(Screen.View(repo, path, line))
+        pushDetail(Screen.View(repo, path, line))
     }
 
     // パンくずから任意の階層へ。スタックに同じ Browse があればそこまで戻り(GitHub 風の上り)、
@@ -194,7 +228,7 @@ fun GitReaderApp() {
     // リポを出てリポ一覧へ戻る(Browse チェーンを畳む)。ブラウザ ← の動作。
     fun leaveRepo() {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-        detailStack.clear()
+        clearDetails()
         focusMode = false
     }
 
@@ -411,16 +445,8 @@ fun GitReaderApp() {
             val drawerState = rememberDrawerState(DrawerValue.Closed)
             val drawerScope = rememberCoroutineScope()
 
-            // ひとつ上のディレクトリへ。直下が親なら pop、非線形なら親に置換。
-            fun goUp() {
-                val parent = current.path.substringBeforeLast('/', "")
-                val below = backStack.getOrNull(backStack.lastIndex - 1)
-                if (below is Screen.Browse && below.repo.id == repo.id && below.path == parent) {
-                    backStack.removeAt(backStack.lastIndex)
-                } else {
-                    backStack[backStack.lastIndex] = Screen.Browse(repo, parent)
-                }
-            }
+            // ひとつ上のディレクトリへ(共通実装に委譲)。
+            fun goUp() = goUpBrowse(current)
 
             @Composable
             fun BrowserPane(threePane: Boolean, onMenu: (() -> Unit)? = null) {
@@ -450,7 +476,7 @@ fun GitReaderApp() {
                     onSetTheme = { mode -> vm.setRepoTheme(repo, mode) { updated -> applyThemeUpdate(updated) } },
                     onOpenDir = { navigate(Screen.Browse(repo, it)) },
                     onOpenFile = {
-                        if (detailStack.lastOrNull()?.filePath != it) detailStack.add(Screen.View(repo, it))
+                        if (detailStack.lastOrNull()?.filePath != it) pushDetail(Screen.View(repo, it))
                     },
                     onOpenHistory = { historySelected = null; navigate(Screen.History(repo, it)) },
                     iconSet = settings.iconSet,
@@ -462,7 +488,7 @@ fun GitReaderApp() {
                                 while (backStack.lastIndex > i) backStack.removeAt(backStack.lastIndex)
                                 backStack[i] = Screen.Browse(updated, "")
                             }
-                            detailStack.clear() // 作業ツリー書換でファイルが変化/消滅しうる
+                            clearDetails() // 作業ツリー書換でファイルが変化/消滅しうる
                             focusMode = false
                         }
                     },
@@ -494,7 +520,7 @@ fun GitReaderApp() {
                         targetLine = file.line,
                         onHistory = { historySelected = null; navigate(Screen.History(file.repo, file.filePath)) },
                         onMemos = { navigate(Screen.Memos(file.repo)) },
-                        onNavigateToFile = { path -> detailStack.add(Screen.View(file.repo, path)) },
+                        onNavigateToFile = { path -> pushDetail(Screen.View(file.repo, path)) },
                         onBack = { handleBack() },
                         showBack = showBack,
                         loadSiblings = {
@@ -608,8 +634,8 @@ fun GitReaderApp() {
                 repoName = current.repo.name,
                 loadCorpus = { vm.loadSearchCorpus(current.repo) },
                 onOpenFile = { path, line ->
-                    detailStack.add(Screen.View(current.repo, path, line))
-                    pop() // Search を閉じて Browse(+右ペイン) に戻る
+                    pop() // Search を閉じて Browse(+右ペイン) に戻してから、その深さで開く
+                    pushDetail(Screen.View(current.repo, path, line))
                 },
                 onBack = { pop() },
             )
