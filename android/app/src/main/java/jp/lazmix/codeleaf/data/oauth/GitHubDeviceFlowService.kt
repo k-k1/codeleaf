@@ -70,8 +70,12 @@ class GitHubDeviceFlowService(
                     return@withContext Result.failure(IllegalStateException("ログインが拒否されました"))
                 GitHubPollResult.Expired ->
                     return@withContext Result.failure(IllegalStateException("コードの有効期限が切れました。もう一度ログインしてください"))
-                is GitHubPollResult.Failed ->
-                    return@withContext Result.failure(OAuthException(result.error))
+                is GitHubPollResult.Failed -> when (result.error) {
+                    // 一時的な通信失敗(DNS/接続断など)はログインを失敗させず、間隔を空けて期限まで再試行する。
+                    is OAuthError.Network -> Unit
+                    // HTTP/パース等のプロトコルエラーは本物の異常なので即中断。
+                    else -> return@withContext Result.failure(OAuthException(result.error))
+                }
             }
         }
         @Suppress("UNREACHABLE_CODE")

@@ -16,8 +16,9 @@ val localProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 // 複数のキー名候補を許容（最初に見つかった非空の値を使う）。
+// 値は trim する（Java Properties は値末尾の空白を残すため、貼り付けミスの末尾スペースで認証が壊れるのを防ぐ）。
 fun secretProp(vararg names: String): String =
-    (names.firstNotNullOfOrNull { localProps.getProperty(it)?.takeIf { v -> v.isNotBlank() } } ?: "")
+    (names.firstNotNullOfOrNull { localProps.getProperty(it)?.trim()?.takeIf { v -> v.isNotEmpty() } } ?: "")
         .replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {

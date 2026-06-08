@@ -113,6 +113,24 @@ class GitHubDeviceFlowTest {
     }
 
     @Test
+    fun pollRetriesThroughTransientNetworkError() = runBlocking {
+        // 1回目は通信失敗(IOException)、その後 pending を挟んで承認。一時的な失敗で諦めないこと。
+        val script = ArrayDeque(
+            listOf<() -> HttpResult>(
+                { throw IOException("dns blip") },
+                { HttpResult(200, """{"error":"authorization_pending"}""") },
+                { HttpResult(200, """{"access_token":"gho_ok","scope":"repo"}""") },
+            ),
+        )
+        val http = object : TokenHttp {
+            override fun postForm(url: String, basicAuth: String, form: Map<String, String>) =
+                script.removeFirst().invoke()
+        }
+        val code = GitHubDeviceCode("DC", "UC", "https://github.com/login/device", 900, 1)
+        assertEquals("gho_ok", service(http).pollForToken(code).getOrThrow().accessToken)
+    }
+
+    @Test
     fun requestDeviceCodeSendsClientIdAndScopeWithoutAuthHeader() = runBlocking {
         val http = object : TokenHttp {
             var form: Map<String, String>? = null
