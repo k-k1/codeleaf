@@ -1,21 +1,18 @@
 package jp.lazmix.codeleaf.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -37,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -49,6 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -156,6 +156,15 @@ fun RepoListScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
+        // 3ペインのレールは画面左端に埋め込まれ、右端は仕切り線。ウィンドウ右の
+        // システムバー(横向きのナビバー)余白を本文に足すと右に隙間ができるので End を落とす。
+        contentWindowInsets = if (compact) {
+            ScaffoldDefaults.contentWindowInsets.only(
+                WindowInsetsSides.Start + WindowInsetsSides.Top + WindowInsetsSides.Bottom,
+            )
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (status.busy) {
@@ -279,27 +288,30 @@ private fun RepoCard(
         modifier = Modifier.fillMaxWidth(),
         colors = colors,
     ) {
-        // 左端のアクセント色バーはパネル全体の高さに伸ばす(2行＋進捗バー含む)。
-        Row(Modifier.height(IntrinsicSize.Min)) {
-            Box(Modifier.width(6.dp).fillMaxHeight().background(accent ?: Color.Transparent))
-            Column(Modifier.weight(1f)) {
-                if (compact) {
-                    // 2行構成: 1行目=情報(全幅) / 2行目=ボタンを右寄せ。狭いレール向け。
-                    Column(Modifier.padding(start = 12.dp, top = 8.dp), content = info)
-                    Row(
-                        Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = actions,
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp), content = info)
-                        actions()
-                    }
+        // アクセント色バーは drawBehind で左端に全高描画する(描画のみ=レイアウトに干渉せず、
+        // IntrinsicSize 不要でカードは常に枠いっぱいに広がる)。色なしは透明。
+        val barColor = accent ?: Color.Transparent
+        Column(
+            Modifier.fillMaxWidth().drawBehind {
+                drawRect(barColor, size = Size(6.dp.toPx(), size.height))
+            },
+        ) {
+            if (compact) {
+                // 2行構成: 1行目=情報(全幅) / 2行目=ボタンを右寄せ。狭いレール向け。
+                Column(Modifier.padding(start = 18.dp, top = 8.dp), content = info)
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 18.dp, end = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = actions,
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).padding(start = 18.dp, top = 8.dp, bottom = 8.dp), content = info)
+                    actions()
                 }
-                if (cloning) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
+            if (cloning) LinearProgressIndicator(Modifier.fillMaxWidth())
         }
     }
 }
