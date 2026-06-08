@@ -2,6 +2,7 @@ package jp.lazmix.codeleaf.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -55,6 +56,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -432,6 +434,11 @@ fun GitReaderApp() {
                     else -> ({ leaveRepo() })
                 }
                 val favorites by vm.observeFavorites(repo.id).collectAsState(initial = emptyList())
+                // リポ色を左端の縦アクセントバー(全高)で反映する。カードと同じ言語・NONE は名前ハッシュの自動色。
+                // 上だけ statusBarsPadding(横向きの横インセットは 4dp 幅を食い潰すため使わない)。
+                Row(Modifier.fillMaxSize()) {
+                  Box(Modifier.width(4.dp).fillMaxHeight().statusBarsPadding().background(repoAvatarColor(repo)))
+                  Box(Modifier.weight(1f)) {
                 FileBrowserScreen(
                     repo = repo,
                     path = current.path,
@@ -470,6 +477,8 @@ fun GitReaderApp() {
                     // 3ペインは左レール(リポ一覧)が グラフ/お気に入り を担うので上部の常設行は出さない。
                     showRepoActions = !threePane,
                 )
+                  }
+                }
             }
 
             @Composable
