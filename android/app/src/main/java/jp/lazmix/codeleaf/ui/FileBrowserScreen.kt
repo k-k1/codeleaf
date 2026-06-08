@@ -502,6 +502,8 @@ private fun EntryRow(
                         modifier = Modifier.size(16.dp),
                     )
                 }
+                // submodule はファイル名でなくフラグで分かるので、AI 等と同様にバッジで明示する。
+                if (entry.isSubmodule) MarkChip("submodule", cs.primary)
                 chip?.let { (label, color) -> MarkChip(label, color) }
             }
         }
