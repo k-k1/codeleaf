@@ -279,28 +279,27 @@ private fun RepoCard(
         modifier = Modifier.fillMaxWidth(),
         colors = colors,
     ) {
-        Column {
-            if (compact) {
-                // 2行構成: 1行目=アクセントバー＋情報(全幅) / 2行目=ボタンを右寄せ。狭いレール向け。
-                Row(Modifier.height(IntrinsicSize.Min)) {
-                    Box(Modifier.width(6.dp).fillMaxHeight().background(accent ?: Color.Transparent))
-                    Column(Modifier.weight(1f).padding(start = 12.dp, top = 8.dp), content = info)
+        // 左端のアクセント色バーはパネル全体の高さに伸ばす(2行＋進捗バー含む)。
+        Row(Modifier.height(IntrinsicSize.Min)) {
+            Box(Modifier.width(6.dp).fillMaxHeight().background(accent ?: Color.Transparent))
+            Column(Modifier.weight(1f)) {
+                if (compact) {
+                    // 2行構成: 1行目=情報(全幅) / 2行目=ボタンを右寄せ。狭いレール向け。
+                    Column(Modifier.padding(start = 12.dp, top = 8.dp), content = info)
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                        content = actions,
+                    )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp), content = info)
+                        actions()
+                    }
                 }
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                    content = actions,
-                )
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // 左端のアクセント色バー(色なしは透明)
-                    Box(Modifier.width(6.dp).height(64.dp).background(accent ?: Color.Transparent))
-                    Column(Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp), content = info)
-                    actions()
-                }
+                if (cloning) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
-            if (cloning) LinearProgressIndicator(Modifier.fillMaxWidth())
         }
     }
 }
