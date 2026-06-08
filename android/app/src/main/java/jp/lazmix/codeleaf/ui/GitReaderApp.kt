@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -615,17 +616,25 @@ fun GitReaderApp() {
 
         is Screen.Graph -> {
             val repo = current.repo
+            // リポが変わったら(別リポのグラフへ切替/戻る)選択コミットを破棄する。
+            // 残ると別リポ SHA で commitDiff して "diff取得失敗" になる。
+            LaunchedEffect(repo.id) { graphSelected = null }
 
             @Composable
             fun GraphPane(selectedSha: String?, onSelect: (GraphCommit) -> Unit) {
-                CommitGraphScreen(
-                    repoName = repo.name,
-                    loadGraph = { vm.commitGraph(repo) },
-                    onBack = { handleBack() },
-                    selectedSha = selectedSha,
-                    onSelectCommit = onSelect,
-                    onSync = { vm.syncNow(repo) },
-                )
+                // リポ毎に作り直す。これがないと別リポのグラフに切替えても LaunchedEffect が
+                // 再実行されず前リポのコミットが残り、タップ時に commitDiff が別リポ SHA で失敗する。
+                key(repo.id) {
+                    CommitGraphScreen(
+                        repoName = repo.name,
+                        accentColor = repoAvatarColor(repo),
+                        loadGraph = { vm.commitGraph(repo) },
+                        onBack = { handleBack() },
+                        selectedSha = selectedSha,
+                        onSelectCommit = onSelect,
+                        onSync = { vm.syncNow(repo) },
+                    )
+                }
             }
 
             BoxWithConstraints {

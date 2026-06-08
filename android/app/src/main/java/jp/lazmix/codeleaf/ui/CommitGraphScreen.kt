@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -65,6 +66,8 @@ fun CommitGraphScreen(
     onSelectCommit: (GraphCommit) -> Unit = {},
     /** 引っ張って更新(同期)する処理。null なら pull-to-refresh を出さない。 */
     onSync: (suspend () -> Unit)? = null,
+    /** 上部バー下に引くリポ色の下線(ブラウザと統一)。 */
+    accentColor: Color = Color.Transparent,
 ) {
     var commits by remember { mutableStateOf<List<GraphCommit>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -80,12 +83,16 @@ fun CommitGraphScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("コミットグラフ: $repoName", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    BackButton(onBack)
-                },
-            )
+            Column {
+                TopAppBar(
+                    title = { Text("コミットグラフ: $repoName", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        BackButton(onBack)
+                    },
+                )
+                // ブラウザと同じリポ色の下線。
+                HorizontalDivider(thickness = 3.dp, color = accentColor)
+            }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
