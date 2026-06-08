@@ -10,7 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,7 +56,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -142,6 +147,10 @@ fun FileBrowserScreen(
     }
 
     Scaffold(
+        // 多ペインではこのペインは画面端でないのに、既定だと横向きの側面ナビバー インセットが
+        // 本文へ右パディングとして入り、ファイル一覧の右端に余白が出ていた。bottomBar 側が
+        // 下端を自前で padding するので、本文インセットから navigationBars を除外する。
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.navigationBars),
         topBar = {
           Column {
             TopAppBar(
@@ -473,12 +482,17 @@ private fun EntryRow(
     Box {
         Row(
             // タップで開く・長押しでお気に入りトグルのメニューを出す。
-            Modifier.fillMaxWidth().height(IntrinsicSize.Min)
-                .combinedClickable(onClick = onClick, onLongClick = { rowMenu = true }),
+            // アクセントバーは drawBehind で左端に全高描画する(IntrinsicSize.Min を使わず行が自然に
+            // 全幅へ広がるようにする。これがないと折り返しテキスト＋バッジで名前が極端に潰れ、
+            // 行が全幅にならず右端に余白が出ていた)。
+            Modifier.fillMaxWidth()
+                .combinedClickable(onClick = onClick, onLongClick = { rowMenu = true })
+                .drawBehind {
+                    if (barColor != null) drawRect(barColor, size = Size(3.dp.toPx(), size.height))
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // 先頭アクセントバー(非対象は透明で確保し、アイコン位置を全行で揃える)。
-            Box(Modifier.width(3.dp).fillMaxHeight().background(barColor ?: Color.Transparent))
+            Spacer(Modifier.width(3.dp)) // アクセントバー分のオフセット(アイコン位置を全行で揃える)。
             Row(
                 Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
