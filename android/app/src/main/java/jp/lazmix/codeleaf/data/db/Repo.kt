@@ -18,6 +18,13 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class RepoColor { NONE, BLUE, GREEN, RED, PURPLE, ORANGE, TEAL }
 
 /**
+ * 初回 clone の進行状態。CLONING=登録済みで clone 実行中（一覧では進捗パネル）、
+ * READY=clone 完了で閲覧可、FAILED=clone 失敗（再試行 or 削除）。
+ * プロセス死で CLONING のまま残った行は起動時に FAILED へ倒す。
+ */
+enum class CloneState { CLONING, READY, FAILED }
+
+/**
  * 登録リポジトリ。token はここには持たず、TokenStore (Keystore暗号化) に id 紐付けで保存する。
  */
 @Parcelize
@@ -36,4 +43,6 @@ data class Repo(
     val authType: AuthType = AuthType.TOKEN,
     /** 所属グループ(Working Set)。空=未分類。一覧はこの値で絞り込む。 */
     val groupName: String = "",
+    /** 初回 clone の進行状態。既存(clone 済み)行は READY 既定。 */
+    val cloneState: CloneState = CloneState.READY,
 ) : Parcelable

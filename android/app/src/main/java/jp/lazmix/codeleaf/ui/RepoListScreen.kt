@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,11 +18,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.R
+import jp.lazmix.codeleaf.data.db.CloneState
 import jp.lazmix.codeleaf.data.db.Repo
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -64,6 +68,10 @@ fun RepoListScreen(
     onOpenGraph: (Repo) -> Unit,
     onOpenFavorites: (Repo) -> Unit = {},
     onSync: (Repo) -> Unit,
+    /** 失敗(FAILED)リポの clone 再試行。 */
+    onRetry: (Repo) -> Unit = {},
+    /** 失敗(FAILED)リポの削除。 */
+    onDelete: (Repo) -> Unit = {},
     onMessageShown: () -> Unit,
     /** 存在するグループ名(昇順)。空ならグループ機能の導線は出さない。 */
     groups: List<String> = emptyList(),
@@ -170,6 +178,8 @@ fun RepoListScreen(
                             onOpenGraph = { onOpenGraph(repo) },
                             onOpenFavorites = { onOpenFavorites(repo) },
                             onSync = { onSync(repo) },
+                            onRetry = { onRetry(repo) },
+                            onDelete = { onDelete(repo) },
                         )
                     }
                 }
@@ -187,7 +197,11 @@ private fun RepoCard(
     onOpenGraph: () -> Unit,
     onOpenFavorites: () -> Unit,
     onSync: () -> Unit,
+    onRetry: () -> Unit,
+    onDelete: () -> Unit,
 ) {
+    val cloning = repo.cloneState == CloneState.CLONING
+    val failed = repo.cloneState == CloneState.FAILED
     val accent = repo.colorTag.accent()
     val colors = if (selected) {
         // 選択パネルはリポ色で淡くハイライト(色なしは中立グレー)。primarycontainer(紫)固定は避ける。
@@ -196,29 +210,61 @@ private fun RepoCard(
     } else {
         CardDefaults.cardColors()
     }
-    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth(), colors = colors) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // 左端のアクセント色バー(色なしは透明)
-            Box(
-                Modifier.width(6.dp).height(64.dp)
-                    .background(accent ?: Color.Transparent),
-            )
-            Column(Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp)) {
-                Text(repo.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    "${repo.host.name.lowercase()} · ${repo.branch}",
-                    style = MaterialTheme.typography.bodySmall,
+    // clone 中/失敗は閲覧不可なのでタップ無効。
+    Card(
+        onClick = if (cloning || failed) ({}) else onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        colors = colors,
+    ) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // 左端のアクセント色バー(色なしは透明)
+                Box(
+                    Modifier.width(6.dp).height(64.dp)
+                        .background(accent ?: Color.Transparent),
                 )
-                Text("同期: ${formatSync(repo.lastSyncedAt)}", style = MaterialTheme.typography.bodySmall)
+                Column(Modifier.weight(1f).padding(start = 12.dp, top = 8.dp, bottom = 8.dp)) {
+                    Text(repo.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        "${repo.host.name.lowercase()} · ${repo.branch}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    when {
+                        cloning -> Text("clone 中…", style = MaterialTheme.typography.bodySmall)
+                        failed -> Text(
+                            "clone 失敗 — 再試行してください",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        else -> Text("同期: ${formatSync(repo.lastSyncedAt)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                when {
+                    cloning -> CircularProgressIndicator(
+                        Modifier.padding(end = 16.dp).size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    failed -> {
+                        IconButton(onClick = onRetry) {
+                            Icon(Icons.Default.Refresh, contentDescription = "再試行")
+                        }
+                        IconButton(onClick = onDelete) {
+                            Icon(Icons.Default.Delete, contentDescription = "削除")
+                        }
+                    }
+                    else -> {
+                        IconButton(onClick = onOpenFavorites) {
+                            Icon(Icons.Default.Star, contentDescription = "お気に入り")
+                        }
+                        IconButton(onClick = onOpenGraph) {
+                            Icon(painterResource(R.drawable.ic_graph), contentDescription = "コミットグラフ")
+                        }
+                        IconButton(onClick = onSync) { Icon(Icons.Default.Refresh, contentDescription = "同期") }
+                    }
+                }
             }
-            IconButton(onClick = onOpenFavorites) {
-                Icon(Icons.Default.Star, contentDescription = "お気に入り")
-            }
-            IconButton(onClick = onOpenGraph) {
-                Icon(painterResource(R.drawable.ic_graph), contentDescription = "コミットグラフ")
-            }
-            IconButton(onClick = onSync) { Icon(Icons.Default.Refresh, contentDescription = "同期") }
-}
+            if (cloning) LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
     }
 }
 

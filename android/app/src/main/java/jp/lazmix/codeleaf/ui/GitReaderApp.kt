@@ -237,6 +237,8 @@ fun GitReaderApp() {
             onOpenGraph = { onItemSelected(); graphSelected = null; navigate(Screen.Graph(it)) },
             onOpenFavorites = { onItemSelected(); navigate(Screen.Favorites(it)) },
             onSync = vm::sync,
+            onRetry = vm::retryClone,
+            onDelete = vm::delete,
             onMessageShown = vm::clearMessage,
             groups = allGroups,
             selectedGroup = selectedGroup,
@@ -344,7 +346,7 @@ fun GitReaderApp() {
             status = status,
             defaultTheme = settings.defaultTheme,
             onBack = { pop() },
-            onSubmit = { input -> vm.addRepo(input) { ok -> if (ok) pop() } },
+            onSubmit = { input -> vm.addRepo(input); pop() },
             bitbucketOAuthAvailable = vm.bitbucketOAuthAvailable,
             onStartBitbucketOAuth = {
                 vm.startBitbucketOAuth()?.let { req ->

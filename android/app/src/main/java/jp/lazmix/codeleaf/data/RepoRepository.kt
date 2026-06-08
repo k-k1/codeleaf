@@ -2,6 +2,7 @@ package jp.lazmix.codeleaf.data
 
 import jp.lazmix.codeleaf.data.crypto.TokenStore
 import jp.lazmix.codeleaf.data.db.AuthType
+import jp.lazmix.codeleaf.data.db.CloneState
 import jp.lazmix.codeleaf.data.db.GitHost
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.RepoColor
@@ -154,8 +155,11 @@ class RepoRepository(
         relPath.isNotEmpty() && File(workDir(repo), relPath).exists()
     }
 
-    /** 登録 → clone → 既定ブランチ確定。失敗時は行と暗号化トークンを巻き戻す。 */
-    suspend fun addAndClone(input: NewRepo): Repo = withContext(ioDispatcher) {
+    /**
+     * 行＋暗号化トークンだけ先に登録し（cloneState=CLONING・clone はまだ）即 [Repo] を返す。
+     * 一覧はこの時点で「clone 中」パネルとして当該リポを表示できる。実 clone は [cloneRegistered]。
+     */
+    suspend fun register(input: NewRepo): Repo = withContext(ioDispatcher) {
         val id = dao.insert(
             Repo(
                 name = input.name.ifBlank { input.url.substringAfterLast('/').removeSuffix(".git") },
@@ -165,29 +169,43 @@ class RepoRepository(
                 branch = input.branch.orEmpty(),
                 themeMode = input.themeMode,
                 authType = input.authType,
+                cloneState = CloneState.CLONING,
             ),
         )
         when (input.authType) {
             AuthType.TOKEN -> tokenStore.setToken(id, input.token)
             AuthType.OAUTH -> tokenStore.setOAuth(id, input.oauth!!.toJson())
         }
-        val dir = File(reposRoot, id.toString())
+        dao.getById(id)!!
+    }
+
+    /**
+     * [register] 済みリポを clone → 既定ブランチ確定 → READY。失敗時は作業ツリーだけ掃除して
+     * 行・トークンは残し FAILED にする（再試行で同じ行を使い回せる）。再試行も同関数。
+     */
+    suspend fun cloneRegistered(repo: Repo): Repo = withContext(ioDispatcher) {
+        val dir = workDir(repo)
         try {
-            val cp = credentialsFor(dao.getById(id)!!)
-            jgit.clone(input.url, dir, cp)
-            val branch = input.branch?.takeIf { it.isNotBlank() } ?: jgit.currentBranch(dir)
-            val saved = dao.getById(id)!!.copy(branch = branch, lastSyncedAt = nowMillis())
+            dir.deleteRecursively() // 再試行時の残骸を掃除してから clone
+            val cp = credentialsFor(repo)
+            jgit.clone(repo.url, dir, cp)
+            val branch = repo.branch.takeIf { it.isNotBlank() } ?: jgit.currentBranch(dir)
+            val saved = dao.getById(repo.id)!!
+                .copy(branch = branch, lastSyncedAt = nowMillis(), cloneState = CloneState.READY)
             dao.update(saved)
             saved
         } catch (t: Throwable) {
-            // ロールバック（両名前空間のトークンを掃除）
-            dao.getById(id)?.let { dao.delete(it) }
-            tokenStore.removeToken(id)
-            tokenStore.removeOAuth(id)
             dir.deleteRecursively()
+            dao.getById(repo.id)?.let { dao.update(it.copy(cloneState = CloneState.FAILED)) }
             throw t
         }
     }
+
+    /** 登録 → clone（[register]＋[cloneRegistered] の合成）。 */
+    suspend fun addAndClone(input: NewRepo): Repo = cloneRegistered(register(input))
+
+    /** プロセス死で中断した clone(CLONING 残留)を FAILED へ倒す（起動時に呼ぶ）。 */
+    suspend fun failInterruptedClones() = withContext(ioDispatcher) { dao.failInterruptedClones() }
 
     /** 指定ブランチで最新化（ローカル変更は破棄）。同一リポの同期は直列化される。 */
     suspend fun sync(repo: Repo, branch: String = repo.branch): Repo = withContext(ioDispatcher) {

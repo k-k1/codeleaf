@@ -77,9 +77,10 @@ class AppE2EInstrumentedTest {
 
         compose.onNodeWithText("保存・clone").performScrollTo().performClick()
 
-        // clone 完了 → List に戻る(タイトル "CodeLeaf" が再表示)
+        // 送信と同時に List へ戻り、e2e-src は最初「clone 中」パネルで現れる。
+        // clone 完了 = READY カードになると「同期」ボタンが出る。これをもって完了を待つ。
         compose.waitUntil(timeoutMillis = 30_000) {
-            compose.onAllNodesWithText("CodeLeaf").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("同期").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("e2e-src").assertIsDisplayed()
 

@@ -23,4 +23,8 @@ interface RepoDao {
 
     @Delete
     suspend fun delete(repo: Repo)
+
+    /** プロセス死で中断した clone(CLONING 残留)を起動時に FAILED へ倒す。 */
+    @Query("UPDATE repos SET cloneState = 'FAILED' WHERE cloneState = 'CLONING'")
+    suspend fun failInterruptedClones()
 }

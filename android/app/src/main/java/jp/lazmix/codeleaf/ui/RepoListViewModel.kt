@@ -112,17 +112,37 @@ class RepoListViewModel(
     private val _status = MutableStateFlow(UiStatus())
     val status: StateFlow<UiStatus> = _status
 
-    fun addRepo(input: NewRepo, onDone: (Boolean) -> Unit) {
+    init {
+        // 起動時: プロセス死で中断した clone(CLONING 残留)を FAILED に倒す。
+        viewModelScope.launch { runCatching { repository.failInterruptedClones() } }
+    }
+
+    /**
+     * リポを登録し（一覧に即「clone 中」パネルとして出現）、バックグラウンドで clone する。
+     * 呼び出し側は戻りを待たず即一覧へ戻ってよい。状態は [repos] の `cloneState` で駆動する。
+     */
+    fun addRepo(input: NewRepo) {
         viewModelScope.launch {
-            _status.value = UiStatus(busy = true, message = "clone 中...")
-            val ok = runCatching { repository.addAndClone(input) }
-            ok.exceptionOrNull()?.let { android.util.Log.w("GitReader", "addAndClone failed", it) }
-            _status.value = UiStatus(
-                busy = false,
-                message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) },
-            )
-            onDone(ok.isSuccess)
+            val repo = runCatching { repository.register(input) }.getOrElse {
+                _status.value = UiStatus(message = cloneErrorMessage(it))
+                return@launch
+            }
+            runClone(repo)
         }
+    }
+
+    /** 失敗(FAILED)リポの clone を再試行する。 */
+    fun retryClone(repo: Repo) {
+        viewModelScope.launch { runClone(repo) }
+    }
+
+    private suspend fun runClone(repo: Repo) {
+        val ok = runCatching { repository.cloneRegistered(repo) }
+        ok.exceptionOrNull()?.let { android.util.Log.w("GitReader", "clone failed", it) }
+        _status.value = UiStatus(
+            message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) }
+                ?: "${repo.name} を追加しました",
+        )
     }
 
     fun sync(repo: Repo) {

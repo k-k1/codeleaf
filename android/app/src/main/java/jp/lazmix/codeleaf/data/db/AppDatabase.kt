@@ -16,6 +16,8 @@ class Converters {
     @TypeConverter fun stringToColor(s: String): RepoColor = RepoColor.valueOf(s)
     @TypeConverter fun authTypeToString(a: AuthType): String = a.name
     @TypeConverter fun stringToAuthType(s: String): AuthType = AuthType.valueOf(s)
+    @TypeConverter fun cloneStateToString(c: CloneState): String = c.name
+    @TypeConverter fun stringToCloneState(s: String): CloneState = CloneState.valueOf(s)
 }
 
 /** v1→v2: 並べ替え順(sortOrder)とカード色(colorTag)を追加。 */
@@ -88,9 +90,16 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/** v7→v8: 初回 clone 進行状態(cloneState)を追加。既存行は clone 済み=READY。 */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE repos ADD COLUMN cloneState TEXT NOT NULL DEFAULT 'READY'")
+    }
+}
+
 @Database(
     entities = [Repo::class, Memo::class, MemoEntry::class, Favorite::class],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
