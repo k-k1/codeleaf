@@ -26,8 +26,8 @@ fun secretProp(vararg names: String): String =
         .replace("\\", "\\\\").replace("\"", "\\\"")
 
 // バージョンは一箇所で管理し、versionCode は versionName から機械的に算出する(付け忘れ防止)。
-// 例: 0.2.0 -> 0*10000 + 2*100 + 0 = 200。配布のたびに versionName を上げれば code も単調増加する。
-val appVersionName = "0.2.0"
+// 例: 0.3.0 -> 0*10000 + 3*100 + 0 = 300。配布のたびに versionName を上げれば code も単調増加する。
+val appVersionName = "0.3.0"
 val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
 
 // リリース署名情報は local.properties(git管理外)から読む。未設定なら release は未署名のまま(CI等で安全)。
