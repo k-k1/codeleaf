@@ -35,7 +35,9 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   **`IconRail`(64dp・`RepoAvatar`)は3ペイン専用**(`ThreePaneScaffold`・`railCollapsed` で展開レール↔IconRail)。テーマは レール/ドロワー=default/中右=repo に分割。
   **お気に入りはリポ一覧(`RepoListScreen` の各 `RepoCard` の★・`onOpenFavorites`)から直行**(ドロワー/List全画面/3ペインレール共通)。
   **集中モード `focusMode`**(rememberSaveable): ファイル表示中にレール+一覧を隠し全幅ビューア(1/2/3共通)。下部左の `PaneToggleHandle` で開閉、
-  **戻るは集中解除を優先**(`handleBack`: focus→detailStack→pop の順)。リポ退出/ブランチ切替で false に戻す。
+  **戻るは集中解除を優先**(`handleBack`: focus→**フォルダ上げ**→detailStack→pop の順)。リポ退出/ブランチ切替で false に戻す。
+  多ペインで「ファイルを開いた後にフォルダを潜った」場合は detailStack を閉じる前に `goUpBrowse` でフォルダを一つ上げる
+  (操作順どおりに巻き戻す)。判定は detailStack と並走する `detailDepth`(開いた時点の `backStack` 深さ)を `pushDetail/popDetail/clearDetails` で同期し比較。
   履歴(`Screen.History`)・グラフは2/3ペイン(左=一覧/右=`FileDiffPane`等、`historySelected`/`graphSelected`、各 `*ListCollapsed`)。
   リポ追加の＋は一覧0件時のみ右上、1件以上は `RepoEditScreen` の右上。`MainActivity` の `configChanges` で回転は状態保持。
   **状態永続化**: `Screen`/`Repo`/`GraphCommit` を `@Parcelize`(`kotlin("plugin.parcelize")`, Instant は `InstantParceler`)、
