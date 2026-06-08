@@ -457,6 +457,8 @@ fun GitReaderApp() {
                     onBack = backAction,
                     onMenu = onMenu,
                     onUp = { goUp() },
+                    // 3ペインは左レール(リポ一覧)が グラフ/お気に入り を担うので上部の常設行は出さない。
+                    showRepoActions = !threePane,
                 )
             }
 

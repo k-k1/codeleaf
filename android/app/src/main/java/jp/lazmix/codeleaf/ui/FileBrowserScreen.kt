@@ -62,8 +62,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontStyle
@@ -110,6 +112,11 @@ fun FileBrowserScreen(
     onMenu: (() -> Unit)? = null,
     /** ひとつ上のディレクトリへ(パスから親を算出して遷移)。ルートでは無効。 */
     onUp: () -> Unit,
+    /**
+     * 上部に コミットグラフ / お気に入り の常設アクション行(BrowserActionRow)を出すか。
+     * 3ペインは左レール(リポ一覧)が同ボタンを担うため false にし、従来どおり ⋮ 内へ収める。
+     */
+    showRepoActions: Boolean = true,
     iconSet: IconSet = IconSet.MATERIAL,
     fileNameDisplay: FileNameDisplay = FileNameDisplay.WRAP,
 ) {
@@ -134,13 +141,19 @@ fun FileBrowserScreen(
           Column {
             TopAppBar(
                 title = {
-                    Column {
+                    if (showRepoActions) {
+                        // 1/2ペイン: branch は下の BrowserActionRow に出すのでタイトルはリポ名1行。
                         Text(repo.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            text = "${repo.branch} ▾",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.clickable(enabled = !locked) { showBranchSheet = true },
-                        )
+                    } else {
+                        // 3ペイン(従来どおり): リポ名＋branch ▾ の2行タイトル。
+                        Column {
+                            Text(repo.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                text = "${repo.branch} ▾",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.clickable(enabled = !locked) { showBranchSheet = true },
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -167,18 +180,24 @@ fun FileBrowserScreen(
                             onClick = { menuExpanded = false; showBranchSheet = true },
                         )
                         HorizontalDivider()
-                        DropdownMenuItem(
-                            text = { Text("コミットグラフ") },
-                            onClick = { menuExpanded = false; onGraph() },
-                        )
+                        // 1/2ペインは グラフ/お気に入り を BrowserActionRow に常設するため ⋮ からは省く。
+                        // 3ペインは従来どおり ⋮ 内に置く(左レールにもボタンがある)。
+                        if (!showRepoActions) {
+                            DropdownMenuItem(
+                                text = { Text("コミットグラフ") },
+                                onClick = { menuExpanded = false; onGraph() },
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text("メモ") },
                             onClick = { menuExpanded = false; onMemos() },
                         )
-                        DropdownMenuItem(
-                            text = { Text("お気に入り") },
-                            onClick = { menuExpanded = false; onFavorites() },
-                        )
+                        if (!showRepoActions) {
+                            DropdownMenuItem(
+                                text = { Text("お気に入り") },
+                                onClick = { menuExpanded = false; onFavorites() },
+                            )
+                        }
                         HorizontalDivider()
                         Text(
                             "テーマ",
@@ -199,6 +218,15 @@ fun FileBrowserScreen(
                     }
                 },
             )
+            if (showRepoActions) {
+                BrowserActionRow(
+                    branch = repo.branch,
+                    locked = locked,
+                    onBranch = { showBranchSheet = true },
+                    onGraph = onGraph,
+                    onFavorites = onFavorites,
+                )
+            }
             PathBreadcrumb(path = path, onNavigate = onNavigateToDir)
           }
         },
@@ -302,6 +330,50 @@ fun FileBrowserScreen(
 }
 
 /**
+ * 上部の副アクション行。左にブランチ切替(`branch ▾`)、右に コミットグラフ / お気に入りを常設する。
+ * リポ名タイトル(TopAppBar)と横幅を奪い合わないよう独立した1行に分け、狭い2ペインでも収まる。
+ */
+@Composable
+private fun BrowserActionRow(
+    branch: String,
+    locked: Boolean,
+    onBranch: () -> Unit,
+    onGraph: () -> Unit,
+    onFavorites: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    Surface(color = cs.surface) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "$branch ▾",
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(enabled = !locked, onClick = onBranch)
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onGraph, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    painterResource(R.drawable.ic_graph),
+                    contentDescription = "コミットグラフ",
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            IconButton(onClick = onFavorites, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.Star, contentDescription = "お気に入り", modifier = Modifier.size(22.dp))
+            }
+        }
+    }
+}
+
+/**
  * GitHub 風のパンくず。ルート(ホーム)＋各フォルダ名をセグメント表示し、祖先をタップで
  * その階層へ一気に移動する。現在地は太字・非リンク。深いパスは右端(現在地)へ自動スクロール。
  */
@@ -364,6 +436,7 @@ private fun EntryRow(
 ) {
     val cs = MaterialTheme.colorScheme
     val mark = FileIcons.mark(entry.name)
+    val clipboard = LocalClipboardManager.current
     var rowMenu by remember { mutableStateOf(false) }
 
     // 分類ごとの描画スタイル(先頭バー/文字色/字形/チップ)を解決する。
@@ -426,6 +499,16 @@ private fun EntryRow(
             DropdownMenuItem(
                 text = { Text(if (isFavorite) "お気に入りから解除" else "お気に入りに追加") },
                 onClick = { rowMenu = false; onToggleFavorite() },
+            )
+            HorizontalDivider()
+            // 名前は実体名(entry.name)、パスはリポルートからの相対(entry.relPath。畳んだ連鎖は最深)。
+            DropdownMenuItem(
+                text = { Text("ファイル名をコピー") },
+                onClick = { rowMenu = false; clipboard.setText(AnnotatedString(entry.name)) },
+            )
+            DropdownMenuItem(
+                text = { Text("ファイルのパスをコピー") },
+                onClick = { rowMenu = false; clipboard.setText(AnnotatedString(entry.relPath)) },
             )
         }
     }
