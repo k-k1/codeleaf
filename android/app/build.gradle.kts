@@ -1,3 +1,5 @@
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Properties
 
 plugins {
@@ -32,6 +34,15 @@ val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10
 fun localProp(name: String): String? = localProps.getProperty(name)?.trim()?.takeIf { it.isNotEmpty() }
 val releaseKeystorePath = localProp("RELEASE_KEYSTORE")
 
+// ビルドの素性(設定画面のバージョン詳細に表示)。日時は構成時刻、git SHA はワークツリーの HEAD。
+// ※ buildTime は毎ビルド変わるため BuildConfig 生成タスクは都度再実行される(小規模アプリなので許容)。
+val buildTime: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+val gitSha: String = runCatching {
+    ProcessBuilder("git", "rev-parse", "--short", "HEAD")
+        .directory(rootProject.projectDir)
+        .start().inputStream.bufferedReader().readText().trim()
+}.getOrNull()?.takeIf { it.isNotEmpty() } ?: "unknown"
+
 android {
     namespace = "jp.lazmix.codeleaf"
     compileSdk = 35
@@ -48,6 +59,9 @@ android {
         buildConfigField("String", "BITBUCKET_OAUTH_CLIENT_SECRET", "\"${secretProp("BITBUCKET_OAUTH_CLIENT_SECRET", "BITBUCKET_OAUTH_SECRET")}\"")
         // GitHub Device Flow は client_id のみ（secret 不要・失効しない user token を使う）。
         buildConfigField("String", "GITHUB_OAUTH_CLIENT_ID", "\"${secretProp("GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_ID")}\"")
+        // ビルド素性(設定画面のバージョン詳細)。
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
     }
 
     // リリース署名。鍵・パスワードは local.properties から読み、リポには入れない。

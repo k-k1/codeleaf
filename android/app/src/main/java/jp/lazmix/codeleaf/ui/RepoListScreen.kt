@@ -188,13 +188,13 @@ fun RepoListScreen(
                     }
                 }
             }
-            // リポ一覧の拠点(全画面/≡ドロワー/3ペイン展開レール)の最下部にバージョンを常設。
+            // リポ一覧の拠点(全画面/≡ドロワー/3ペイン展開レール)の最下部にバージョンを常設(右寄せ)。
             Text(
                 "CodeLeaf ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             )
         }
     }

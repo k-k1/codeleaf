@@ -301,6 +301,16 @@ fun SettingsScreen(
                         "CodeLeaf ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    Text(
+                        "ビルド: ${BuildConfig.BUILD_TIME} · ${BuildConfig.GIT_SHA} · ${BuildConfig.BUILD_TYPE}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "ID: ${BuildConfig.APPLICATION_ID}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 OutlinedButton(onClick = onLicenses, modifier = Modifier.fillMaxWidth()) {
                     Text("オープンソースライセンス")
