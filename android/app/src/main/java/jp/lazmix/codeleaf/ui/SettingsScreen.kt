@@ -72,6 +72,7 @@ fun SettingsScreen(
     onSetFileNameDisplay: (FileNameDisplay) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
     onClearCache: () -> Unit,
+    onLicenses: () -> Unit,
     onBack: () -> Unit,
 ) {
     var confirmClear by remember { mutableStateOf(false) }
@@ -265,6 +266,13 @@ fun SettingsScreen(
                     enabled = repoCount > 0,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("キャッシュを全削除") }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("このアプリ", style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(onClick = onLicenses, modifier = Modifier.fillMaxWidth()) {
+                    Text("オープンソースライセンス")
+                }
             }
         }
     }

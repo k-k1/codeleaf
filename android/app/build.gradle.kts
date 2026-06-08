@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    // 依存ライブラリのライセンス情報を POM から収集し R.raw へ生成(ライセンス画面で表示)。
+    alias(libs.plugins.aboutlibraries)
     // kapt / parcelize は Kotlin プラグイン経由でクラスパス上にあるため version 指定なしで適用する
     kotlin("kapt")
     kotlin("plugin.parcelize")
@@ -146,6 +148,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     debugImplementation(libs.androidx.ui.tooling)
+
+    // オープンソースライセンス一覧(Compose Material3 UI)。データは aboutlibraries プラグインが生成。
+    implementation(libs.aboutlibraries.compose.m3)
 
     // persistence
     implementation(libs.androidx.room.runtime)
