@@ -250,6 +250,23 @@ fun GitReaderApp() {
     val status by vm.status.collectAsState()
     val settings by vm.settings.collectAsState()
 
+    // プロセス死からの復元で backStack/detailStack が「現存しないリポ」(削除済み・別端末同期前など)を
+    // 指すことがある。その画面はファイル取得に失敗する幽霊になり、一覧の上に旧リポ名が重なって見える。
+    // リポ確定後(非空)に検出したら一覧へ戻す。リポ id がテスト毎に変わる E2E の決定化にも効く。
+    LaunchedEffect(repos) {
+        if (repos.isEmpty()) return@LaunchedEffect // 初回ロード前(空)は復元画面を温存する
+        val ids = repos.mapTo(HashSet()) { it.id }
+        val stale = backStack.any { it is Screen.WithRepo && it.repo.id !in ids } ||
+            detailStack.any { it.repo.id !in ids }
+        if (stale) {
+            backStack.clear()
+            backStack.add(Screen.List)
+            clearDetails()
+            focusMode = false
+            graphSelected = null
+        }
+    }
+
     // 左レール(リポ一覧)。List 全画面・3ペインの左で共有する。
     // グループ一覧 = 定義済み(settings, 表示順) ＋ 念のため未登録のリポ所属名(末尾)。
     val allGroups = run {

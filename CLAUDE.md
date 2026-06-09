@@ -44,7 +44,10 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   リポ追加の＋は一覧0件時のみ右上、1件以上は `RepoEditScreen` の右上。`MainActivity` の `configChanges` で回転は状態保持。
   **状態永続化**: `Screen`/`Repo`/`GraphCommit` を `@Parcelize`(`kotlin("plugin.parcelize")`, Instant は `InstantParceler`)、
   `backStack`/`detailStack`/`graphSelected`/`focusMode` を `rememberSaveable` でプロセス死から復元。
-  **instrumented E2E は portrait(compact)前提** — landscape で実行すると2/3ペインになり一部 assert が崩れる。
+  **復元の健全化**: repos 確定後(非空)、backStack/detailStack が現存しないリポ(削除/別id)を指す `WithRepo` 画面を含めば一覧へ戻す
+  (`LaunchedEffect(repos)`)。削除済みリポの幽霊画面を防ぐ＋E2E は実行毎に repo id が変わるので決定化に必須。
+  **instrumented E2E は portrait(compact)前提** — landscape で2/3ペインになり assert が崩れる。グラフへは**一覧カードのグラフアイコン**から開く
+  (compact の Browse は `ModalNavigationDrawer`=RepoListScreen を画面外に常時 compose し、同 contentDescription "コミットグラフ" が二重化して曖昧になるため)。
 - **ブラウザ**(`FileBrowserScreen`): 上部に GitHub 風パンくず(`PathBreadcrumb`・🏠＋各フォルダ、祖先タップで `onNavigateToDir`→`navigateToDir` が
   スタックを当該 Browse まで畳む/無ければ置換)。ファイル名表示は設定 `fileNameDisplay`(`FileNameText`)= 折り返し(既定)/中央省略/末尾省略。
   中央省略は Compose1.7 に `MiddleEllipsis` が無いため `TextMeasurer`＋`onSizeChanged` で自前(BoxWithConstraints は `IntrinsicSize.Min` 行で不可)。
