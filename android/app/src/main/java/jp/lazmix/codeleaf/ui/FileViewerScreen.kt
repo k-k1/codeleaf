@@ -134,6 +134,8 @@ fun FileViewerScreen(
     onHistory: () -> Unit,
     onMemos: () -> Unit,
     onNavigateToFile: (String) -> Unit,
+    /** 相対リンクがディレクトリを指すとき、そのフォルダをブラウザで開く(repo ルート相対パス・ルートは "")。 */
+    onNavigateToDir: (String) -> Unit = {},
     onBack: () -> Unit,
     /** 戻る矢印を表示するか。2/3ペインでは一覧が常に見えるため非表示にする。 */
     showBack: Boolean = true,
@@ -401,6 +403,7 @@ fun FileViewerScreen(
                                             dark = dark,
                                             fontScale = fontScale,
                                             onNavigateToFile = onNavigateToFile,
+                                            onNavigateToDir = onNavigateToDir,
                                             onExternalLink = openExternal,
                                             // 長押しでこのブロックのソース行を起点にメモ追加。
                                             onLongPress = blockLineRange(body, block.markdown)

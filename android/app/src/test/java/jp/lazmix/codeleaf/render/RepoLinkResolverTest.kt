@@ -84,8 +84,61 @@ class RepoLinkResolverTest {
     }
 
     @Test
-    fun directoryTarget_returnsNull() {
+    fun directoryTarget_returnsNull_forFileResolution() {
+        // ファイル限定の resolveRepoRelativePath はディレクトリを解決しない(=null)。
         val base = workDir
-        assertNull("ディレクトリは遷移対象外", resolve(base, "docs"))
+        assertNull("ファイル解決ではディレクトリ対象外", resolve(base, "docs"))
+    }
+
+    private fun target(baseDir: File, link: String): RepoTarget? =
+        RepoLinkResolver.resolveRepoTarget(baseDir, workDir, link)
+
+    @Test
+    fun fileTarget_resolvesAsFile() {
+        val base = File(workDir, "docs")
+        assertEquals(RepoTarget.FileTarget("docs/guide.md"), target(base, "guide.md"))
+        assertEquals(RepoTarget.FileTarget("README.md"), target(base, "../README.md"))
+        assertEquals(RepoTarget.FileTarget("api/spec.md"), target(base, "../api/spec.md"))
+    }
+
+    @Test
+    fun directoryTarget_resolvesAsDir() {
+        // 子ディレクトリ・親経由の他ディレクトリ・末尾スラッシュ付きいずれもディレクトリ遷移。
+        assertEquals(RepoTarget.DirTarget("docs"), target(workDir, "docs"))
+        assertEquals(RepoTarget.DirTarget("docs"), target(workDir, "docs/"))
+        assertEquals(RepoTarget.DirTarget("api"), target(File(workDir, "docs"), "../api"))
+        assertEquals(RepoTarget.DirTarget("docs/img"), target(File(workDir, "docs"), "img"))
+    }
+
+    @Test
+    fun rootDirectoryTarget_hasEmptyPath() {
+        // 親へ上がってリポルートを指すリンクは path="" のディレクトリ(ブラウザのトップ)。
+        assertEquals(RepoTarget.DirTarget(""), target(File(workDir, "docs"), ".."))
+        assertEquals(RepoTarget.DirTarget(""), target(File(workDir, "docs"), "../"))
+    }
+
+    @Test
+    fun percentEncodedPath_isDecoded() {
+        // スペースや非ASCIIを含むパスは %XX で来ても実体に解決する。
+        File(workDir, "my docs").mkdirs()
+        File(workDir, "my docs/a b.md").writeText("# x")
+        assertEquals(RepoTarget.FileTarget("my docs/a b.md"), target(workDir, "my%20docs/a%20b.md"))
+        assertEquals(RepoTarget.DirTarget("my docs"), target(workDir, "my%20docs"))
+    }
+
+    @Test
+    fun literalPlusInName_isNotTurnedIntoSpace() {
+        // パスの '+' はスペースにしない(form エンコードではないため)。
+        File(workDir, "c++.md").writeText("# x")
+        assertEquals(RepoTarget.FileTarget("c++.md"), target(workDir, "c++.md"))
+    }
+
+    @Test
+    fun outsideRepoOrMissing_returnsNullTarget() {
+        val base = File(workDir, "docs")
+        assertNull(target(base, "../../escape.md"))
+        assertNull(target(base, "missing.md"))
+        assertNull(target(base, "https://example.com/a"))
+        assertNull(target(base, "#section"))
     }
 }

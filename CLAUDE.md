@@ -59,7 +59,8 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
 - **Markdown 本文は `AndroidView(TextView)`** で Compose セマンティクスから不可視 → 本文/リンクは Compose test で検証不可。
   検証は (a)ロジックを純粋関数化し JVM 単体, (b)到達は Compose ノード(CodeView/表/frontmatter/見出し), (c)実機 uiautomator。
 - **リンク**: `setTextIsSelectable(true)` は MovementMethod を奪う → 使わず setMarkdown 後に `LinkMovementMethod` を明示。
-  相対 .md はアプリ内遷移・外部リンクは設定で CustomTabs / 外部ブラウザ。
+  相対リンクは `RepoLinkResolver.resolveRepoTarget` で解決(`%XX`/`<…>` は decode)= 既存ファイル→ビューア / ディレクトリ→ブラウザ
+  (`onNavigateToDir`・ルートは path="")。リポ外/不在は無視。外部リンクは設定で CustomTabs / 外部ブラウザ。
 - **GitHub HTTPS 認証**: username 空だと 401 → `JgitClient.credentials` が `x-access-token` を補う。PAT は Contents: Read-only 必須。
 - **認証種別**: `Repo.authType` = TOKEN(手入力 PAT/API token) / OAUTH。OAuth token は `TokenStore` の `oauth_<id>` に
   JSON 暗号化保存。git の username はホスト/種別で分岐(`gitUsernameFor`): Bitbucket OAuth=`x-token-auth`、GitHub=`x-access-token`。

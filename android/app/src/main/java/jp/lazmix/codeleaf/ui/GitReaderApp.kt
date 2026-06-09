@@ -521,6 +521,12 @@ fun GitReaderApp() {
                         onHistory = { historySelected = null; navigate(Screen.History(file.repo, file.filePath)) },
                         onMemos = { navigate(Screen.Memos(file.repo)) },
                         onNavigateToFile = { path -> pushDetail(Screen.View(file.repo, path)) },
+                        onNavigateToDir = { dir ->
+                            // ディレクトリリンク: 開いているファイルを畳んでブラウザを当該フォルダへ。
+                            clearDetails()
+                            focusMode = false
+                            navigate(Screen.Browse(file.repo, dir))
+                        },
                         onBack = { handleBack() },
                         showBack = showBack,
                         loadSiblings = {

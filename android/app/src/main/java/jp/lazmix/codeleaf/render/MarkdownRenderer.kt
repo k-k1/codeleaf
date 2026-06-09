@@ -346,10 +346,19 @@ object MarkdownRenderer {
     }
 }
 
+/** 相対リンクの解決先(リポ ルート相対パス・区切りは '/')。 */
+sealed interface RepoTarget {
+    val path: String
+    /** リポ内の既存ファイル(ビューアで開く)。 */
+    data class FileTarget(override val path: String) : RepoTarget
+    /** リポ内の既存ディレクトリ(ファイルブラウザで開く)。ルートは path="" 。 */
+    data class DirTarget(override val path: String) : RepoTarget
+}
+
 /**
  * Markdown 内のリンクタップを処理する LinkResolver。
- * 相対リンクがリポジトリ内のファイルを指す場合はアプリ内遷移(onFile に repo ルート相対パスを渡す)、
- * それ以外(http(s)/mailto 等)は既定動作(ブラウザ等で開く)に委譲する。
+ * 相対リンクがリポジトリ内のファイル/ディレクトリを指す場合はアプリ内遷移
+ * (onFile/onDir に repo ルート相対パスを渡す)、それ以外(http(s)/mailto 等)は既定動作に委譲する。
  *
  * @param baseDir 表示中ファイルのあるディレクトリ(相対解決の基点)
  * @param workDir リポジトリのルート(=遷移パスの基点)
@@ -358,6 +367,7 @@ class RepoLinkResolver(
     private val baseDir: File,
     private val workDir: File,
     private val onFile: (String) -> Unit,
+    private val onDir: (String) -> Unit,
     private val onExternal: (String) -> Unit,
 ) : LinkResolver {
 
@@ -369,25 +379,55 @@ class RepoLinkResolver(
             onExternal(link)
             return
         }
-        val path = resolveRepoRelativePath(baseDir, workDir, link)
         // リポ外/存在しない相対リンクは黙って無視(外部 intent でクラッシュさせない)
-        if (path != null) onFile(path)
+        when (val t = resolveRepoTarget(baseDir, workDir, link)) {
+            is RepoTarget.FileTarget -> onFile(t.path)
+            is RepoTarget.DirTarget -> onDir(t.path)
+            null -> Unit
+        }
     }
 
     companion object {
         /**
-         * 相対リンクをリポ内ファイルへ解決し、repo ルート相対パス(区切りは '/')を返す。
-         * 解決できない(スキーム付き/リポ外/存在しない/ディレクトリ)場合は null。
+         * 相対リンクをリポ内のファイル/ディレクトリへ解決する。
+         * 解決できない(スキーム付き/リポ外/存在しない)場合は null。
+         * リンク先は `%XX`/`<...>` でエンコードされ得るためパーセントデコードしてから実体を判定する。
          */
-        fun resolveRepoRelativePath(baseDir: File, workDir: File, link: String): String? {
+        fun resolveRepoTarget(baseDir: File, workDir: File, link: String): RepoTarget? {
             if (!MarkdownRenderer.isRelative(link)) return null
-            val clean = link.substringBefore('#').substringBefore('?')
+            val clean = decodePercent(link.substringBefore('#').substringBefore('?'))
             if (clean.isEmpty()) return null
             val target = File(baseDir, clean).normalize()
             val rel = target.relativeToOrNull(workDir.normalize()) ?: return null
             if (rel.path.startsWith("..")) return null
-            if (!target.isFile) return null
-            return rel.path.replace('\\', '/')
+            val relPath = rel.path.replace('\\', '/')
+            return when {
+                target.isFile -> RepoTarget.FileTarget(relPath)
+                // ディレクトリは末尾 '/' を落とす(ルートは "" のまま=ブラウザのトップ)。
+                target.isDirectory -> RepoTarget.DirTarget(relPath.trimEnd('/'))
+                else -> null
+            }
+        }
+
+        /**
+         * 相対リンクをリポ内ファイルへ解決し、repo ルート相対パス(区切りは '/')を返す。
+         * ファイル以外(ディレクトリ/スキーム付き/リポ外/存在しない)は null。
+         */
+        fun resolveRepoRelativePath(baseDir: File, workDir: File, link: String): String? =
+            (resolveRepoTarget(baseDir, workDir, link) as? RepoTarget.FileTarget)?.path
+
+        /**
+         * URL のパーセントエンコードのみ復号する(`%20` 等)。
+         * URLDecoder は `+` を空白に変えてしまう(form 用セマンティクス・パスでは誤り)ため
+         * リテラル `+` を一旦退避してから復号する。不正な `%` 列は復号せず原文を返す。
+         */
+        private fun decodePercent(s: String): String {
+            if (!s.contains('%')) return s
+            return try {
+                java.net.URLDecoder.decode(s.replace("+", "%2B"), "UTF-8")
+            } catch (e: Exception) {
+                s
+            }
         }
     }
 }
@@ -464,8 +504,8 @@ object CodeHighlight {
  * Compose から Markdown テキストブロックを表示する。baseDir は対象 .md があるディレクトリ。
  * textColor は現在テーマの onSurface 色（AndroidView の TextView は Compose テーマを継承しないため明示指定）。
  * dark はコードフェンスのハイライト配色(ダーク/ライト)を選ぶ。
- * workDir はリポジトリのルート。相対リンクがリポ内ファイルを指す場合は
- * onNavigateToFile(repo ルート相対パス)でアプリ内遷移する。
+ * workDir はリポジトリのルート。相対リンクがリポ内ファイル/ディレクトリを指す場合は
+ * onNavigateToFile / onNavigateToDir(repo ルート相対パス)でアプリ内遷移する。
  */
 @Composable
 fun MarkdownView(
@@ -476,6 +516,7 @@ fun MarkdownView(
     dark: Boolean,
     fontScale: Float,
     onNavigateToFile: (String) -> Unit,
+    onNavigateToDir: (String) -> Unit,
     onExternalLink: (String) -> Unit,
     /** このブロックを長押ししたとき呼ぶ(整形 Markdown でのメモ追加)。null なら無効。 */
     onLongPress: (() -> Unit)? = null,
@@ -484,6 +525,7 @@ fun MarkdownView(
     val context = LocalContext.current
     // コールバックの最新参照を保持(Markwon は再生成せず、resolver から間接参照する)
     val latestNavigate by rememberUpdatedState(onNavigateToFile)
+    val latestNavigateDir by rememberUpdatedState(onNavigateToDir)
     val latestExternal by rememberUpdatedState(onExternalLink)
     val latestLongPress by rememberUpdatedState(onLongPress)
     val scheme = MaterialTheme.colorScheme
@@ -501,6 +543,7 @@ fun MarkdownView(
             baseDir = baseDir,
             workDir = workDir,
             onFile = { latestNavigate(it) },
+            onDir = { latestNavigateDir(it) },
             onExternal = { latestExternal(it) },
         )
         MarkdownRenderer.create(context, dark, resolver, colors)
