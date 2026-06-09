@@ -69,6 +69,13 @@ class AppE2EInstrumentedTest {
         // List 画面 → 追加 FAB
         compose.onNodeWithContentDescription("リポジトリを追加").performClick()
 
+        // OAuth 設定済みビルド(local.properties に client_id あり)では GitHub 既定が OAuth になり
+        // URL 手入力欄が隠れる。アコーディオンの「トークンを入力」を選んで URL 欄を出す
+        // (OAuth 未設定ビルドではアコーディオン自体が無いので、その時は素通り)。
+        if (compose.onAllNodesWithText("トークンを入力").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("トークンを入力").performClick()
+        }
+
         // フォーム入力(URL=ローカルパス, token=ダミー: file clone では未使用だが UI 必須)。
         // 表示名は URL から自動補完される(末尾セグメント = "e2e-src")。
         setField("https", srcRepo.absolutePath) // URL 欄(ラベル "URL (https://...)")を一意に特定

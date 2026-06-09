@@ -38,6 +38,11 @@ class AddRepoValidationE2EInstrumentedTest {
             compose.onAllNodesWithContentDescription("リポジトリを追加").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onAllNodesWithContentDescription("リポジトリを追加").onFirst().performClick()
+        // OAuth 設定済みビルドでは GitHub 既定が OAuth で URL 欄が隠れる。トークン方式へ切替
+        // (OAuth 未設定ビルドではアコーディオンが無いので素通り)。
+        if (compose.onAllNodesWithText("トークンを入力").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("トークンを入力").performClick()
+        }
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("URL (https://...)").fetchSemanticsNodes().isNotEmpty()
         }
