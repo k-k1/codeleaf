@@ -655,9 +655,10 @@ fun GitReaderApp() {
 
             @Composable
             fun GraphPane(selectedSha: String?, multiPane: Boolean, onSelect: (GraphCommit) -> Unit) {
-                // リポ毎に作り直す。これがないと別リポのグラフに切替えても LaunchedEffect が
-                // 再実行されず前リポのコミットが残り、タップ時に commitDiff が別リポ SHA で失敗する。
-                key(repo.id) {
+                // リポ毎・ブランチ毎に作り直す。リポ id だけだと別リポ切替で前コミットが残り
+                // commitDiff が別リポ SHA で失敗する。branch も含めるのは長押し切替後に再読込して
+                // 現在ブランチ強調(RefChip)と未到達グレーを更新するため。
+                key(repo.id, repo.branch) {
                     CommitGraphScreen(
                         repoName = repo.name,
                         branch = repo.branch,
@@ -667,6 +668,14 @@ fun GitReaderApp() {
                         onBack = { handleBack() },
                         selectedSha = selectedSha,
                         onSelectCommit = onSelect,
+                        onSwitchBranch = { branch ->
+                            vm.switchBranch(repo, branch) { updated ->
+                                // Graph は WithRepo なので backStack の該当画面が更新版へ差し替わり、
+                                // repo.branch 変化で key が変わりグラフが再読込される。選択は作業ツリー変化で無効化。
+                                applyRepoUpdate(updated)
+                                graphSelected = null
+                            }
+                        },
                         onSync = { vm.syncNow(repo) },
                     )
                 }

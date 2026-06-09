@@ -58,6 +58,11 @@ data class GraphCommit(
     val committedAt: Instant,
     val refs: List<String>,
     /**
+     * このコミットを指すリモートブランチ表示名(origin/ を剥がした名前)。タグは含まない。
+     * グラフ長押しでの「ブランチ切替」メニュー用([refs] はチップ表示用でタグも混在する)。
+     */
+    val branches: List<String> = emptyList(),
+    /**
      * 現在チェックアウト中ブランチ(HEAD)から到達可能か。true=ローカル作業ツリーに反映済み。
      * false=他ブランチ専用/未取り込みで、UI ではグレー表示する。
      */
@@ -78,6 +83,17 @@ internal fun graphRefDisplayName(fullName: String): String? = when {
     fullName.startsWith("refs/tags/") -> fullName.removePrefix("refs/tags/")
     else -> null
 }
+
+/**
+ * リモートブランチ(refs/remotes 配下)のときだけブランチ表示名(origin/ を剥がした名前)を返す。
+ * タグ・ローカルブランチ・origin/HEAD は null。グラフ長押しの「ブランチ切替」候補抽出に使う純粋関数。
+ */
+internal fun remoteBranchDisplayName(fullName: String): String? =
+    if (fullName.startsWith("refs/remotes/")) {
+        fullName.removePrefix("refs/remotes/").substringAfter('/').takeIf { it != "HEAD" }
+    } else {
+        null
+    }
 
 /**
  * JGit を薄くラップした git クライアント。全メソッドはブロッキング I/O のため、
@@ -270,10 +286,12 @@ class JgitClient {
             // sha -> その位置を指す ref 表示名。読み取りミラーなのでローカル(refs/heads)は出さず、
             // リモートブランチは origin/ を剥がし、タグはそのまま(graphRefDisplayName)。
             val refNames = HashMap<String, MutableList<String>>()
+            // sha -> その位置を指すリモートブランチ名(切替メニュー用。タグは除く)。
+            val branchNames = HashMap<String, MutableList<String>>()
             for (ref in allRefs) {
-                val display = graphRefDisplayName(ref.name) ?: continue
                 val id = repo.refDatabase.peel(ref).peeledObjectId ?: ref.objectId ?: continue
-                refNames.getOrPut(id.name) { ArrayList() }.add(display)
+                graphRefDisplayName(ref.name)?.let { refNames.getOrPut(id.name) { ArrayList() }.add(it) }
+                remoteBranchDisplayName(ref.name)?.let { branchNames.getOrPut(id.name) { ArrayList() }.add(it) }
             }
 
             RevWalk(repo).use { rw ->
@@ -296,6 +314,7 @@ class JgitClient {
                             author = c.authorIdent.name,
                             committedAt = c.committerIdent.whenAsInstant,
                             refs = refNames[c.name].orEmpty().distinct().sorted(),
+                            branches = branchNames[c.name].orEmpty().distinct().sorted(),
                             // HEAD を解決できなかった時(集合が空)は全て反映済み扱い(全グレー化を回避)。
                             inCurrentBranch = reachableFromHead.isEmpty() || c.name in reachableFromHead,
                         ),

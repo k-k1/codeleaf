@@ -39,6 +39,8 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   多ペインで「ファイルを開いた後にフォルダを潜った」場合は detailStack を閉じる前に `goUpBrowse` でフォルダを一つ上げる
   (操作順どおりに巻き戻す)。判定は detailStack と並走する `detailDepth`(開いた時点の `backStack` 深さ)を `pushDetail/popDetail/clearDetails` で同期し比較。
   履歴(`Screen.History`)・グラフは2/3ペイン(左=一覧/右=`FileDiffPane`等、`historySelected`/`graphSelected`、各 `*ListCollapsed`)。
+  **グラフのコミット長押し**(`CommitGraphScreen`)= そのコミットを指す**リモートブランチ毎にメニュー項目**を並べ選択で `switchBranch`(=そのブランチで sync)。
+  ブランチ判定は `GraphCommit.branches`(commitGraph が `refs/remotes` のみ収集・タグ除外。チップ用 `refs` はタグ込み)。切替後は `key(repo.id, repo.branch)` で再読込。
   リポ追加の＋は一覧0件時のみ右上、1件以上は `RepoEditScreen` の右上。`MainActivity` の `configChanges` で回転は状態保持。
   **状態永続化**: `Screen`/`Repo`/`GraphCommit` を `@Parcelize`(`kotlin("plugin.parcelize")`, Instant は `InstantParceler`)、
   `backStack`/`detailStack`/`graphSelected`/`focusMode` を `rememberSaveable` でプロセス死から復元。

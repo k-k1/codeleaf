@@ -1,8 +1,9 @@
 package jp.lazmix.codeleaf.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,6 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -79,6 +82,8 @@ fun CommitGraphScreen(
     onBack: () -> Unit,
     selectedSha: String? = null,
     onSelectCommit: (GraphCommit) -> Unit = {},
+    /** コミット長押しメニューから別ブランチへ切り替える(= そのブランチで同期)。 */
+    onSwitchBranch: (String) -> Unit = {},
     /** 引っ張って更新(同期)する処理。null なら pull-to-refresh を出さない。 */
     onSync: (suspend () -> Unit)? = null,
     /** 上部バー下に引くリポ色の下線(ブラウザと統一)。 */
@@ -165,6 +170,7 @@ fun CommitGraphScreen(
                                     currentBranch = branch,
                                     selected = row.commit.sha == selectedSha,
                                     onClick = { onSelectCommit(row.commit) },
+                                    onSwitchBranch = onSwitchBranch,
                                 )
                             }
                         }
@@ -175,6 +181,7 @@ fun CommitGraphScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GraphCommitRow(
     row: GraphRow,
@@ -183,42 +190,75 @@ private fun GraphCommitRow(
     currentBranch: String,
     selected: Boolean,
     onClick: () -> Unit,
+    onSwitchBranch: (String) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth()
-            .height(ROW_HEIGHT)
-            .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-            .clickable(onClick = onClick),
-    ) {
-        GraphCell(row, laneCount, laneW, Modifier.width(laneW * laneCount).fillMaxHeight())
-        Column(
-            Modifier.weight(1f).fillMaxHeight().padding(end = 12.dp),
-            verticalArrangement = Arrangement.Center,
+    // このコミットを指すリモートブランチがあれば、長押しで切替メニューを出す。
+    val branches = row.commit.branches
+    var menuOpen by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier.fillMaxWidth()
+                .height(ROW_HEIGHT)
+                .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (branches.isEmpty()) null else { { menuOpen = true } },
+                ),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                row.commit.refs.forEach { ref ->
-                    RefChip(ref, isCurrent = ref == currentBranch)
+            GraphCell(row, laneCount, laneW, Modifier.width(laneW * laneCount).fillMaxHeight())
+            Column(
+                Modifier.weight(1f).fillMaxHeight().padding(end = 12.dp),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    row.commit.refs.forEach { ref ->
+                        RefChip(ref, isCurrent = ref == currentBranch)
+                    }
+                    Text(
+                        row.commit.shortMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        // 現ブランチ非到達(他ブランチ専用/未取り込み)は減光して区別する。
+                        color = if (row.commit.inCurrentBranch) {
+                            Color.Unspecified
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 Text(
-                    row.commit.shortMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    // 現ブランチ非到達(他ブランチ専用/未取り込み)は減光して区別する。
-                    color = if (row.commit.inCurrentBranch) {
-                        Color.Unspecified
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    "${row.commit.author} · ${relativeTimeMillis(row.commit.committedAt.toEpochMilli())} · ${shortSha(row.commit.sha)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+        // ブランチ毎に1項目(複数ブランチが同一コミットを指す場合は並べる)。
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             Text(
-                "${row.commit.author} · ${relativeTimeMillis(row.commit.committedAt.toEpochMilli())} · ${shortSha(row.commit.sha)}",
-                style = MaterialTheme.typography.labelSmall,
+                "ブランチを切り替え",
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             )
+            branches.forEach { b ->
+                val isCurrent = b == currentBranch
+                DropdownMenuItem(
+                    text = { Text(if (isCurrent) "$b（現在のブランチ）" else b) },
+                    enabled = !isCurrent,
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.ic_graph),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    onClick = { menuOpen = false; onSwitchBranch(b) },
+                )
+            }
         }
     }
 }
