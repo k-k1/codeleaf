@@ -3,8 +3,11 @@ package jp.lazmix.codeleaf.ui
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,7 +29,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -44,6 +50,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,11 +67,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.luminance
@@ -77,6 +88,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -102,6 +115,8 @@ import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
@@ -771,26 +786,50 @@ private fun AddMemoSheet(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            // 行範囲の微調整(開始 ≤ 終了 ≤ 総行数)。
+            // 行範囲の指定。スライダーで素早く・ステッパ/直接入力で正確に(開始 ≤ 終了 ≤ 総行数)。
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("行", style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.width(12.dp))
-                LineStepper(
-                    value = start1,
-                    onDec = { start1 = (start1 - 1).coerceAtLeast(1) },
-                    onInc = { start1 = (start1 + 1).coerceAtMost(end1) },
-                )
-                Text("〜", Modifier.padding(horizontal = 8.dp))
-                LineStepper(
-                    value = end1,
-                    onDec = { end1 = (end1 - 1).coerceAtLeast(start1) },
-                    onInc = { end1 = (end1 + 1).coerceAtMost(total) },
+                Text(
+                    "行 $start1 〜 $end1",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
                     "全 $total 行",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // 総行数が2行以上のときだけスライダー(1行ファイルは range が潰れるため出さない)。
+            if (total >= 2) {
+                RangeSlider(
+                    value = start1.toFloat()..end1.toFloat(),
+                    onValueChange = { r ->
+                        // 連続値で受けて整数行へ丸める(巨大ファイルでも目盛りを描かず滑らかに)。
+                        start1 = r.start.roundToInt().coerceIn(1, total)
+                        end1 = r.endInclusive.roundToInt().coerceIn(start1, total)
+                    },
+                    valueRange = 1f..total.toFloat(),
+                )
+            }
+            // 1行単位の微調整(長押しで連続・数字タップで直接入力)。
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                LineField(
+                    label = "開始",
+                    value = start1,
+                    min = 1,
+                    max = end1,
+                    onChange = { start1 = it.coerceIn(1, end1) },
+                )
+                LineField(
+                    label = "終了",
+                    value = end1,
+                    min = start1,
+                    max = total,
+                    onChange = { end1 = it.coerceIn(start1, total) },
                 )
             }
 
@@ -869,13 +908,135 @@ private fun AddMemoSheet(
     }
 }
 
-/** 行番号の増減ステッパ(−[値]＋)。 */
+/**
+ * 行番号の指定フィールド(ラベル + −[値]＋)。
+ * −/＋ は長押しで連続増減(加速)、値をタップすると直接入力に切り替わる。
+ * value は [min]..[max] に収まる前提で表示し、限界では該当ボタンを無効化する。
+ */
 @Composable
-private fun LineStepper(value: Int, onDec: () -> Unit, onInc: () -> Unit) {
+private fun LineField(
+    label: String,
+    value: Int,
+    min: Int,
+    max: Int,
+    onChange: (Int) -> Unit,
+) {
+    var editing by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = onDec, contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) { Text("−") }
-        Text("$value", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-        TextButton(onClick = onInc, contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)) { Text("＋") }
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(6.dp))
+        RepeatingIconButton(
+            enabled = value > min,
+            onTrigger = { onChange(value - 1) },
+        ) { StepGlyph("−") }
+
+        if (editing) {
+            val focus = remember { FocusRequester() }
+            var buf by remember { mutableStateOf(value.toString()) }
+            // フォーカスを得る前の初回 onFocusChanged(未フォーカス)で即コミットしないためのガード。
+            var hadFocus by remember { mutableStateOf(false) }
+            fun commit() {
+                buf.toIntOrNull()?.let { onChange(it.coerceIn(min, max)) }
+                editing = false
+            }
+            OutlinedTextField(
+                value = buf,
+                onValueChange = { buf = it.filter(Char::isDigit).take(7) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { commit() }),
+                modifier = Modifier
+                    .width(76.dp)
+                    .focusRequester(focus)
+                    .onFocusChanged {
+                        if (it.isFocused) hadFocus = true
+                        else if (hadFocus && editing) commit() // フォーカスを失ったら確定
+                    },
+            )
+            LaunchedEffect(Unit) { focus.requestFocus() }
+        } else {
+            Text(
+                "$value",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { editing = true }
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
+
+        RepeatingIconButton(
+            enabled = value < max,
+            onTrigger = { onChange(value + 1) },
+        ) { StepGlyph("＋") }
+    }
+}
+
+/** ステッパボタンの −/＋ グリフ(LocalContentColor を継承)。 */
+@Composable
+private fun StepGlyph(symbol: String) {
+    Text(
+        symbol,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = androidx.compose.material3.LocalContentColor.current,
+    )
+}
+
+/**
+ * 押している間 [onTrigger] を繰り返し呼ぶアイコンボタン(オートリピート)。
+ * 押下で即1回 → 短い猶予 → 加速しながら連続発火。単タップは1回だけ。
+ * [enabled]=false の間は枠と内容を減光し反応しない(限界に達したボタン用)。
+ */
+@Composable
+private fun RepeatingIconButton(
+    enabled: Boolean,
+    onTrigger: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val current by androidx.compose.runtime.rememberUpdatedState(onTrigger)
+    val scope = rememberCoroutineScope()
+    val border = if (enabled) MaterialTheme.colorScheme.outline
+    else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val tint = if (enabled) MaterialTheme.colorScheme.onSurface
+    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .border(1.dp, border, CircleShape)
+            .then(
+                if (!enabled) Modifier else Modifier.pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        val job = scope.launch {
+                            current()             // 1回目は即時(単タップ用)
+                            delay(380)            // 長押し判定の猶予
+                            var step = 180L
+                            while (isActive) {
+                                current()
+                                delay(step)
+                                step = (step - 18).coerceAtLeast(35L) // 押し続けるほど加速
+                            }
+                        }
+                        waitForUpOrCancellation()
+                        job.cancel()
+                    }
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides tint,
+        ) { content() }
     }
 }
 
