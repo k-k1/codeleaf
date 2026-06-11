@@ -191,8 +191,12 @@ fun GitReaderApp() {
     fun handleBack() {
         val top = backStack.last()
         if (top is Screen.Browse && detailStack.isNotEmpty()) {
-            // 集中モード中はまず集中を解除する(ファイルは開いたまま・レールと一覧を戻す)。
-            if (focusMode) { focusMode = false; return }
+            // 集中モード中: リンク等で別ファイルへ潜っていれば(detailStack に戻れる前のファイルがある)、
+            // 集中を解除せず前のファイルへ戻る。先頭ファイルなら従来どおり集中を解除する。
+            if (focusMode) {
+                if (detailStack.size > 1) popDetail() else focusMode = false
+                return
+            }
             // 多ペイン: 開いているファイルより後にフォルダを潜っていれば(backStack が当時より深い)、
             // ファイルを閉じる前にフォルダを一つ上げる(「フォルダ遷移直後の戻る」を直感に合わせる)。
             val openedAtDepth = detailDepth.lastOrNull() ?: backStack.size
