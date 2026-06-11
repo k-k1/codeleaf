@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -143,6 +144,10 @@ fun FileViewerScreen(
     defaultWrap: Boolean = true,
     /** 折り返しトグルの変更を保存する(ファイル閲覧の折り返し設定として永続化)。 */
     onToggleWrap: (Boolean) -> Unit = {},
+    /** テキスト選択モードの既定値(設定の selectByDefault)。 */
+    defaultSelectable: Boolean = false,
+    /** 選択モードトグルの変更を保存する(既定値設定として永続化)。 */
+    onToggleSelectable: (Boolean) -> Unit = {},
     linkOpenMode: LinkOpenMode = LinkOpenMode.IN_APP,
     showLineNumbers: Boolean = false,
     tableMode: TableMode = TableMode.INLINE,
@@ -178,6 +183,8 @@ fun FileViewerScreen(
     // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
     var raw by remember(filePath) { mutableStateOf(targetLine != null) }
     var wrap by remember(filePath) { mutableStateOf(defaultWrap) }
+    // テキスト選択モード。設定の既定値で初期化し、⋮ で個別切替(変更時に設定へ保存)。
+    var selectionMode by remember(filePath) { mutableStateOf(defaultSelectable) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     // まず種別を判定し、テキストのときだけ本文を読み込む(画像/バイナリは全読みしない)。
@@ -207,6 +214,8 @@ fun FileViewerScreen(
 
     // メモ追加の行選択範囲(0始まり)。非 null の間は追加シートを出す。
     var addRange by remember(filePath) { mutableStateOf<IntRange?>(null) }
+    // コード行の長押しメモ(選択モードでないとき CodeView に渡す)。
+    val lineMemo: (Int) -> Unit = { idx -> addRange = idx..idx }
 
     // 同一フォルダの隣接ファイル(前/次送り用)。読み込めるまでは送りボタンを出さない。
     var siblings by remember(repo.id, filePath) { mutableStateOf<List<String>>(emptyList()) }
@@ -309,6 +318,14 @@ fun FileViewerScreen(
                             DropdownMenuItem(
                                 text = { Text("メモ") },
                                 onClick = { menuExpanded = false; onMemos() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (selectionMode) "選択を終了" else "テキストを選択") },
+                                onClick = {
+                                    menuExpanded = false
+                                    selectionMode = !selectionMode
+                                    onToggleSelectable(selectionMode)
+                                },
                             )
                         }
                     }
@@ -425,9 +442,13 @@ fun FileViewerScreen(
                                             onNavigateToFile = onNavigateToFile,
                                             onNavigateToDir = onNavigateToDir,
                                             onExternalLink = openExternal,
-                                            // 長押しでこのブロックのソース行を起点にメモ追加。
-                                            onLongPress = blockLineRange(body, block.markdown)
-                                                ?.let { range -> { addRange = range } },
+                                            // 長押しでこのブロックのソース行を起点にメモ追加(選択モード中は無効)。
+                                            onLongPress = if (selectionMode) {
+                                                null
+                                            } else {
+                                                blockLineRange(body, block.markdown)?.let { range -> { addRange = range } }
+                                            },
+                                            selectable = selectionMode,
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                         is MdBlock.Mermaid -> MermaidWebView(
@@ -463,33 +484,38 @@ fun FileViewerScreen(
                     }
                 }
                 // Raw 表示(Markdown のソース)は無装飾の行表示。行ジャンプ時はその行へ。
-                isMarkdown && raw -> CodeView(
-                    code = body,
-                    language = null,
-                    dark = dark,
-                    fontScale = fontScale,
-                    highlightLine = targetLine?.let { it - 1 },
-                    wrap = wrap,
-                    showLineNumbers = showLineNumbers,
-                    onLineLongPress = { idx -> addRange = idx..idx },
-                    selectedLines = addRange,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
-                else -> {
-                    val language = remember(filePath) { CodeHighlight.languageForFile(fileName) }
+                isMarkdown && raw -> SelectableArea(selectionMode) {
                     CodeView(
                         code = body,
-                        language = language,
+                        language = null,
                         dark = dark,
                         fontScale = fontScale,
                         highlightLine = targetLine?.let { it - 1 },
                         wrap = wrap,
                         showLineNumbers = showLineNumbers,
-                        onLineLongPress = { idx -> addRange = idx..idx },
+                        // 選択モード中は行長押しメモを無効化(選択が長押しを使うため)。
+                        onLineLongPress = if (selectionMode) null else lineMemo,
                         selectedLines = addRange,
                         modifier = Modifier.fillMaxSize(),
                     )
+                }
+                // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
+                else -> {
+                    val language = remember(filePath) { CodeHighlight.languageForFile(fileName) }
+                    SelectableArea(selectionMode) {
+                        CodeView(
+                            code = body,
+                            language = language,
+                            dark = dark,
+                            fontScale = fontScale,
+                            highlightLine = targetLine?.let { it - 1 },
+                            wrap = wrap,
+                            showLineNumbers = showLineNumbers,
+                            onLineLongPress = if (selectionMode) null else lineMemo,
+                            selectedLines = addRange,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
         }
@@ -595,6 +621,12 @@ internal fun fileMetaLine(info: FileInfo): String? = when (val k = info.kind) {
     }.joinToString(" ・ ")
     is FileKind.Pdf -> "PDF ・ ${humanSize(info.size)}"
     is FileKind.Binary -> null
+}
+
+/** 選択モードのとき中身を SelectionContainer で包み、コード/テキストを選択可能にする。 */
+@Composable
+private fun SelectableArea(enabled: Boolean, content: @Composable () -> Unit) {
+    if (enabled) SelectionContainer(Modifier.fillMaxSize()) { content() } else content()
 }
 
 /** 本文上部に出す1行のメタ情報バー。 */

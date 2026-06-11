@@ -1,9 +1,14 @@
 package jp.lazmix.codeleaf.render
 
 import android.content.Context
+import android.text.Selection
+import android.text.Spannable
 import android.text.Spanned
+import android.text.method.ArrowKeyMovementMethod
 import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
+import android.view.MotionEvent
 import android.view.View
 import android.widget.TextView
 import androidx.compose.foundation.background
@@ -520,6 +525,8 @@ fun MarkdownView(
     onExternalLink: (String) -> Unit,
     /** このブロックを長押ししたとき呼ぶ(整形 Markdown でのメモ追加)。null なら無効。 */
     onLongPress: (() -> Unit)? = null,
+    /** テキスト選択を有効にするか(選択モード)。ON のとき長押しメモは無効・リンクは維持。 */
+    selectable: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -553,18 +560,57 @@ fun MarkdownView(
     }
     AndroidView(
         modifier = modifier,
-        // setTextIsSelectable(true) は MovementMethod を選択用に置換しリンクのタップを無効化するため使わない。
         factory = { ctx -> TextView(ctx) },
         update = { tv ->
             tv.setTextColor(textColor)
             tv.textSize = MARKDOWN_BASE_SP * fontScale
             markwon.setMarkdown(tv, rendered)
-            // リンク(相対リンク=アプリ内遷移 / 外部=ブラウザ)をタップ可能にする。
-            tv.movementMethod = LinkMovementMethod.getInstance()
-            // 長押しはメモ追加に使う(リンクのタップ=短押しとは競合しない)。
-            tv.setOnLongClickListener { latestLongPress?.invoke(); latestLongPress != null }
+            // 選択モード: 本文を選択可能に。MovementMethod は選択用に置換されるので、
+            // リンクも生かす SelectableLinkMovementMethod を使う。長押しは選択に使うのでメモは無効。
+            // 非選択モード: 従来どおりリンク(LinkMovementMethod)＋長押しメモ。
+            tv.setTextIsSelectable(selectable)
+            tv.movementMethod =
+                if (selectable) SelectableLinkMovementMethod.getInstance() else LinkMovementMethod.getInstance()
+            tv.setOnLongClickListener(
+                if (selectable) {
+                    null
+                } else {
+                    View.OnLongClickListener { latestLongPress?.invoke(); latestLongPress != null }
+                },
+            )
         },
     )
+}
+
+/**
+ * 選択と相対/外部リンクのタップを両立する MovementMethod。
+ * ArrowKeyMovementMethod(選択)を基底に、タップ(選択が無い ACTION_UP)が ClickableSpan 上なら onClick する。
+ * ドラッグ選択の終了(選択あり)ではリンクを発火しない。
+ */
+private class SelectableLinkMovementMethod : ArrowKeyMovementMethod() {
+    override fun onTouchEvent(widget: TextView, buffer: Spannable, event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP &&
+            Selection.getSelectionStart(buffer) == Selection.getSelectionEnd(buffer)
+        ) {
+            val layout = widget.layout
+            if (layout != null) {
+                val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
+                val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
+                val off = layout.getOffsetForHorizontal(layout.getLineForVertical(y), x.toFloat())
+                val links = buffer.getSpans(off, off, ClickableSpan::class.java)
+                if (links.isNotEmpty()) {
+                    links[0].onClick(widget)
+                    return true
+                }
+            }
+        }
+        return super.onTouchEvent(widget, buffer, event)
+    }
+
+    companion object {
+        private val instance = SelectableLinkMovementMethod()
+        fun getInstance() = instance
+    }
 }
 
 /** Markdown / コード本文の基準フォントサイズ(sp)。fontScale を掛けて適用する。 */

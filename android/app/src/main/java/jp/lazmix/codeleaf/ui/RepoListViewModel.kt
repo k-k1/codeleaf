@@ -323,6 +323,8 @@ class RepoListViewModel(
 
     fun setRestoreLastPosition(on: Boolean) = settingsStore.setRestoreLastPosition(on)
 
+    fun setSelectByDefault(on: Boolean) = settingsStore.setSelectByDefault(on)
+
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {

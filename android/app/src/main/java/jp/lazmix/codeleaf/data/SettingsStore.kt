@@ -41,6 +41,8 @@ data class AppSettings(
     /** ファイル一覧の名前表示方法。 */
     val fileNameDisplay: FileNameDisplay = FileNameDisplay.WRAP,
     val iconSet: IconSet = IconSet.MATERIAL,
+    /** ビューアでテキスト選択モードを既定で有効にするか(各ビューアの ⋮ で個別切替も可)。 */
+    val selectByDefault: Boolean = false,
     /** リポを開いたとき前回のフォルダ/ファイルを復元するか。OFF=常にトップ・ファイル未オープン。 */
     val restoreLastPosition: Boolean = true,
     /** リポ一覧で選択中のグループ。空=すべて表示。 */
@@ -72,6 +74,7 @@ class SettingsStore(context: Context) {
         collapseFolders = prefs.getBoolean(KEY_COLLAPSE, true),
         fileNameDisplay = enumOrDefault(prefs.getString(KEY_NAMEDISP, null), FileNameDisplay.WRAP),
         iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.MATERIAL),
+        selectByDefault = prefs.getBoolean(KEY_SELECT, false),
         restoreLastPosition = prefs.getBoolean(KEY_RESTOREPOS, true),
         selectedGroup = prefs.getString(KEY_GROUP, "") ?: "",
         groups = prefs.getString(KEY_GROUPS, null)
@@ -133,6 +136,11 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(iconSet = set)
     }
 
+    fun setSelectByDefault(on: Boolean) {
+        prefs.edit().putBoolean(KEY_SELECT, on).apply()
+        _settings.value = _settings.value.copy(selectByDefault = on)
+    }
+
     fun setRestoreLastPosition(on: Boolean) {
         prefs.edit().putBoolean(KEY_RESTOREPOS, on).apply()
         _settings.value = _settings.value.copy(restoreLastPosition = on)
@@ -161,6 +169,7 @@ class SettingsStore(context: Context) {
         const val KEY_COLLAPSE = "collapse_folders"
         const val KEY_NAMEDISP = "file_name_display"
         const val KEY_ICONSET = "icon_set"
+        const val KEY_SELECT = "select_by_default"
         const val KEY_RESTOREPOS = "restore_last_position"
         const val KEY_GROUP = "selected_group"
         const val KEY_GROUPS = "groups"

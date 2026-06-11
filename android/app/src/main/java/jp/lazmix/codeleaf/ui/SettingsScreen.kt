@@ -101,6 +101,7 @@ fun SettingsScreen(
     onSetFileNameDisplay: (FileNameDisplay) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
     onSetRestoreLastPosition: (Boolean) -> Unit,
+    onSetSelectByDefault: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     onLicenses: () -> Unit,
     onBack: () -> Unit,
@@ -239,6 +240,13 @@ fun SettingsScreen(
                     description = "コード/テキスト/Raw 表示で各行に行番号を付ける。",
                     checked = settings.showLineNumbers,
                     onCheckedChange = onSetShowLineNumbers,
+                )
+                SwitchSetting(
+                    title = "テキスト選択を既定で有効",
+                    description = "本文を選択してコピーできる状態でビューアを開く。各ビューアの ⋮ でも個別に切替できます。" +
+                        "ON の間は長押しメモ追加が無効になります。",
+                    checked = settings.selectByDefault,
+                    onCheckedChange = onSetSelectByDefault,
                 )
                 SwitchSetting(
                     title = "見出しを上部に固定",
