@@ -109,7 +109,7 @@ fun HistoryScreen(
  * ヘッダ(件名・著者・時刻・sha)＋ DiffText。コミットグラフの CommitDetailContent と対の関係。
  */
 @Composable
-fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String) {
+fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String, onOpenFile: (String) -> Unit = {}) {
     var diff by remember(commit.sha) { mutableStateOf<String?>(null) }
     var error by remember(commit.sha) { mutableStateOf<String?>(null) }
     LaunchedEffect(commit.sha) {
@@ -137,7 +137,7 @@ fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String) {
             error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
             d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
             d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth())
+            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
 }

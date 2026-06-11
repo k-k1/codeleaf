@@ -255,6 +255,20 @@ class RepoListViewModel(
     suspend fun probeFile(repo: Repo, relPath: String): jp.lazmix.codeleaf.data.FileInfo =
         repository.probeFile(repo, relPath)
 
+    /** 指定コミット時点のファイル種別(履歴表示用・blob が無ければ null)。 */
+    suspend fun probeBlob(repo: Repo, relPath: String, sha: String): jp.lazmix.codeleaf.data.FileInfo? =
+        repository.probeBlob(repo, relPath, sha)
+
+    /** 指定コミット時点のテキスト本文(履歴表示用・blob が無ければ null)。 */
+    suspend fun readBlobText(
+        repo: Repo,
+        relPath: String,
+        sha: String,
+        charsetName: String? = null,
+        maxBytes: Long = Long.MAX_VALUE,
+    ): jp.lazmix.codeleaf.data.TextLoad? =
+        repository.readBlobText(repo, relPath, sha, resolveCharset(charsetName), maxBytes)
+
     suspend fun loadSearchCorpus(repo: Repo): List<TextFile> =
         repository.loadSearchCorpus(repo)
 

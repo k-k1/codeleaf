@@ -454,6 +454,38 @@ class RepoRepository(
     suspend fun commitDiff(repo: Repo, sha: String): String =
         withContext(ioDispatcher) { jgit.commitDiff(workDir(repo), sha) }
 
+    /**
+     * 指定コミット(sha)時点の relPath の種別を判定する(履歴表示用)。
+     * 作業ツリーに無いファイルを Viewer で見せるとき用。実ファイルが無いので
+     * 画像/PDF はプレビューせず概要カード(Binary)に寄せる。blob が無ければ null。
+     */
+    suspend fun probeBlob(repo: Repo, relPath: String, sha: String): FileInfo? = withContext(ioDispatcher) {
+        val bytes = jgit.readBytesAt(workDir(repo), relPath, sha) ?: return@withContext null
+        val size = bytes.size.toLong()
+        val head = if (bytes.size > FileClassifier.PROBE_BYTES) bytes.copyOf(FileClassifier.PROBE_BYTES) else bytes
+        var kind = FileClassifier.classify(relPath.substringAfterLast('/'), head, size)
+        if (kind is FileKind.Image) kind = FileKind.Binary(kind.format.uppercase())
+        if (kind is FileKind.Pdf) kind = FileKind.Binary("PDF")
+        val textMeta = if (kind is FileKind.Text) FileClassifier.textMeta(head) else null
+        FileInfo(kind, size, head, textMeta)
+    }
+
+    /** 指定コミット(sha)時点の relPath のテキスト本文。blob が無ければ null。先頭 BOM は除去。 */
+    suspend fun readBlobText(
+        repo: Repo,
+        relPath: String,
+        sha: String,
+        charset: Charset = Charsets.UTF_8,
+        maxBytes: Long = Long.MAX_VALUE,
+    ): TextLoad? = withContext(ioDispatcher) {
+        val bytes = jgit.readBytesAt(workDir(repo), relPath, sha) ?: return@withContext null
+        val total = bytes.size.toLong()
+        val cap = minOf(total, maxBytes, Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(0)
+        var s = String(bytes, 0, cap, charset)
+        if (s.isNotEmpty() && s[0] == '﻿') s = s.substring(1)
+        TextLoad(s, truncated = total > cap.toLong())
+    }
+
     /** リポジトリの表示テーマを変更して保存する。更新後の Repo を返す。 */
     suspend fun setTheme(repo: Repo, mode: ThemeMode): Repo = withContext(ioDispatcher) {
         val updated = repo.copy(themeMode = mode)

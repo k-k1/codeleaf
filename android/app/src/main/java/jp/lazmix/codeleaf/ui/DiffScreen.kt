@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.runtime.mutableStateMapOf
@@ -55,6 +56,7 @@ fun DiffScreen(
     commit: CommitInfo,
     loadDiff: suspend () -> String,
     onBack: () -> Unit,
+    onOpenFile: (String) -> Unit = {},
 ) {
     Scaffold(
         // 本文(DiffText)が自前の下部バーで navigationBars を padding するため、
@@ -72,15 +74,15 @@ fun DiffScreen(
     ) { padding ->
         // コミットメッセージ見出し＋ファイル diff(2/3ペインの右と共通の FileDiffPane)。
         Box(Modifier.fillMaxSize().padding(padding)) {
-            FileDiffPane(commit, loadDiff)
+            FileDiffPane(commit, loadDiff, onOpenFile)
         }
     }
 }
 
 /** 整形済み diff の1行。ノイズ(diff --git/index/---/+++)は除き、種別ごとに描き分ける。 */
 sealed interface DiffRow {
-    /** ファイル境界。path は変更後パス(リネームは "旧 → 新")。 */
-    data class FileHeader(val path: String) : DiffRow
+    /** ファイル境界。path は表示用(リネームは "旧 → 新")、newPath は開く対象=変更後/b 側パス。 */
+    data class FileHeader(val path: String, val newPath: String) : DiffRow
     /** ハンク見出し(@@ -a,b +c,d @@ ...)。 */
     data class Hunk(val text: String) : DiffRow
     /** 本文行。kind: '+'追加 / '-'削除 / ' '文脈。lineNo はその版での行番号(無いとき null)。 */
@@ -97,7 +99,10 @@ fun parseDiffRows(diff: String): List<DiffRow> {
     var newNo = 0
     for (line in diff.lineSequence()) {
         when {
-            line.startsWith("diff --git") -> { rows.add(DiffRow.FileHeader(diffHeaderPath(line))); inHunk = false }
+            line.startsWith("diff --git") -> {
+                rows.add(DiffRow.FileHeader(diffHeaderPath(line), diffHeaderNewPath(line)))
+                inHunk = false
+            }
             line.startsWith("@@") -> {
                 rows.add(DiffRow.Hunk(line))
                 inHunk = true
@@ -127,10 +132,10 @@ private fun isDiffMeta(line: String): Boolean =
         line.startsWith("similarity index") || line.startsWith("dissimilarity") ||
         line.startsWith("rename ") || line.startsWith("copy ")
 
-/** "diff --git a/foo b/foo" からパスを取り出す(リネームは "旧 → 新")。非ASCIIの git quote を復元。 */
-internal fun diffHeaderPath(line: String): String {
+/** "diff --git a/foo b/foo" の (旧パス, 新パス)。非ASCIIの git quote を復元。解析不能なら (rest, rest)。 */
+private fun diffHeaderAB(line: String): Pair<String, String> {
     val rest = line.removePrefix("diff --git ").trim()
-    val (a, b) = if (rest.startsWith("\"")) {
+    return if (rest.startsWith("\"")) {
         // 両パスが引用符: "a/..." "b/..."
         val (q1, end1) = readQuoted(rest, 0)
         var k = end1
@@ -139,11 +144,19 @@ internal fun diffHeaderPath(line: String): String {
         gitUnquotePath(q1).removePrefix("a/") to gitUnquotePath(q2).removePrefix("b/")
     } else {
         val sep = rest.indexOf(" b/")
-        if (sep < 0) return rest
+        if (sep < 0) return rest to rest
         rest.substring(0, sep).removePrefix("a/") to rest.substring(sep + 3)
     }
+}
+
+/** ヘッダ表示用パス(リネームは "旧 → 新")。 */
+internal fun diffHeaderPath(line: String): String {
+    val (a, b) = diffHeaderAB(line)
     return if (a == b) b else "$a → $b"
 }
+
+/** 開く対象パス(=変更後/b 側)。add/delete でも実パスが入る。 */
+internal fun diffHeaderNewPath(line: String): String = diffHeaderAB(line).second
 
 /** s[start]=='"' から閉じ引用符まで(引用符含む)を返す。戻り(部分文字列, 閉じ引用符直後index)。 */
 private fun readQuoted(s: String, start: Int): Pair<String, Int> {
@@ -213,7 +226,7 @@ fun groupDiffByFile(rows: List<DiffRow>): List<DiffFile> {
 /** 整形済み diff を表示する(DiffScreen / コミット詳細 / ファイル履歴で共有)。
  *  ファイル毎に折りたたみ可・行番号付き。下部バーの「折り返しON/OFF」で長行の折り返し/横スクロールを切替。 */
 @Composable
-fun DiffText(diff: String, modifier: Modifier = Modifier) {
+fun DiffText(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -> Unit = {}) {
     val rows = remember(diff) { parseDiffRows(diff) }
     val files = remember(rows) { groupDiffByFile(rows) }
     val collapsed = remember(diff) { mutableStateMapOf<Int, Boolean>() }
@@ -252,7 +265,7 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
                             rowMod
                                 .background(headerBg)
                                 .clickable { collapsed[i] = !isCollapsed }
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                .padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
@@ -261,7 +274,19 @@ fun DiffText(diff: String, modifier: Modifier = Modifier) {
                                 tint = headerFg,
                                 modifier = Modifier.size(18.dp),
                             )
-                            Spacer(Modifier.width(4.dp))
+                            // ファイルを Viewer で開く(独立クリック・親の折りたたみは発火しない)。
+                            Box(
+                                Modifier.size(30.dp).clickable { onOpenFile(h.newPath) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "ファイルを開く",
+                                    tint = headerFg,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            Spacer(Modifier.width(2.dp))
                             Text(
                                 h.path,
                                 color = headerFg,

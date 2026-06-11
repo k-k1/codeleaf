@@ -93,7 +93,13 @@ private sealed interface Screen : Parcelable {
     @Parcelize data class Graph(override val repo: Repo) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
-    @Parcelize data class View(override val repo: Repo, val filePath: String, val line: Int? = null) : WithRepo {
+    // sha != null = そのコミット時点の版を表示する履歴モード(作業ツリーに無いファイル用・読み取り専用)。
+    @Parcelize data class View(
+        override val repo: Repo,
+        val filePath: String,
+        val line: Int? = null,
+        val sha: String? = null,
+    ) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
     @Parcelize data class History(override val repo: Repo, val filePath: String) : WithRepo {
@@ -226,6 +232,21 @@ fun GitReaderApp() {
             while (backStack.lastIndex > idx) backStack.removeAt(backStack.lastIndex)
         } else {
             backStack[backStack.lastIndex] = Screen.Browse(repo, path)
+        }
+    }
+
+    // diff のファイルを Viewer で開く。作業ツリーに在れば現物(ディレクトリを開き＋ビューア)、
+    // 無ければそのコミット時点の版(履歴モード)を開く。
+    fun openDiffFile(repo: Repo, path: String, sha: String) {
+        val exists = java.io.File(vm.workDirOf(repo), path).exists()
+        while (backStack.size > 1 && backStack.last() !is Screen.Browse) backStack.removeAt(backStack.lastIndex)
+        if (exists) {
+            val dir = path.substringBeforeLast('/', "")
+            if (backStack.last() is Screen.Browse) navigateToDir(repo, dir) else backStack.add(Screen.Browse(repo, dir))
+            pushDetail(Screen.View(repo, path))
+        } else {
+            if (backStack.last() !is Screen.Browse) backStack.add(Screen.Browse(repo, "")) // ビューアのホスト確保
+            pushDetail(Screen.View(repo, path, sha = sha))
         }
     }
 
@@ -571,14 +592,27 @@ fun GitReaderApp() {
 
             @Composable
             fun ViewerPane(file: Screen.View, showBack: Boolean) {
-                key(file.repo.id, file.filePath) {
+                key(file.repo.id, file.filePath, file.sha) {
                     val repoMemos by vm.observeMemos(file.repo.id).collectAsState(initial = emptyList())
+                    // sha != null = そのコミット時点の版を blob から表示する履歴モード(読み取り専用)。
+                    val histSha = file.sha
+                    val historical = histSha != null
+                    val notFound = "この時点のファイルは見つかりません"
                     FileViewerScreen(
                         repo = file.repo,
                         filePath = file.filePath,
                         workDir = vm.workDirOf(file.repo),
-                        loadText = { cs, max -> vm.readFile(file.repo, file.filePath, cs, max) },
-                        probeFile = { vm.probeFile(file.repo, file.filePath) },
+                        loadText = if (historical) {
+                            { cs, max -> vm.readBlobText(file.repo, file.filePath, histSha!!, cs, max) ?: error(notFound) }
+                        } else {
+                            { cs, max -> vm.readFile(file.repo, file.filePath, cs, max) }
+                        },
+                        probeFile = if (historical) {
+                            { vm.probeBlob(file.repo, file.filePath, histSha!!) ?: error(notFound) }
+                        } else {
+                            { vm.probeFile(file.repo, file.filePath) }
+                        },
+                        revisionLabel = if (historical) "コミット ${shortSha(histSha!!)} 時点" else null,
                         fontScale = settings.fontScale.scale,
                         defaultWrap = settings.wrapByDefault,
                         onToggleWrap = vm::setWrapByDefault,
@@ -598,23 +632,36 @@ fun GitReaderApp() {
                         },
                         onBack = { handleBack() },
                         showBack = showBack,
-                        loadSiblings = {
-                            val dir = file.filePath.substringBeforeLast('/', "")
-                            vm.listDir(file.repo, dir)
-                                .filter { !it.isDir && !it.isSubmodule && !it.isLfs }
-                                .map { it.relPath }
+                        // 履歴モードは作業ツリーに無いので前後送り・メモは無効。
+                        loadSiblings = if (historical) {
+                            { emptyList() }
+                        } else {
+                            {
+                                val dir = file.filePath.substringBeforeLast('/', "")
+                                vm.listDir(file.repo, dir)
+                                    .filter { !it.isDir && !it.isSubmodule && !it.isLfs }
+                                    .map { it.relPath }
+                            }
                         },
                         onOpenSibling = { path ->
                             if (detailStack.isNotEmpty()) {
                                 detailStack[detailStack.lastIndex] = Screen.View(file.repo, path)
                             }
                         },
-                        memos = repoMemos,
-                        onAddMemoEntry = { memoId, ls, le, quote, comment ->
-                            vm.addMemoEntry(memoId, file.filePath, ls, le, quote, comment)
+                        memos = if (historical) emptyList() else repoMemos,
+                        onAddMemoEntry = if (historical) {
+                            { _, _, _, _, _ -> }
+                        } else {
+                            { memoId, ls, le, quote, comment ->
+                                vm.addMemoEntry(memoId, file.filePath, ls, le, quote, comment)
+                            }
                         },
-                        onCreateMemoWithEntry = { title, ls, le, quote, comment ->
-                            vm.createMemoWithEntry(file.repo.id, title, file.filePath, ls, le, quote, comment)
+                        onCreateMemoWithEntry = if (historical) {
+                            { _, _, _, _, _ -> }
+                        } else {
+                            { title, ls, le, quote, comment ->
+                                vm.createMemoWithEntry(file.repo.id, title, file.filePath, ls, le, quote, comment)
+                            }
                         },
                     )
                 }
@@ -771,7 +818,13 @@ fun GitReaderApp() {
                             }
                             Box(Modifier.weight(0.55f)) {
                                 if (sel != null) {
-                                    key(sel.sha) { CommitDetailContent(sel) { vm.commitDiff(repo, sel.sha) } }
+                                    key(sel.sha) {
+                    CommitDetailContent(
+                        sel,
+                        loadDiff = { vm.commitDiff(repo, sel.sha) },
+                        onOpenFile = { openDiffFile(repo, it, sel.sha) },
+                    )
+                }
                                 } else {
                                     SelectPlaceholder("コミットを選択")
                                 }
@@ -832,7 +885,13 @@ fun GitReaderApp() {
                             }
                             Box(Modifier.weight(0.55f)) {
                                 if (sel != null) {
-                                    key(sel.sha) { FileDiffPane(sel) { vm.fileDiff(repo, filePath, sel.sha) } }
+                                    key(sel.sha) {
+                    FileDiffPane(
+                        sel,
+                        loadDiff = { vm.fileDiff(repo, filePath, sel.sha) },
+                        onOpenFile = { openDiffFile(repo, it, sel.sha) },
+                    )
+                }
                                 } else {
                                     SelectPlaceholder("コミットを選択")
                                 }
@@ -861,6 +920,7 @@ fun GitReaderApp() {
                 commit = current.commit,
                 loadDiff = { vm.fileDiff(current.repo, current.filePath, current.commit.sha) },
                 onBack = { pop() },
+                onOpenFile = { openDiffFile(current.repo, it, current.commit.sha) },
             )
         }
 
@@ -869,6 +929,7 @@ fun GitReaderApp() {
                 commit = current.commit,
                 loadDiff = { vm.commitDiff(current.repo, current.commit.sha) },
                 onBack = { handleBack() },
+                onOpenFile = { openDiffFile(current.repo, it, current.commit.sha) },
             )
         }
 

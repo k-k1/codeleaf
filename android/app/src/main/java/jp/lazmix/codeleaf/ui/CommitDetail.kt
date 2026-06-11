@@ -37,7 +37,7 @@ import jp.lazmix.codeleaf.git.GraphCommit
  * 2ペインの右ペイン(`CommitDetailContent`)と compact の全画面(`CommitDetailScreen`)で共有する。
  */
 @Composable
-fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String) {
+fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String, onOpenFile: (String) -> Unit = {}) {
     var diff by remember(commit.sha) { mutableStateOf<String?>(null) }
     var error by remember(commit.sha) { mutableStateOf<String?>(null) }
     LaunchedEffect(commit.sha) {
@@ -103,14 +103,19 @@ fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String) {
             error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
             d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
             d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth())
+            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommitDetailScreen(commit: GraphCommit, loadDiff: suspend () -> String, onBack: () -> Unit) {
+fun CommitDetailScreen(
+    commit: GraphCommit,
+    loadDiff: suspend () -> String,
+    onBack: () -> Unit,
+    onOpenFile: (String) -> Unit = {},
+) {
     Scaffold(
         // 本文(DiffText)が自前の下部バーで navigationBars を padding するため二重計上を防ぐ(DiffScreen と同様)。
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.navigationBars),
@@ -124,7 +129,7 @@ fun CommitDetailScreen(commit: GraphCommit, loadDiff: suspend () -> String, onBa
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            CommitDetailContent(commit, loadDiff)
+            CommitDetailContent(commit, loadDiff, onOpenFile)
         }
     }
 }

@@ -137,6 +137,8 @@ fun FileViewerScreen(
     loadText: suspend (charsetName: String?, maxBytes: Long) -> TextLoad,
     /** ファイル種別(テキスト/画像/バイナリ)とサイズを先読みで判定する。 */
     probeFile: suspend () -> FileInfo,
+    /** 過去コミット時点の表示など、メタバー行頭に出す注記(null=現物表示)。 */
+    revisionLabel: String? = null,
     fontScale: Float,
     defaultWrap: Boolean = true,
     /** 折り返しトグルの変更を保存する(ファイル閲覧の折り返し設定として永続化)。 */
@@ -346,7 +348,10 @@ fun FileViewerScreen(
             val body = text
             val kind = info?.kind
             // 上部メタバー: テキストはエンコード/BOM/改行/サイズ、画像はフォーマット/寸法/サイズ。
-            info?.let { fi -> fileMetaLine(fi)?.let { FileMetaBar(it) } }
+            // revisionLabel(過去コミット時点 等)があれば行頭に連結する(1行・省略されにくい行頭側)。
+            val metaText = listOfNotNull(revisionLabel, info?.let { fileMetaLine(it) })
+                .joinToString(" ・ ").ifBlank { null }
+            metaText?.let { FileMetaBar(it) }
             // 上限で先頭のみ読んだときの注意バー。
             if (truncated && body != null) {
                 FileMetaBar("先頭のみ表示中(全体 ${humanSize(info?.size ?: 0)})")

@@ -18,6 +18,7 @@ import org.eclipse.jgit.transport.RefSpec
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import org.eclipse.jgit.treewalk.EmptyTreeIterator
+import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -234,6 +235,32 @@ class JgitClient {
                 }
             }
         }
+    }
+
+    /**
+     * 指定コミット(sha)時点の relPath の blob バイト列を返す。
+     * sha のツリーに無ければ第1親(sha^)を試す（そのコミットで削除されたファイルは前版を表示するため）。
+     * どちらにも無ければ null。
+     */
+    fun readBytesAt(dir: File, relPath: String, sha: String): ByteArray? {
+        Git.open(dir).use { git ->
+            val repo = git.repository
+            RevWalk(repo).use { rw ->
+                val commit = rw.parseCommit(ObjectId.fromString(sha))
+                repo.newObjectReader().use { reader ->
+                    val trees = buildList {
+                        add(commit.tree)
+                        if (commit.parentCount > 0) add(rw.parseCommit(commit.getParent(0).id).tree)
+                    }
+                    for (tree in trees) {
+                        TreeWalk.forPath(reader, relPath, tree)?.use { tw ->
+                            return reader.open(tw.getObjectId(0)).bytes
+                        }
+                    }
+                }
+            }
+        }
+        return null
     }
 
     /** 指定コミット全体の unified diff（第1親との差分・全ファイル）。 */

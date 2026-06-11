@@ -22,7 +22,7 @@ class DiffRowsTest {
         val rows = parseDiffRows(diff)
         // index/---/+++ は畳まれ、ヘッダ・ハンク・本文3行のみ。行番号は @@ -1,3 +1,3 起点。
         assertEquals(5, rows.size)
-        assertEquals(DiffRow.FileHeader("foo.kt"), rows[0])
+        assertEquals(DiffRow.FileHeader("foo.kt", "foo.kt"), rows[0])
         assertTrue(rows[1] is DiffRow.Hunk)
         assertEquals(DiffRow.Line(" ctx", ' ', 1), rows[2])
         assertEquals(DiffRow.Line("-old", '-', 2), rows[3]) // 旧側 2行目
@@ -40,7 +40,24 @@ class DiffRowsTest {
 
         val rows = parseDiffRows(diff)
         assertEquals(1, rows.size)
-        assertEquals(DiffRow.FileHeader("old.kt → new.kt"), rows[0])
+        // 表示は "旧 → 新"、開く対象 newPath は新側。
+        assertEquals(DiffRow.FileHeader("old.kt → new.kt", "new.kt"), rows[0])
+    }
+
+    @Test
+    fun deletedFileKeepsOpenablePath() {
+        // 削除でも diff --git の b 側は実パス。newPath はそれを保持(履歴側で親に解決して表示する)。
+        val diff = """
+            diff --git a/gone.kt b/gone.kt
+            deleted file mode 100644
+            index abc1234..0000000
+            --- a/gone.kt
+            +++ /dev/null
+            @@ -1,1 +0,0 @@
+            -bye
+        """.trimIndent()
+        val rows = parseDiffRows(diff)
+        assertEquals(DiffRow.FileHeader("gone.kt", "gone.kt"), rows[0])
     }
 
     @Test
@@ -62,7 +79,7 @@ class DiffRowsTest {
         val line = "diff --git \"a/\\346\\227\\245\\346\\234\\254\\350\\252\\236.md\" " +
             "\"b/\\346\\227\\245\\346\\234\\254\\350\\252\\236.md\""
         val rows = parseDiffRows(line)
-        assertEquals(DiffRow.FileHeader("日本語.md"), rows[0])
+        assertEquals(DiffRow.FileHeader("日本語.md", "日本語.md"), rows[0])
     }
 
     @Test
