@@ -240,11 +240,17 @@ fun GitReaderApp() {
     }
 
     // diff のファイルを Viewer で開く。作業ツリーに在れば現物(ディレクトリを開き＋ビューア)、
-    // 無ければそのコミット時点の版(履歴モード)を開く。
+    // 無ければそのコミット時点の版(履歴モード)を開く。submodule 等ディレクトリはファイルとして開かない。
     fun openDiffFile(repo: Repo, path: String, sha: String) {
-        val exists = java.io.File(vm.workDirOf(repo), path).exists()
+        val f = java.io.File(vm.workDirOf(repo), path)
         while (backStack.size > 1 && backStack.last() !is Screen.Browse) backStack.removeAt(backStack.lastIndex)
-        if (exists) {
+        if (f.isDirectory) {
+            // submodule の変更など対象がディレクトリ: ファイルとして開くと EISDIR。
+            // そのフォルダをブラウザで開き、ファイルは未選択にする。
+            if (backStack.last() is Screen.Browse) navigateToDir(repo, path) else backStack.add(Screen.Browse(repo, path))
+            clearDetails()
+            focusMode = false
+        } else if (f.exists()) {
             val dir = path.substringBeforeLast('/', "")
             if (backStack.last() is Screen.Browse) navigateToDir(repo, dir) else backStack.add(Screen.Browse(repo, dir))
             pushDetail(Screen.View(repo, path))

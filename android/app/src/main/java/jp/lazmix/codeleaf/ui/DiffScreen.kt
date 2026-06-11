@@ -274,7 +274,19 @@ fun DiffText(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -
                                 tint = headerFg,
                                 modifier = Modifier.size(18.dp),
                             )
-                            // ファイルを Viewer で開く(独立クリック・親の折りたたみは発火しない)。
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                h.path,
+                                color = headerFg,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                softWrap = wrap,
+                                maxLines = if (wrap) Int.MAX_VALUE else 1,
+                                // 折り返しON(既定): 名前を伸ばしてボタンをバー右端へ寄せる。
+                                modifier = if (wrap) Modifier.weight(1f) else Modifier,
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            // ファイルを Viewer で開く(独立クリック・親の折りたたみは発火しない)。バー右寄せ。
                             Box(
                                 Modifier.size(30.dp).clickable { onOpenFile(h.newPath) },
                                 contentAlignment = Alignment.Center,
@@ -286,16 +298,6 @@ fun DiffText(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                h.path,
-                                color = headerFg,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                softWrap = wrap,
-                                maxLines = if (wrap) Int.MAX_VALUE else 1,
-                                modifier = if (wrap) Modifier.weight(1f) else Modifier,
-                            )
                         }
                     }
                     if (!isCollapsed) {
