@@ -51,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -61,10 +62,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.os.Parcelable
+import jp.lazmix.codeleaf.data.NavPosition
+import jp.lazmix.codeleaf.data.OpenFile
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.ThemeMode
 import jp.lazmix.codeleaf.git.CommitInfo
 import jp.lazmix.codeleaf.git.GraphCommit
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
@@ -244,6 +248,45 @@ fun GitReaderApp() {
         }
     }
 
+    // 現在表示中のリポの「最後にいた場所」(フォルダチェーン＋開いているファイル＋集中モード)を切り出す。
+    // backStack には常に1リポ分の Browse しか積まれない(openRepo が切替時に一旦 List へ畳むため)。
+    // Browse が無い(=Graph/お気に入り直入り)・リポ外(List/設定)は null=保存しない。
+    fun captureRepoPosition(): Pair<Long, NavPosition>? {
+        val repoId = (backStack.lastOrNull { it is Screen.WithRepo } as? Screen.WithRepo)?.repo?.id
+            ?: return null
+        val chain = backStack.filterIsInstance<Screen.Browse>().filter { it.repo.id == repoId }.map { it.path }
+        if (chain.isEmpty()) return null
+        val files = detailStack.filter { it.repo.id == repoId }.map { OpenFile(it.filePath, it.line) }
+        return repoId to NavPosition(chain, files, focusMode)
+    }
+
+    fun flushCurrentRepoPosition() {
+        captureRepoPosition()?.let { (id, pos) -> vm.saveNavPosition(id, pos) }
+    }
+
+    // リポを開く(一覧/レールから)。離脱元を保存してから List まで畳み、保存済み位置を復元する。
+    // 「切替＝push 積み増し」をやめ畳み直しにすることで、往復で同一リポが重複せず、
+    // detailStack に別リポのファイルが残る不整合も避ける。
+    fun openRepo(target: Repo) {
+        flushCurrentRepoPosition()
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        clearDetails()
+        focusMode = false
+        graphSelected = null
+        historySelected = null
+        // 設定 OFF のときは復元せず常にトップ・ファイル未オープンで開く(保存自体は継続)。
+        val saved = if (vm.settings.value.restoreLastPosition) vm.savedNavPosition(target.id) else null
+        if (saved == null) {
+            backStack.add(Screen.Browse(target, ""))
+        } else {
+            // chain は get 側で「非空・先頭 ""」を保証済み。target は DB 最新の Repo を使う(branch/theme 反映)。
+            saved.chain.forEach { backStack.add(Screen.Browse(target, it)) }
+            if (backStack.last() !is Screen.Browse) backStack.add(Screen.Browse(target, ""))
+            saved.files.forEach { pushDetail(Screen.View(target, it.path, it.line)) }
+            focusMode = saved.focus
+        }
+    }
+
     BackHandler(enabled = backStack.size > 1 || detailStack.isNotEmpty()) { handleBack() }
 
     val repos by vm.repos.collectAsState()
@@ -265,6 +308,14 @@ fun GitReaderApp() {
             focusMode = false
             graphSelected = null
         }
+    }
+
+    // 現在のリポのナビ位置を継続保存する。戻る/leaveRepo など離脱経路を取りこぼさず、
+    // SharedPreferences へ書くのでアプリ再起動も跨いで復元できる(openRepo が読み戻す)。
+    LaunchedEffect(Unit) {
+        snapshotFlow { captureRepoPosition() }
+            .distinctUntilChanged()
+            .collect { it?.let { (id, pos) -> vm.saveNavPosition(id, pos) } }
     }
 
     // 左レール(リポ一覧)。List 全画面・3ペインの左で共有する。
@@ -291,7 +342,7 @@ fun GitReaderApp() {
             onAddClick = { onItemSelected(); navigate(Screen.Add) },
             onSettings = { onItemSelected(); navigate(Screen.Settings) },
             onEdit = { onItemSelected(); navigate(Screen.RepoEdit) },
-            onOpen = { onItemSelected(); navigate(Screen.Browse(it, "")) },
+            onOpen = { onItemSelected(); openRepo(it) },
             onOpenGraph = { onItemSelected(); graphSelected = null; navigate(Screen.Graph(it)) },
             onOpenFavorites = { onItemSelected(); navigate(Screen.Favorites(it)) },
             onSync = vm::sync,
@@ -331,7 +382,7 @@ fun GitReaderApp() {
                             RepoAvatar(
                                 repo = r,
                                 selected = r.id == selectedRepoId,
-                                onClick = { navigate(Screen.Browse(r, "")) },
+                                onClick = { openRepo(r) },
                             )
                         }
                         Spacer(Modifier.height(4.dp))
@@ -449,6 +500,7 @@ fun GitReaderApp() {
             onSetCollapseFolders = vm::setCollapseFolders,
             onSetFileNameDisplay = vm::setFileNameDisplay,
             onSetIconSet = vm::setIconSet,
+            onSetRestoreLastPosition = vm::setRestoreLastPosition,
             onClearCache = { vm.clearCache() },
             onLicenses = { navigate(Screen.Licenses) },
             onBack = { pop() },

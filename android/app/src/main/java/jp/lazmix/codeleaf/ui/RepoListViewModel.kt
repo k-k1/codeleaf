@@ -12,6 +12,8 @@ import jp.lazmix.codeleaf.data.FavoriteRepository
 import jp.lazmix.codeleaf.data.FileEntry
 import jp.lazmix.codeleaf.data.FontScale
 import jp.lazmix.codeleaf.data.MemoRepository
+import jp.lazmix.codeleaf.data.NavPosition
+import jp.lazmix.codeleaf.data.NavPositionStore
 import jp.lazmix.codeleaf.data.NewRepo
 import jp.lazmix.codeleaf.data.RepoRepository
 import jp.lazmix.codeleaf.data.SettingsStore
@@ -55,6 +57,7 @@ class RepoListViewModel(
     private val settingsStore: SettingsStore,
     private val memos: MemoRepository,
     private val favorites: FavoriteRepository,
+    private val navPositions: NavPositionStore,
     private val oauthService: BitbucketOAuthService? = null,
     private val githubOAuthService: GitHubDeviceFlowService? = null,
     oauthResults: Channel<Result<OAuthAccount>>? = null,
@@ -162,6 +165,7 @@ class RepoListViewModel(
     }
 
     fun delete(repo: Repo) {
+        navPositions.clear(repo.id)
         viewModelScope.launch { runCatching { repository.delete(repo) } }
     }
 
@@ -217,9 +221,21 @@ class RepoListViewModel(
                 busy = false,
                 message = r.exceptionOrNull()?.let { "切替失敗: ${it.message}" },
             )
-            r.getOrNull()?.let(onDone)
+            r.getOrNull()?.let {
+                // 作業ツリー書換でフォルダ/ファイルが失効しうるので、保存済みナビ位置を破棄。
+                navPositions.clear(repo.id)
+                onDone(it)
+            }
         }
     }
+
+    // --- ナビ位置（リポを開き直したとき最後のフォルダ/ファイルを復元する） ---
+    /** 保存済みのナビ位置を同期取得（無ければ null）。 */
+    fun savedNavPosition(repoId: Long): NavPosition? = navPositions.get(repoId)
+
+    fun saveNavPosition(repoId: Long, pos: NavPosition) = navPositions.save(repoId, pos)
+
+    fun clearNavPosition(repoId: Long) = navPositions.clear(repoId)
 
     // --- ファイルブラウザ / 閲覧 ---
     suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> =
@@ -290,6 +306,8 @@ class RepoListViewModel(
         settingsStore.setFileNameDisplay(mode)
 
     fun setIconSet(set: jp.lazmix.codeleaf.data.IconSet) = settingsStore.setIconSet(set)
+
+    fun setRestoreLastPosition(on: Boolean) = settingsStore.setRestoreLastPosition(on)
 
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
@@ -387,6 +405,7 @@ class RepoListViewModel(
                     app.container.settingsStore,
                     app.container.memoRepository,
                     app.container.favoriteRepository,
+                    app.container.navPositionStore,
                     app.container.bitbucketOAuthService,
                     app.container.githubOAuthService,
                     app.container.oauthResults,

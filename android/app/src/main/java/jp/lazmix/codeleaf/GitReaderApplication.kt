@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.room.Room
 import jp.lazmix.codeleaf.data.FavoriteRepository
 import jp.lazmix.codeleaf.data.MemoRepository
+import jp.lazmix.codeleaf.data.NavPositionStore
 import jp.lazmix.codeleaf.data.RepoRepository
 import jp.lazmix.codeleaf.data.SettingsStore
 import jp.lazmix.codeleaf.data.crypto.TokenStore
@@ -72,6 +73,8 @@ class AppContainer(app: Application) {
     )
 
     val settingsStore: SettingsStore = SettingsStore(app)
+
+    val navPositionStore: NavPositionStore = NavPositionStore(app)
 
     val memoRepository: MemoRepository = MemoRepository(db.memoDao())
 

@@ -100,6 +100,7 @@ fun SettingsScreen(
     onSetCollapseFolders: (Boolean) -> Unit,
     onSetFileNameDisplay: (FileNameDisplay) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
+    onSetRestoreLastPosition: (Boolean) -> Unit,
     onClearCache: () -> Unit,
     onLicenses: () -> Unit,
     onBack: () -> Unit,
@@ -203,6 +204,18 @@ fun SettingsScreen(
                     description = "中身が1つの子フォルダだけの階層を src/main/java のようにまとめ、辿る手間を省く。",
                     checked = settings.collapseFolders,
                     onCheckedChange = onSetCollapseFolders,
+                )
+            }
+
+            HorizontalDivider()
+
+            SettingsSection("リポジトリ") {
+                SwitchSetting(
+                    title = "前回の位置を復元",
+                    description = "リポを開いたとき、前回いたフォルダと開いていたファイルを復元します。" +
+                        "OFF なら常にトップ・ファイルを開いていない状態で開きます。",
+                    checked = settings.restoreLastPosition,
+                    onCheckedChange = onSetRestoreLastPosition,
                 )
             }
 
