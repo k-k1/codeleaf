@@ -806,6 +806,7 @@ fun GitReaderApp() {
                             }
                         },
                         onSync = { vm.syncNow(repo) },
+                        busy = status.busy,
                     )
                 }
             }
