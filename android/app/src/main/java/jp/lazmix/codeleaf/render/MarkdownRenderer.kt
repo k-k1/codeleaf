@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -671,7 +672,7 @@ fun CodeView(
     val listModifier = modifier
         .background(Color(theme.background()))
         .let { if (wrap) it else it.horizontalScroll(hScroll) }
-    LazyColumn(state = listState, modifier = listModifier) {
+    LazyColumn(state = listState, modifier = listModifier.testTag("codeContent")) {
         itemsIndexed(lines) { idx, line ->
             val emphasized = idx == highlightLine || selectedLines?.contains(idx) == true
             val rowBg = if (emphasized) Modifier.background(highlightBg) else Modifier

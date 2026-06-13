@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -251,7 +252,8 @@ fun FileViewerScreen(
 
     // 目次スクロール用: 整形ビューのスクロール状態と各セクションの Y 位置(px)。
     val scope = rememberCoroutineScope()
-    val scrollState = remember(filePath) { ScrollState(0) }
+    // 戻る/再表示でスクロール位置を保つため saveable に(holder が退避→復元する)。
+    val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
     val sectionTops = remember(filePath) { mutableStateMapOf<Int, Int>() }
     var showToc by remember(filePath) { mutableStateOf(false) }
     // スクロールビューポート上端(root座標, px)。テーブルのヘッダ固定の基準。

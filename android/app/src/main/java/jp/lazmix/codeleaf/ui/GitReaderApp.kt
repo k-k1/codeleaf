@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -152,6 +153,9 @@ fun GitReaderApp() {
             restore = { it.toMutableStateList() },
         ),
     ) { mutableStateListOf<Int>() }
+    // ブラウザ/ビューアのスクロール等を、1ペインのアンマウント(戻る・ファイル開閉)を跨いで保持する。
+    // ファイル毎/ブラウズパス毎に SaveableStateProvider で包む(プロセス死も跨ぐ)。
+    val navStateHolder = rememberSaveableStateHolder()
     // コミットグラフ2/3ペインで右に出す選択コミット。
     var graphSelected by rememberSaveable { mutableStateOf<GraphCommit?>(null) }
     // ファイル履歴2/3ペインで右に出す選択コミット(CommitInfo は非Parcelableのため非保存・回転は維持)。
@@ -560,6 +564,8 @@ fun GitReaderApp() {
                     else -> ({ leaveRepo() })
                 }
                 val favorites by vm.observeFavorites(repo.id).collectAsState(initial = emptyList())
+                // ブラウズパス毎に一覧スクロールを保持(ファイル開閉/フォルダ戻りのアンマウントを跨ぐ)。
+                navStateHolder.SaveableStateProvider("browse:${repo.id}/${current.path}") {
                 FileBrowserScreen(
                     repo = repo,
                     path = current.path,
@@ -599,11 +605,13 @@ fun GitReaderApp() {
                     // 3ペインは左レール(リポ一覧)が グラフ/お気に入り を担うので上部の常設行は出さない。
                     showRepoActions = !threePane,
                 )
+                }
             }
 
             @Composable
             fun ViewerPane(file: Screen.View, showBack: Boolean) {
-                key(file.repo.id, file.filePath, file.sha) {
+                // ファイル毎に状態をスコープ。キー変更で中身は作り直しつつ、saveable(スクロール等)は holder に保持。
+                navStateHolder.SaveableStateProvider("view:${file.repo.id}/${file.sha}/${file.filePath}") {
                     val repoMemos by vm.observeMemos(file.repo.id).collectAsState(initial = emptyList())
                     // sha != null = そのコミット時点の版を blob から表示する履歴モード(読み取り専用)。
                     val histSha = file.sha

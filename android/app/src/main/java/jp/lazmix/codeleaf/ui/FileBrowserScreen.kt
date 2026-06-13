@@ -56,6 +56,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.navigationBars
@@ -285,7 +286,7 @@ fun FileBrowserScreen(
                     entries == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                     error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
                     entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
-                    else -> LazyColumn(Modifier.fillMaxSize()) {
+                    else -> LazyColumn(Modifier.fillMaxSize().testTag("browserFileList")) {
                         items(entries!!, key = { it.relPath }) { e ->
                             EntryRow(
                                 entry = e,
