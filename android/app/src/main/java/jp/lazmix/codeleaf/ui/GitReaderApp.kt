@@ -88,7 +88,8 @@ private sealed interface Screen : Parcelable {
     @Parcelize data class Browse(override val repo: Repo, val path: String) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
-    @Parcelize data class Search(override val repo: Repo) : WithRepo {
+    // path = 検索を開いた時点で表示していたフォルダ。検索画面のパス絞り込みの既定値にする(空=リポ全体)。
+    @Parcelize data class Search(override val repo: Repo, val path: String = "") : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
     @Parcelize data class Graph(override val repo: Repo) : WithRepo {
@@ -573,7 +574,7 @@ fun GitReaderApp() {
                     loadDir = { vm.listDir(repo, it) },
                     loadBranches = { vm.listBranches(repo) },
                     onSync = { vm.syncNow(repo) },
-                    onSearch = { navigate(Screen.Search(repo)) },
+                    onSearch = { navigate(Screen.Search(repo, current.path)) },
                     onGraph = { graphSelected = null; navigate(Screen.Graph(repo)) },
                     onMemos = { navigate(Screen.Memos(repo)) },
                     onFavorites = { navigate(Screen.Favorites(repo)) },
@@ -775,6 +776,7 @@ fun GitReaderApp() {
         is Screen.Search -> GitReaderTheme(current.repo.themeMode) {
             SearchScreen(
                 repoName = current.repo.name,
+                initialPath = current.path,
                 loadCorpus = { vm.loadSearchCorpus(current.repo) },
                 onOpenFile = { path, line ->
                     pop() // Search を閉じて Browse(+右ペイン) に戻してから、その深さで開く

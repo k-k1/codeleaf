@@ -44,10 +44,13 @@ fun SearchScreen(
     loadCorpus: suspend () -> List<TextFile>,
     onOpenFile: (path: String, line: Int) -> Unit,
     onBack: () -> Unit,
+    initialPath: String = "",
 ) {
     var corpus by remember { mutableStateOf<List<TextFile>?>(null) }
     var query by remember { mutableStateOf("") }
-    var pathFilter by remember { mutableStateOf("") }
+    // 検索を開いた時点で表示していたフォルダを既定の絞り込みにする(末尾 / で配下に限定・空なら全体)。
+    // searchCorpus は relPath.contains 判定なので "docs/" で docs 配下のみ。欄を消せば全体検索に戻せる。
+    var pathFilter by remember { mutableStateOf(if (initialPath.isEmpty()) "" else "$initialPath/") }
     var regex by remember { mutableStateOf(false) }
     var results by remember { mutableStateOf<List<SearchHit>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
