@@ -551,16 +551,3 @@ private fun ManualAuthFields(
         modifier = Modifier.fillMaxWidth(),
     )
 }
-
-/**
- * git URL からリポジトリ名を推定する。末尾スラッシュ・.git・クエリ/フラグメントを除去し、
- * 最後のパスセグメントを返す。GitHub/Bitbucket の https URL を想定。
- */
-internal fun repoNameFromUrl(url: String): String {
-    val cleaned = url.trim()
-        .substringBefore('?')
-        .substringBefore('#')
-        .trimEnd('/')
-    if (cleaned.isEmpty()) return ""
-    return cleaned.substringAfterLast('/').removeSuffix(".git")
-}

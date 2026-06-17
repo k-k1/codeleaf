@@ -1,6 +1,19 @@
 package jp.lazmix.codeleaf.ui
 
 /**
+ * git URL からリポジトリ名を推定する。末尾スラッシュ・.git・クエリ/フラグメントを除去し、
+ * 最後のパスセグメントを返す。GitHub/Bitbucket の https URL を想定。
+ */
+internal fun repoNameFromUrl(url: String): String {
+    val cleaned = url.trim()
+        .substringBefore('?')
+        .substringBefore('#')
+        .trimEnd('/')
+    if (cleaned.isEmpty()) return ""
+    return cleaned.substringAfterLast('/').removeSuffix(".git")
+}
+
+/**
  * clone URL の簡易バリデーション。問題なければ null、あれば表示用メッセージを返す。
  * 空文字は「未入力」として呼び出し側の必須チェック(ボタン無効)に委ねるため null。
  * 厳密な到達性は確認せず、明らかに形式が違うものだけ弾く(誤検知で正規 URL を拒まない)。
