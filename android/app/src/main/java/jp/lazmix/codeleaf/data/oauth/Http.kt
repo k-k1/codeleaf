@@ -30,6 +30,24 @@ internal fun HttpURLConnection.readHttpResult(): HttpResult {
     return HttpResult(status, body)
 }
 
+/** REST API への GET(JSON) を抽象化（テストでフェイクに差し替える）。 */
+interface ApiHttp {
+    /** @throws IOException ネットワーク失敗時。 */
+    fun getJson(url: String, authHeader: String): HttpResult
+}
+
+/** OkHttp を足さず HttpURLConnection で実装（依存を絞る方針）。 */
+class HttpUrlConnectionApiHttp : ApiHttp {
+    override fun getJson(url: String, authHeader: String): HttpResult {
+        val conn = openJsonConnection(url, "GET", authHeader)
+        try {
+            return conn.readHttpResult()
+        } finally {
+            conn.disconnect()
+        }
+    }
+}
+
 /** トークンエンドポイントへの form POST を抽象化（テストでフェイクに差し替える）。 */
 interface TokenHttp {
     /**

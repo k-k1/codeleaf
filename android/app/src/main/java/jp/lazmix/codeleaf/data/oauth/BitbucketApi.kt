@@ -3,26 +3,6 @@ package jp.lazmix.codeleaf.data.oauth
 import org.json.JSONObject
 import java.io.IOException
 
-/** Bitbucket のリモートリポ1件（一覧選択用）。cloneUrl は userinfo を除いた HTTPS。 */
-data class RemoteRepo(val fullName: String, val name: String, val cloneUrl: String)
-
-/** GET(JSON) を抽象化（テストでフェイクに差し替え）。 */
-interface ApiHttp {
-    /** @throws IOException ネットワーク失敗時。 */
-    fun getJson(url: String, authHeader: String): HttpResult
-}
-
-class HttpUrlConnectionApiHttp : ApiHttp {
-    override fun getJson(url: String, authHeader: String): HttpResult {
-        val conn = openJsonConnection(url, "GET", authHeader)
-        try {
-            return conn.readHttpResult()
-        } finally {
-            conn.disconnect()
-        }
-    }
-}
-
 /** Bitbucket Cloud REST API(読み取り)。アクセストークンは Bearer で送る。 */
 class BitbucketApi(private val http: ApiHttp = HttpUrlConnectionApiHttp()) {
 
@@ -106,14 +86,6 @@ fun parseRepoPage(body: String): Pair<List<RemoteRepo>, String?> {
     return repos to next
 }
 
-/** リポ JSON 1件 + clone URL から RemoteRepo を作る。full_name か clone URL が空なら null。GitHub/Bitbucket 共通。 */
-internal fun buildRemoteRepo(r: JSONObject, cloneUrl: String?): RemoteRepo? {
-    val fullName = r.optString("full_name", "")
-    if (fullName.isEmpty() || cloneUrl.isNullOrEmpty()) return null
-    val name = r.optString("name", "").ifEmpty { fullName.substringAfterLast('/') }
-    return RemoteRepo(fullName, name, stripUserInfo(cloneUrl))
-}
-
 private fun httpsCloneHref(repo: JSONObject): String? {
     val clone = repo.optJSONObject("links")?.optJSONArray("clone") ?: return null
     for (i in 0 until clone.length()) {
@@ -123,15 +95,4 @@ private fun httpsCloneHref(repo: JSONObject): String? {
         }
     }
     return null
-}
-
-/** `https://user@host/...` の userinfo を除去する。 */
-fun stripUserInfo(url: String): String = url.replace(Regex("://[^/@]*@"), "://")
-
-/** clone URL を比較用に正規化（userinfo/.git/末尾スラッシュ除去・小文字化）。 */
-fun normalizeRepoUrl(url: String): String {
-    var s = url.trim().substringBefore('?').substringBefore('#')
-    s = stripUserInfo(s).trimEnd('/')
-    if (s.endsWith(".git")) s = s.dropLast(4)
-    return s.lowercase()
 }
