@@ -69,7 +69,7 @@ fun MemosScreen(
     var renameTarget by remember { mutableStateOf<Memo?>(null) }
     var deleteTarget by remember { mutableStateOf<Memo?>(null) }
 
-    fun bundleThen(memo: Memo, action: (String) -> Unit) {
+    fun withMemoText(memo: Memo, action: (String) -> Unit) {
         scope.launch {
             val text = MemoFormat.memo(repoName, memo.title, loadEntries(memo.id))
             action(text)
@@ -114,8 +114,8 @@ fun MemosScreen(
                     MemoRow(
                         mwc = mwc,
                         onOpen = { onOpenMemo(mwc.memo) },
-                        onShare = { bundleThen(mwc.memo) { shareText(context, it) } },
-                        onCopy = { bundleThen(mwc.memo) { clipboard.setText(AnnotatedString(it)) } },
+                        onShare = { withMemoText(mwc.memo) { shareText(context, it) } },
+                        onCopy = { withMemoText(mwc.memo) { clipboard.setText(AnnotatedString(it)) } },
                         onRename = { renameTarget = mwc.memo },
                         onDelete = { deleteTarget = mwc.memo },
                     )
@@ -126,7 +126,7 @@ fun MemosScreen(
 
     if (showCreate) {
         MemoTitleDialog(
-            title = "新しいメモ帳",
+            heading = "新しいメモ帳",
             initial = "",
             confirmLabel = "作成",
             onConfirm = { showCreate = false; onCreateMemo(it) },
@@ -135,7 +135,7 @@ fun MemosScreen(
     }
     renameTarget?.let { memo ->
         MemoTitleDialog(
-            title = "メモ帳の名前を変更",
+            heading = "メモ帳の名前を変更",
             initial = memo.title,
             confirmLabel = "変更",
             onConfirm = { renameTarget = null; onRenameMemo(memo.id, it) },
@@ -201,7 +201,7 @@ private fun MemoRow(
 /** メモ帳タイトルの作成/改名ダイアログ。空タイトルは確定不可。 */
 @Composable
 fun MemoTitleDialog(
-    title: String,
+    heading: String,
     initial: String,
     confirmLabel: String,
     onConfirm: (String) -> Unit,
@@ -210,7 +210,7 @@ fun MemoTitleDialog(
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(heading) },
         text = {
             OutlinedTextField(
                 value = text,

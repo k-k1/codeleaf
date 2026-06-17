@@ -2,8 +2,8 @@ package jp.lazmix.codeleaf.ui
 
 /** 整形済み diff の1行。ノイズ(diff --git/index/---/+++)は除き、種別ごとに描き分ける。 */
 sealed interface DiffRow {
-    /** ファイル境界。path は表示用(リネームは "旧 → 新")、newPath は開く対象=変更後/b 側パス。 */
-    data class FileHeader(val path: String, val newPath: String) : DiffRow
+    /** ファイル境界。displayPath は表示用(リネームは "旧 → 新")、newPath は開く対象=変更後/b 側パス。 */
+    data class FileHeader(val displayPath: String, val newPath: String) : DiffRow
     /** ハンク見出し(@@ -a,b +c,d @@ ...)。 */
     data class Hunk(val text: String) : DiffRow
     /** 本文行。kind: '+'追加 / '-'削除 / ' '文脈。lineNo はその版での行番号(無いとき null)。 */

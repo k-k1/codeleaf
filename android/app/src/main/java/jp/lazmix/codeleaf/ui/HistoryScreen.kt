@@ -106,7 +106,7 @@ fun HistoryScreen(
 
 /**
  * 2/3ペインの右に出すファイル履歴の差分(選択コミットでのそのファイルの diff)。
- * ヘッダ(件名・著者・時刻・sha)＋ DiffText。コミットグラフの CommitDetailContent と対の関係。
+ * ヘッダ(件名・著者・時刻・sha)＋ DiffView。コミットグラフの CommitDetailContent と対の関係。
  */
 @Composable
 fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String, onOpenFile: (String) -> Unit = {}) {
@@ -137,7 +137,7 @@ fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String, onOpenFile:
             error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
             d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
             d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
+            else -> DiffView(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
 }

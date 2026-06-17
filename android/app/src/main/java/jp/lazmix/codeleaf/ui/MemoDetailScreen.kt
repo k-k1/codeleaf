@@ -68,7 +68,7 @@ fun MemoDetailScreen(
     var showRename by remember { mutableStateOf(false) }
     var showDeleteMemo by remember { mutableStateOf(false) }
 
-    fun bundle(): String = MemoFormat.memo(repoName, memoTitle, entries)
+    fun memoText(): String = MemoFormat.memo(repoName, memoTitle, entries)
 
     Scaffold(
         topBar = {
@@ -99,11 +99,11 @@ fun MemoDetailScreen(
                         DropdownMenu(expanded = topMenu, onDismissRequest = { topMenu = false }) {
                             DropdownMenuItem(
                                 text = { Text("まとめて共有") },
-                                onClick = { topMenu = false; shareText(context, bundle()) },
+                                onClick = { topMenu = false; shareText(context, memoText()) },
                             )
                             DropdownMenuItem(
                                 text = { Text("まとめてコピー") },
-                                onClick = { topMenu = false; clipboard.setText(AnnotatedString(bundle())) },
+                                onClick = { topMenu = false; clipboard.setText(AnnotatedString(memoText())) },
                             )
                             DropdownMenuItem(
                                 text = { Text("名前を変更") },
@@ -144,7 +144,7 @@ fun MemoDetailScreen(
 
     if (showRename) {
         MemoTitleDialog(
-            title = "メモ帳の名前を変更",
+            heading = "メモ帳の名前を変更",
             initial = memoTitle,
             confirmLabel = "変更",
             onConfirm = { showRename = false; onRenameMemo(it) },

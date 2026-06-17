@@ -253,7 +253,7 @@ private fun RepoCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
-            else -> Text("同期: ${formatSync(repo.lastSyncedAt)}", style = MaterialTheme.typography.bodySmall)
+            else -> Text("同期: ${formatSyncTime(repo.lastSyncedAt)}", style = MaterialTheme.typography.bodySmall)
         }
     }
     // 末尾アクション(clone中=進捗 / 失敗=再試行・削除 / 通常=★・グラフ・同期)。compact では2行目に右寄せ。
@@ -316,7 +316,7 @@ private fun RepoCard(
     }
 }
 
-private fun formatSync(epochMillis: Long?): String {
+private fun formatSyncTime(epochMillis: Long?): String {
     if (epochMillis == null) return "未同期"
     val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return fmt.format(Date(epochMillis))

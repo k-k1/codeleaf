@@ -101,7 +101,7 @@ fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String, onO
             error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
             d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
             d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-            else -> DiffText(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
+            else -> DiffView(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
 }
@@ -115,7 +115,7 @@ fun CommitDetailScreen(
     onOpenFile: (String) -> Unit = {},
 ) {
     Scaffold(
-        // 本文(DiffText)が自前の下部バーで navigationBars を padding するため二重計上を防ぐ(DiffScreen と同様)。
+        // 本文(DiffView)が自前の下部バーで navigationBars を padding するため二重計上を防ぐ(DiffScreen と同様)。
         contentWindowInsets = contentInsetsExcludingNavBar,
         topBar = {
             TopAppBar(

@@ -57,7 +57,7 @@ fun DiffScreen(
     onOpenFile: (String) -> Unit = {},
 ) {
     Scaffold(
-        // 本文(DiffText)が自前の下部バーで navigationBars を padding するため、Scaffold 側からは除外。
+        // 本文(DiffView)が自前の下部バーで navigationBars を padding するため、Scaffold 側からは除外。
         contentWindowInsets = contentInsetsExcludingNavBar,
         topBar = {
             TopAppBar(
@@ -78,7 +78,7 @@ fun DiffScreen(
 /** 整形済み diff を表示する(DiffScreen / コミット詳細 / ファイル履歴で共有)。
  *  ファイル毎に折りたたみ可・行番号付き。下部バーの「折り返しON/OFF」で長行の折り返し/横スクロールを切替。 */
 @Composable
-fun DiffText(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -> Unit = {}) {
+fun DiffView(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -> Unit = {}) {
     val rows = remember(diff) { parseDiffRows(diff) }
     val files = remember(rows) { groupDiffByFile(rows) }
     val collapsed = remember(diff) { mutableStateMapOf<Int, Boolean>() }
@@ -128,7 +128,7 @@ fun DiffText(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                h.path,
+                                h.displayPath,
                                 color = headerFg,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
