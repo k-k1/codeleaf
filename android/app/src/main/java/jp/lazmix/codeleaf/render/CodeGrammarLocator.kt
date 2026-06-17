@@ -45,7 +45,7 @@ class CodeGrammarLocator(
  * prism4j 規約: lookbehind は java の `(?<=)` ではなく「pattern の第1キャプチャ群＋lookbehind=true」で表現し、
  * マッチからその群を除いて着色する。greedy=true は文字列等の貪欲マッチに使う。
  */
-object CustomGrammars {
+internal object CustomGrammars {
 
     private fun p(
         regex: String,

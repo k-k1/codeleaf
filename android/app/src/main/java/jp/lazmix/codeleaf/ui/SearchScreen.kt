@@ -31,7 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.data.SearchHit
-import jp.lazmix.codeleaf.data.TextFile
+import jp.lazmix.codeleaf.data.SearchFile
 import jp.lazmix.codeleaf.data.searchCorpus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -41,12 +41,12 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SearchScreen(
     repoName: String,
-    loadCorpus: suspend () -> List<TextFile>,
+    loadCorpus: suspend () -> List<SearchFile>,
     onOpenFile: (path: String, line: Int) -> Unit,
     onBack: () -> Unit,
     initialPath: String = "",
 ) {
-    var corpus by remember { mutableStateOf<List<TextFile>?>(null) }
+    var corpus by remember { mutableStateOf<List<SearchFile>?>(null) }
     var query by remember { mutableStateOf("") }
     // 検索を開いた時点で表示していたフォルダを既定の絞り込みにする(末尾 / で配下に限定・空なら全体)。
     // searchCorpus は relPath.contains 判定なので "docs/" で docs 配下のみ。欄を消せば全体検索に戻せる。

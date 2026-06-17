@@ -17,7 +17,7 @@ import jp.lazmix.codeleaf.data.NavPositionStore
 import jp.lazmix.codeleaf.data.NewRepo
 import jp.lazmix.codeleaf.data.RepoRepository
 import jp.lazmix.codeleaf.data.SettingsStore
-import jp.lazmix.codeleaf.data.TextFile
+import jp.lazmix.codeleaf.data.SearchFile
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.ThemeMode
 import jp.lazmix.codeleaf.data.oauth.AuthorizationRequest
@@ -58,7 +58,7 @@ class RepoListViewModel(
     private val memos: MemoRepository,
     private val favorites: FavoriteRepository,
     private val navPositions: NavPositionStore,
-    private val oauthService: BitbucketOAuthService? = null,
+    private val bitbucketOAuthService: BitbucketOAuthService? = null,
     private val githubOAuthService: GitHubDeviceFlowService? = null,
     oauthResults: Channel<Result<OAuthAccount>>? = null,
 ) : ViewModel() {
@@ -69,13 +69,13 @@ class RepoListViewModel(
     val settings: StateFlow<AppSettings> = settingsStore.settings
 
     /** OAuth が利用可能か（BuildConfig に client_id/secret がある）。 */
-    val bitbucketOAuthAvailable: Boolean = oauthService != null
+    val bitbucketOAuthAvailable: Boolean = bitbucketOAuthService != null
 
     /** redirect Activity が交換した OAuth 結果（AddRepoScreen が購読）。 */
     val oauthResult: Flow<Result<OAuthAccount>> = oauthResults?.receiveAsFlow() ?: emptyFlow()
 
     /** 認可を開始（state 保存）。UI は返り値の url を Custom Tabs で開く。未設定なら null。 */
-    fun startBitbucketOAuth(): AuthorizationRequest? = oauthService?.startAuthorization()
+    fun startBitbucketOAuth(): AuthorizationRequest? = bitbucketOAuthService?.startAuthorization()
 
     /** GitHub Device Flow が利用可能か（BuildConfig に client_id がある）。 */
     val githubOAuthAvailable: Boolean = githubOAuthService != null
@@ -267,7 +267,7 @@ class RepoListViewModel(
     ): jp.lazmix.codeleaf.data.TextLoad? =
         repository.readBlobText(repo, relPath, sha, resolveCharset(charsetName), maxBytes)
 
-    suspend fun loadSearchCorpus(repo: Repo): List<TextFile> =
+    suspend fun loadSearchCorpus(repo: Repo): List<SearchFile> =
         repository.loadSearchCorpus(repo)
 
     fun workDirOf(repo: Repo): File = repository.workDir(repo)

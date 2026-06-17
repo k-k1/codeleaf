@@ -10,8 +10,8 @@ import org.junit.Test
 class SearchCorpusTest {
 
     private val corpus = listOf(
-        TextFile("a.md", "needle alpha\nfoo bar"),
-        TextFile("b.md", "needle beta"),
+        SearchFile("a.md", "needle alpha\nfoo bar"),
+        SearchFile("b.md", "needle beta"),
     )
 
     @Test
@@ -92,7 +92,7 @@ class SearchCorpusTest {
 
     @Test
     fun maxHits_isRespected() {
-        val many = listOf(TextFile("x.txt", (1..10).joinToString("\n") { "hit $it" }))
+        val many = listOf(SearchFile("x.txt", (1..10).joinToString("\n") { "hit $it" }))
         val out = searchCorpus(many, "hit", regex = false, maxHits = 3)
         assertEquals(3, out.hits.size)
     }

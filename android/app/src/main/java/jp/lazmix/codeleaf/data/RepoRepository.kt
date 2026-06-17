@@ -78,7 +78,7 @@ data class SearchHit(
 )
 
 /** 検索対象テキストファイル1件（インメモリ・インクリメンタル検索用のコーパス）。 */
-data class TextFile(
+data class SearchFile(
     val relPath: String,
     val content: String,
 )
@@ -96,7 +96,7 @@ data class SearchOutcome(
  * pathFilter が非空なら relPath にそれを含むファイルだけを対象にする(拡張子/ディレクトリ絞り込み)。
  */
 fun searchCorpus(
-    corpus: List<TextFile>,
+    corpus: List<SearchFile>,
     query: String,
     regex: Boolean,
     pathFilter: String = "",
@@ -420,10 +420,10 @@ class RepoRepository(
      * .git・巨大ファイル(>1MB)・バイナリ(NULを含む)は除外し、合計サイズ上限で打ち切る。
      * relPath 昇順で返す。
      */
-    suspend fun loadSearchCorpus(repo: Repo): List<TextFile> = withContext(ioDispatcher) {
+    suspend fun loadSearchCorpus(repo: Repo): List<SearchFile> = withContext(ioDispatcher) {
         val root = workDir(repo)
         val files = root.walkTopDown().onEnter { it.name != ".git" }.filter { it.isFile }
-        val corpus = ArrayList<TextFile>()
+        val corpus = ArrayList<SearchFile>()
         var total = 0L
         for (f in files) {
             if (total >= MAX_CORPUS_BYTES) break
@@ -432,7 +432,7 @@ class RepoRepository(
             if (data.any { it == 0.toByte() }) continue // バイナリ判定
             total += data.size
             val rel = f.relativeTo(root).path.replace('\\', '/')
-            corpus.add(TextFile(rel, String(data, Charsets.UTF_8)))
+            corpus.add(SearchFile(rel, String(data, Charsets.UTF_8)))
         }
         corpus.sortedBy { it.relPath }
     }
