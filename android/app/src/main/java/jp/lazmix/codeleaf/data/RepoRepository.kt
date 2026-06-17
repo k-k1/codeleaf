@@ -429,7 +429,7 @@ class RepoRepository(
             if (total >= MAX_CORPUS_BYTES) break
             if (f.length() > MAX_SEARCH_FILE_BYTES) continue
             val data = runCatching { f.readBytes() }.getOrNull() ?: continue
-            if (data.any { it == 0.toByte() }) continue // バイナリ判定
+            if (isBinaryHead(data)) continue // バイナリ判定
             total += data.size
             val rel = f.relativeTo(root).path.replace('\\', '/')
             corpus.add(SearchFile(rel, String(data, Charsets.UTF_8)))

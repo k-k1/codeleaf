@@ -53,6 +53,9 @@ class FileInfo(
     val imageHeight: Int? = null,
 )
 
+/** 先頭バイトに NUL を含めばバイナリとみなす素朴な判定(種別判定・検索コーパス除外で共用)。 */
+fun isBinaryHead(head: ByteArray): Boolean = head.any { it == 0.toByte() }
+
 /** ファイル名・先頭バイト・サイズからファイル種別を判定する(純粋関数・テスト可能)。 */
 object FileClassifier {
 
@@ -62,7 +65,7 @@ object FileClassifier {
     fun classify(name: String, head: ByteArray): FileKind {
         imageFormat(name, head)?.let { return FileKind.Image(it) }
         if (head.startsWith(0x25, 0x50, 0x44, 0x46)) return FileKind.Pdf // %PDF
-        if (isBinary(head)) return FileKind.Binary(magicLabel(name, head))
+        if (isBinaryHead(head)) return FileKind.Binary(magicLabel(name, head))
         return FileKind.Text
     }
 
@@ -148,8 +151,6 @@ object FileClassifier {
         }
     }
 
-    /** 先頭バイトに NUL を含めばバイナリとみなす(loadSearchCorpus と同じ素朴な判定)。 */
-    private fun isBinary(h: ByteArray): Boolean = h.any { it == 0.toByte() }
 
     /** magic / 拡張子から file(1) 風の種別ラベルを返す。判別不能は「バイナリ」。 */
     private fun magicLabel(name: String, h: ByteArray): String = when {
