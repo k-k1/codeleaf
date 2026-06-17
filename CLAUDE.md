@@ -10,7 +10,7 @@
 リーダー。push / commit はしない。確定仕様・画面モックは `DESIGN.md`。
 
 ## 技術スタック
-Kotlin + Jetpack Compose(Material3) / MVVM + StateFlow / 手動DI(`GitReaderApplication.container = AppContainer`)。
+Kotlin + Jetpack Compose(Material3) / MVVM + StateFlow / 手動DI(`CodeLeafApplication.container = AppContainer`)。
 JGit 7.6 / Markwon 4.6.2(+WebView で Mermaid) / Prism4j(kapt) / Room / token は AndroidKeystore 暗号化。
 package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/app/src/main/java/jp/lazmix/codeleaf/`(data/git/render/ui)。
 
@@ -28,7 +28,7 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
 - git は cwd ズレ回避に `git -C C:/private_workspace/git-reader ...`。コミット末尾に Co-Authored-By 行。
 
 ## ハマりどころ(コードから読み取りにくい点)
-- **ナビ/多ペイン**(`ui/GitReaderApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
+- **ナビ/多ペイン**(`ui/CodeLeafApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
   幅 `BoxWithConstraints` で `>=600dp`=2ペイン / `>=960dp`=3ペイン(左=リポ一覧レール｜中=一覧｜右=詳細)、未満は全画面。
   **1/2ペインの Browse はハンバーガー(`FileBrowserScreen` の `onMenu`=≡)→`ModalNavigationDrawer`**(中身は `RepoListScreen` 再利用・
   `drawerState`/`drawerScope` は Browse 枝で保持、選択で `onItemSelected`→`drawerState.close()`、1ペインのファイル表示中だけ `gesturesEnabled=false`)。
