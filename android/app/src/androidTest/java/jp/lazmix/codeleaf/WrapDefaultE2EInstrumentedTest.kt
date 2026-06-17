@@ -1,10 +1,10 @@
 package jp.lazmix.codeleaf
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -47,8 +47,8 @@ class WrapDefaultE2EInstrumentedTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("コードの折り返し（既定）").fetchSemanticsNodes().isNotEmpty()
         }
-        // 設定画面の最初のスイッチ=「コードの折り返し（既定）」(2番目は行番号表示)
-        compose.onAllNodes(isToggleable())[0].performScrollTo().performClick()
+        // 「コードの折り返し（既定）」のスイッチを testTag で特定して押す(並び順に依存しない)。
+        compose.onNodeWithTag("settingSwitch:コードの折り返し（既定）").performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(false, app.container.settingsStore.settings.value.wrapByDefault)
 

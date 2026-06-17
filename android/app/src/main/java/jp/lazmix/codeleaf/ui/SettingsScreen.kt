@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.BuildConfig
 import jp.lazmix.codeleaf.data.AppSettings
@@ -80,7 +81,12 @@ private fun SwitchSetting(
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(description, style = MaterialTheme.typography.bodySmall)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        // testTag でラベル別に特定可能にする(設定スイッチはセマンティクス上フラットに並び順依存になるため)。
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag("settingSwitch:$title"),
+        )
     }
 }
 
