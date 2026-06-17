@@ -225,7 +225,7 @@ private fun GraphCommitRow(
                     onLongClick = if (branches.isEmpty()) null else { { menuOpen = true } },
                 ),
         ) {
-            GraphCell(row, laneCount, laneW, Modifier.width(laneW * laneCount).fillMaxHeight())
+            GraphCell(row, laneW, Modifier.width(laneW * laneCount).fillMaxHeight())
             Column(
                 Modifier.weight(1f).fillMaxHeight().padding(end = 12.dp),
                 verticalArrangement = Arrangement.Center,
@@ -303,7 +303,7 @@ internal fun RefChip(name: String, isCurrent: Boolean = false) {
 }
 
 @Composable
-private fun GraphCell(row: GraphRow, laneCount: Int, laneWidth: Dp, modifier: Modifier) {
+private fun GraphCell(row: GraphRow, laneWidth: Dp, modifier: Modifier) {
     // 中空ノードの内側を塗って下のレーン線が透けないようにする色。
     val nodeFill = MaterialTheme.colorScheme.surface
     Canvas(modifier) {

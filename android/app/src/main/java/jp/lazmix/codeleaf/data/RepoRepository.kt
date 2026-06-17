@@ -401,7 +401,7 @@ class RepoRepository(
             read
         }
         val head = buf.copyOf(n)
-        val kind = FileClassifier.classify(relPath.substringAfterLast('/'), head, size)
+        val kind = FileClassifier.classify(relPath.substringAfterLast('/'), head)
         val textMeta = if (kind is FileKind.Text) FileClassifier.textMeta(head) else null
         var w: Int? = null
         var h: Int? = null
@@ -463,7 +463,7 @@ class RepoRepository(
         val bytes = jgit.readBytesAt(workDir(repo), relPath, sha) ?: return@withContext null
         val size = bytes.size.toLong()
         val head = if (bytes.size > FileClassifier.PROBE_BYTES) bytes.copyOf(FileClassifier.PROBE_BYTES) else bytes
-        var kind = FileClassifier.classify(relPath.substringAfterLast('/'), head, size)
+        var kind = FileClassifier.classify(relPath.substringAfterLast('/'), head)
         if (kind is FileKind.Image) kind = FileKind.Binary(kind.format.uppercase())
         if (kind is FileKind.Pdf) kind = FileKind.Binary("PDF")
         val textMeta = if (kind is FileKind.Text) FileClassifier.textMeta(head) else null

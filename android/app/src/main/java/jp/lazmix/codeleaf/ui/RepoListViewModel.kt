@@ -235,8 +235,6 @@ class RepoListViewModel(
 
     fun saveNavPosition(repoId: Long, pos: NavPosition) = navPositions.save(repoId, pos)
 
-    fun clearNavPosition(repoId: Long) = navPositions.clear(repoId)
-
     // --- ファイルブラウザ / 閲覧 ---
     suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> =
         repository.listDir(repo, relPath, collapse = settingsStore.settings.value.collapseFolders)

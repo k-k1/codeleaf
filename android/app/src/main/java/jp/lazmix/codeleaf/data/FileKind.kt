@@ -59,7 +59,7 @@ object FileClassifier {
     /** 種別判定に十分な先頭バイト数。これだけ読めば magic / NUL 判定が成り立つ。 */
     const val PROBE_BYTES = 8192
 
-    fun classify(name: String, head: ByteArray, size: Long): FileKind {
+    fun classify(name: String, head: ByteArray): FileKind {
         imageFormat(name, head)?.let { return FileKind.Image(it) }
         if (head.startsWith(0x25, 0x50, 0x44, 0x46)) return FileKind.Pdf // %PDF
         if (isBinary(head)) return FileKind.Binary(magicLabel(name, head))

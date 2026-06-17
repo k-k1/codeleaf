@@ -19,9 +19,6 @@ interface MemoDao {
     )
     fun observeMemosWithCount(repoId: Long): Flow<List<MemoWithCount>>
 
-    @Query("SELECT * FROM memos WHERE id = :id")
-    suspend fun getMemo(id: Long): Memo?
-
     @Query("SELECT * FROM memo_entries WHERE memoId = :memoId ORDER BY filePath COLLATE NOCASE, lineStart, id")
     fun observeEntries(memoId: Long): Flow<List<MemoEntry>>
 

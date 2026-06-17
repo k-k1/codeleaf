@@ -10,51 +10,51 @@ class FileClassifierTest {
     private fun ascii(s: String): ByteArray = s.toByteArray(Charsets.US_ASCII)
 
     @Test fun plainText_isText() {
-        assertEquals(FileKind.Text, FileClassifier.classify("a.txt", ascii("hello\nworld"), 11))
+        assertEquals(FileKind.Text, FileClassifier.classify("a.txt", ascii("hello\nworld")))
     }
 
     @Test fun textWithNul_isBinary() {
-        val k = FileClassifier.classify("a.dat", bytes('h'.code, 0x00, 'i'.code), 3)
+        val k = FileClassifier.classify("a.dat", bytes('h'.code, 0x00, 'i'.code))
         assertEquals(FileKind.Binary("バイナリ"), k)
     }
 
     @Test fun pngMagic_isImage() {
-        val k = FileClassifier.classify("noext", bytes(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A), 8)
+        val k = FileClassifier.classify("noext", bytes(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
         assertEquals(FileKind.Image("png"), k)
     }
 
     @Test fun jpegMagic_isImage() {
-        assertEquals(FileKind.Image("jpeg"), FileClassifier.classify("x", bytes(0xFF, 0xD8, 0xFF, 0xE0), 4))
+        assertEquals(FileKind.Image("jpeg"), FileClassifier.classify("x", bytes(0xFF, 0xD8, 0xFF, 0xE0)))
     }
 
     @Test fun svgByExtension_isImage() {
         // SVG はテキストだが拡張子で画像扱いにして描画へ回す。
-        assertEquals(FileKind.Image("svg"), FileClassifier.classify("logo.svg", ascii("<svg></svg>"), 11))
+        assertEquals(FileKind.Image("svg"), FileClassifier.classify("logo.svg", ascii("<svg></svg>")))
     }
 
     @Test fun pdf_isPdfKind() {
         val head = ascii("%PDF-1.7") + bytes(0x00)
-        assertEquals(FileKind.Pdf, FileClassifier.classify("doc.pdf", head, 100))
+        assertEquals(FileKind.Pdf, FileClassifier.classify("doc.pdf", head))
     }
 
     @Test fun zipJarExtension_labelsJar() {
         val head = bytes(0x50, 0x4B, 0x03, 0x04, 0x00)
-        assertEquals(FileKind.Binary("JAR アーカイブ"), FileClassifier.classify("lib.jar", head, 100))
+        assertEquals(FileKind.Binary("JAR アーカイブ"), FileClassifier.classify("lib.jar", head))
     }
 
     @Test fun zipPlain_labelsZip() {
         val head = bytes(0x50, 0x4B, 0x03, 0x04, 0x00)
-        assertEquals(FileKind.Binary("ZIP アーカイブ"), FileClassifier.classify("a.zip", head, 100))
+        assertEquals(FileKind.Binary("ZIP アーカイブ"), FileClassifier.classify("a.zip", head))
     }
 
     @Test fun elf_isLabeled() {
         val head = bytes(0x7F, 0x45, 0x4C, 0x46, 0x00)
-        assertEquals(FileKind.Binary("ELF 実行ファイル"), FileClassifier.classify("a.out", head, 100))
+        assertEquals(FileKind.Binary("ELF 実行ファイル"), FileClassifier.classify("a.out", head))
     }
 
     @Test fun gzip_isLabeled() {
         val head = bytes(0x1F, 0x8B, 0x08, 0x00)
-        assertEquals(FileKind.Binary("gzip 圧縮"), FileClassifier.classify("a.gz", head, 100))
+        assertEquals(FileKind.Binary("gzip 圧縮"), FileClassifier.classify("a.gz", head))
     }
 
     @Test fun humanSize_formats() {

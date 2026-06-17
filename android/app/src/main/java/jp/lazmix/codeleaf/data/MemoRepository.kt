@@ -18,8 +18,6 @@ class MemoRepository(
 
     fun observeEntries(memoId: Long): Flow<List<MemoEntry>> = dao.observeEntries(memoId)
 
-    suspend fun getMemo(id: Long): Memo? = dao.getMemo(id)
-
     suspend fun getEntries(memoId: Long): List<MemoEntry> = dao.getEntries(memoId)
 
     /** 新規メモ帳を作成し id を返す。 */

@@ -131,7 +131,6 @@ fun MemoDetailScreen(
             LazyColumn(Modifier.fillMaxSize().padding(padding)) {
                 items(entries, key = { it.id }) { e ->
                     EntryCard(
-                        repoName = repoName,
                         entry = e,
                         onOpen = { onOpenEntry(e) },
                         onShare = { shareText(context, MemoFormat.entry(repoName, e)) },
@@ -167,7 +166,6 @@ fun MemoDetailScreen(
 
 @Composable
 private fun EntryCard(
-    repoName: String,
     entry: MemoEntry,
     onOpen: () -> Unit,
     onShare: () -> Unit,
