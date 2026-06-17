@@ -13,8 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import jp.lazmix.codeleaf.data.db.ThemeMode
-import jp.lazmix.codeleaf.ui.GitReaderApp
-import jp.lazmix.codeleaf.ui.GitReaderTheme
+import jp.lazmix.codeleaf.ui.CodeLeafApp
+import jp.lazmix.codeleaf.ui.CodeLeafTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
         // システムバーは透過(edge-to-edge)。各画面の Scaffold/IconRail/SlimBottomBar が
         // status/navigation の inset を負担するので、本体はバー下に潜らない。
         enableEdgeToEdge()
-        val settingsStore = (application as GitReaderApplication).container.settingsStore
+        val settingsStore = (application as CodeLeafApplication).container.settingsStore
         setContent {
             // 一覧・追加・設定画面はデフォルトテーマで描画(リポ閲覧中は repo 毎テーマが上書き)。
             val settings by settingsStore.settings.collectAsState()
@@ -38,9 +38,9 @@ class MainActivity : ComponentActivity() {
                 controller.isAppearanceLightStatusBars = !dark
                 controller.isAppearanceLightNavigationBars = !dark
             }
-            GitReaderTheme(settings.defaultTheme) {
+            CodeLeafTheme(settings.defaultTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    GitReaderApp()
+                    CodeLeafApp()
                 }
             }
         }

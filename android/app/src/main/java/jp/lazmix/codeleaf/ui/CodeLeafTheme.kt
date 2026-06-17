@@ -9,7 +9,7 @@ import jp.lazmix.codeleaf.data.db.ThemeMode
 
 /** リポジトリ毎テーマ。SYSTEM は端末のダーク設定に追従。 */
 @Composable
-fun GitReaderTheme(
+fun CodeLeafTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {

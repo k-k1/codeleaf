@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Compose 側で MaterialTheme を使うため、土台は NoActionBar の DayNight のみ -->
-    <style name="Theme.GitReader" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.CodeLeaf" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import jp.lazmix.codeleaf.GitReaderApplication
+import jp.lazmix.codeleaf.CodeLeafApplication
 import jp.lazmix.codeleaf.data.AppSettings
 import jp.lazmix.codeleaf.data.FavoriteRepository
 import jp.lazmix.codeleaf.data.FileEntry
@@ -141,7 +141,7 @@ class RepoListViewModel(
 
     private suspend fun runClone(repo: Repo) {
         val ok = runCatching { repository.cloneRegistered(repo) }
-        ok.exceptionOrNull()?.let { android.util.Log.w("GitReader", "clone failed", it) }
+        ok.exceptionOrNull()?.let { android.util.Log.w("CodeLeaf", "clone failed", it) }
         _status.value = UiStatus(
             message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) }
                 ?: "${repo.name} を追加しました",
@@ -413,7 +413,7 @@ class RepoListViewModel(
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val app = this[APPLICATION_KEY] as GitReaderApplication
+                val app = this[APPLICATION_KEY] as CodeLeafApplication
                 RepoListViewModel(
                     app.container.repoRepository,
                     app.container.settingsStore,

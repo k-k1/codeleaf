@@ -26,7 +26,7 @@ class OAuthRedirectActivity : ComponentActivity() {
     }
 
     private fun handle(data: Uri?) {
-        val container = (application as GitReaderApplication).container
+        val container = (application as CodeLeafApplication).container
         val service = container.bitbucketOAuthService
         if (data == null || service == null) {
             finish()

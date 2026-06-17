@@ -81,7 +81,7 @@ class AppContainer(app: Application) {
     val favoriteRepository: FavoriteRepository = FavoriteRepository(db.favoriteDao())
 }
 
-class GitReaderApplication : Application() {
+class CodeLeafApplication : Application() {
     lateinit var container: AppContainer
         private set
 

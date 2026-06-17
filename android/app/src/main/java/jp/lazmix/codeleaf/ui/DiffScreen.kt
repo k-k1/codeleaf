@@ -45,7 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import jp.lazmix.codeleaf.GitReaderApplication
+import jp.lazmix.codeleaf.CodeLeafApplication
 import jp.lazmix.codeleaf.git.CommitInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -228,7 +228,7 @@ fun DiffText(diff: String, modifier: Modifier = Modifier, onOpenFile: (String) -
     val collapsed = remember(diff) { mutableStateMapOf<Int, Boolean>() }
     // 折り返しは diff 専用設定として永続化(ファイル閲覧の wrapByDefault とは別管理)。既定 ON。
     val context = LocalContext.current
-    val settingsStore = remember { (context.applicationContext as GitReaderApplication).container.settingsStore }
+    val settingsStore = remember { (context.applicationContext as CodeLeafApplication).container.settingsStore }
     var wrap by remember { mutableStateOf(settingsStore.settings.value.diffWrap) }
     val base = MaterialTheme.colorScheme.onSurface
     val muted = MaterialTheme.colorScheme.onSurfaceVariant

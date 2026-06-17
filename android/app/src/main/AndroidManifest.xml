@@ -4,13 +4,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:name=".GitReaderApplication"
+        android:name=".CodeLeafApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="CodeLeaf"
         android:supportsRtl="true"
-        android:theme="@style/Theme.GitReader">
+        android:theme="@style/Theme.CodeLeaf">
         <activity
             android:name=".MainActivity"
             android:exported="true"

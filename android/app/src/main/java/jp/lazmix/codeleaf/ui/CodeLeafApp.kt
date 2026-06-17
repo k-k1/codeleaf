@@ -129,7 +129,7 @@ private val TWO_PANE_MIN_WIDTH = 600.dp
 private val THREE_PANE_MIN_WIDTH = 960.dp
 
 @Composable
-fun GitReaderApp() {
+fun CodeLeafApp() {
     val vm: RepoListViewModel = viewModel(factory = RepoListViewModel.Factory)
     val context = LocalContext.current
     // backStack/detailStack/graphSelected はプロセス死から復元する(rememberSaveable + @Parcelize)。
@@ -397,7 +397,7 @@ fun GitReaderApp() {
     // レール畳み時の細いアイコンレール: ≡(展開) / リポのアバター縦並び / 下に編集(or＋)・設定。
     @Composable
     fun IconRail(selectedRepoId: Long?) {
-        GitReaderTheme(settings.defaultTheme) {
+        CodeLeafTheme(settings.defaultTheme) {
             Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxHeight().width(64.dp)) {
                 Column(
                     Modifier.fillMaxHeight().statusBarsPadding(),
@@ -451,16 +451,16 @@ fun GitReaderApp() {
         Row(Modifier.fillMaxSize()) {
             if (!railCollapsed) {
                 Box(Modifier.weight(0.25f)) {
-                    GitReaderTheme(settings.defaultTheme) {
+                    CodeLeafTheme(settings.defaultTheme) {
                         RailPane(selectedRepoId, onCollapse = { railCollapsed = true }, compact = true)
                     }
                 }
                 VerticalDivider()
-                Box(Modifier.weight(0.75f)) { GitReaderTheme(repoTheme) { content() } }
+                Box(Modifier.weight(0.75f)) { CodeLeafTheme(repoTheme) { content() } }
             } else {
                 IconRail(selectedRepoId)
                 VerticalDivider()
-                Box(Modifier.weight(1f)) { GitReaderTheme(repoTheme) { content() } }
+                Box(Modifier.weight(1f)) { CodeLeafTheme(repoTheme) { content() } }
             }
         }
     }
@@ -471,7 +471,7 @@ fun GitReaderApp() {
         if (three) {
             ThreePaneScaffold(repo.id, repo.themeMode) { content() }
         } else {
-            GitReaderTheme(repo.themeMode) { content() }
+            CodeLeafTheme(repo.themeMode) { content() }
         }
     }
 
@@ -723,7 +723,7 @@ fun GitReaderApp() {
 
                 when {
                     // 集中モード: レール・一覧を隠して全幅ビューア。
-                    focused -> GitReaderTheme(repo.themeMode) {
+                    focused -> CodeLeafTheme(repo.themeMode) {
                         Box(Modifier.fillMaxSize()) {
                             ViewerPane(file!!, showBack = false)
                             FocusHandle()
@@ -744,7 +744,7 @@ fun GitReaderApp() {
                         gesturesEnabled = !(file != null && !two),
                         drawerContent = {
                             ModalDrawerSheet {
-                                GitReaderTheme(settings.defaultTheme) {
+                                CodeLeafTheme(settings.defaultTheme) {
                                     RailPane(
                                         selectedRepoId = repo.id,
                                         onItemSelected = { drawerScope.launch { drawerState.close() } },
@@ -753,7 +753,7 @@ fun GitReaderApp() {
                             }
                         },
                     ) {
-                        GitReaderTheme(repo.themeMode) {
+                        CodeLeafTheme(repo.themeMode) {
                             val openDrawer: () -> Unit = { drawerScope.launch { drawerState.open() } }
                             if (two) {
                                 Row(Modifier.fillMaxSize()) {
@@ -773,7 +773,7 @@ fun GitReaderApp() {
             }
         }
 
-        is Screen.Search -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.Search -> CodeLeafTheme(current.repo.themeMode) {
             SearchScreen(
                 repoName = current.repo.name,
                 initialPath = current.path,
@@ -939,7 +939,7 @@ fun GitReaderApp() {
             }
         }
 
-        is Screen.Diff -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.Diff -> CodeLeafTheme(current.repo.themeMode) {
             DiffScreen(
                 commit = current.commit,
                 loadDiff = { vm.fileDiff(current.repo, current.filePath, current.commit.sha) },
@@ -948,7 +948,7 @@ fun GitReaderApp() {
             )
         }
 
-        is Screen.CommitDetail -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.CommitDetail -> CodeLeafTheme(current.repo.themeMode) {
             CommitDetailScreen(
                 commit = current.commit,
                 loadDiff = { vm.commitDiff(current.repo, current.commit.sha) },
@@ -957,7 +957,7 @@ fun GitReaderApp() {
             )
         }
 
-        is Screen.Memos -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.Memos -> CodeLeafTheme(current.repo.themeMode) {
             val memoList by vm.observeMemos(current.repo.id).collectAsState(initial = emptyList())
             MemosScreen(
                 repoName = current.repo.name,
@@ -971,7 +971,7 @@ fun GitReaderApp() {
             )
         }
 
-        is Screen.MemoDetail -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.MemoDetail -> CodeLeafTheme(current.repo.themeMode) {
             val entries by vm.observeMemoEntries(current.memoId).collectAsState(initial = emptyList())
             MemoDetailScreen(
                 repoName = current.repo.name,
@@ -985,7 +985,7 @@ fun GitReaderApp() {
             )
         }
 
-        is Screen.Favorites -> GitReaderTheme(current.repo.themeMode) {
+        is Screen.Favorites -> CodeLeafTheme(current.repo.themeMode) {
             val repo = current.repo
             val favList by vm.observeFavorites(repo.id).collectAsState(initial = emptyList())
             FavoritesScreen(

@@ -25,7 +25,7 @@ class AddRepoValidationE2EInstrumentedTest {
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
 
-    private val app get() = ApplicationProvider.getApplicationContext<GitReaderApplication>()
+    private val app get() = ApplicationProvider.getApplicationContext<CodeLeafApplication>()
 
     @Before
     fun setUp() {

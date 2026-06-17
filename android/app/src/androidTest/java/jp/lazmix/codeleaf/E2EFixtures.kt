@@ -14,7 +14,7 @@ import java.io.File
  */
 
 /** 既存リポを一掃して決定論化する(前回失敗実行の残骸対策)。 */
-fun GitReaderApplication.cleanRepos() = runBlocking {
+fun CodeLeafApplication.cleanRepos() = runBlocking {
     val repo = container.repoRepository
     repo.observeRepos().first().forEach { repo.delete(it) }
 }
@@ -23,14 +23,14 @@ fun GitReaderApplication.cleanRepos() = runBlocking {
  * cacheDir 配下に git リポを作る。[build] には `(git, dir)` を渡し、commit まで呼び出し側が行う
  * (複数ブランチ・マージ等の自由な構成用)。多くのテストは [createSrcRepo] の Map 版で足りる。
  */
-fun GitReaderApplication.gitRepo(name: String, build: (git: Git, dir: File) -> Unit): File {
+fun CodeLeafApplication.gitRepo(name: String, build: (git: Git, dir: File) -> Unit): File {
     val dir = File(cacheDir, name).apply { deleteRecursively(); mkdirs() }
     Git.init().setInitialBranch("main").setDirectory(dir).call().use { build(it, dir) }
     return dir
 }
 
 /** `path → 内容` のファイルを書いて単一コミットしたローカル git リポを作る。サブディレクトリも作成。 */
-fun GitReaderApplication.createSrcRepo(name: String, files: Map<String, String>): File =
+fun CodeLeafApplication.createSrcRepo(name: String, files: Map<String, String>): File =
     gitRepo(name) { git, dir ->
         files.forEach { (path, content) ->
             File(dir, path).apply { parentFile?.mkdirs() }.writeText(content)
@@ -46,7 +46,7 @@ fun Git.commitAll(message: String) {
 }
 
 /** ローカル [src] を file パスで TOKEN 方式リポとして登録 & clone する。 */
-fun GitReaderApplication.addFixtureRepo(name: String, src: File, branch: String? = null) = runBlocking {
+fun CodeLeafApplication.addFixtureRepo(name: String, src: File, branch: String? = null) = runBlocking {
     container.repoRepository.addAndClone(
         NewRepo(
             name = name,
