@@ -11,6 +11,7 @@ import jp.lazmix.codeleaf.data.db.ThemeMode
 import jp.lazmix.codeleaf.data.oauth.BitbucketApi
 import jp.lazmix.codeleaf.data.oauth.GitHubApi
 import jp.lazmix.codeleaf.data.oauth.OAuthAccount
+import jp.lazmix.codeleaf.data.oauth.OAuthProvider
 import jp.lazmix.codeleaf.data.oauth.RemoteRepo
 import jp.lazmix.codeleaf.data.oauth.gitUsernameFor
 import jp.lazmix.codeleaf.data.oauth.needsRefresh
@@ -258,20 +259,20 @@ class RepoRepository(
 
     /** 成功したログインを provider 単位で記憶する（次回のリポ追加で再ログインを省く）。 */
     suspend fun rememberOAuthSession(account: OAuthAccount) = withContext(ioDispatcher) {
-        tokenStore.setOAuthSession(account.provider, account.toJson())
+        tokenStore.setOAuthSession(account.provider.name, account.toJson())
     }
 
     /**
      * 記憶済みログインを返す。失効間近なら refresh して保存し直す。
      * refresh 失効（再ログインが要る）や未記憶なら null（UI はログインボタンを出す）。
      */
-    suspend fun rememberedOAuthSession(provider: String): OAuthAccount? = withContext(ioDispatcher) {
-        val json = tokenStore.getOAuthSession(provider) ?: return@withContext null
+    suspend fun rememberedOAuthSession(provider: OAuthProvider): OAuthAccount? = withContext(ioDispatcher) {
+        val json = tokenStore.getOAuthSession(provider.name) ?: return@withContext null
         val account = OAuthAccount.fromJson(json)
         if (!needsRefresh(account.expiresAtEpochMs, nowMillis())) return@withContext account
         val refresher = refreshOAuth ?: return@withContext account
         val refreshed = refresher(account).getOrNull() ?: return@withContext null
-        tokenStore.setOAuthSession(provider, refreshed.toJson())
+        tokenStore.setOAuthSession(provider.name, refreshed.toJson())
         refreshed
     }
 
@@ -527,7 +528,7 @@ class RepoRepository(
     /** 登録済みリポジトリ・暗号化トークン・作業ツリー・記憶ログインをすべて削除する(キャッシュ全削除)。 */
     suspend fun deleteAll() = withContext(ioDispatcher) {
         observeRepos().first().forEach { delete(it) }
-        listOf("GITHUB", "BITBUCKET").forEach { tokenStore.removeOAuthSession(it) }
+        OAuthProvider.entries.forEach { tokenStore.removeOAuthSession(it.name) }
     }
 
     private fun nowMillis(): Long = System.currentTimeMillis()

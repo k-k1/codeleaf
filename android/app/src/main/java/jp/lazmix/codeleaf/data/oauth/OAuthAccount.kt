@@ -4,19 +4,22 @@ import jp.lazmix.codeleaf.data.db.AuthType
 import jp.lazmix.codeleaf.data.db.GitHost
 import org.json.JSONObject
 
+/** OAuth ログインの提供元。enum 名(BITBUCKET/GITHUB)がそのまま永続化・保存キーに使われる。 */
+enum class OAuthProvider { BITBUCKET, GITHUB }
+
 /**
  * 暗号化保存する OAuth 資格情報（TokenStore に JSON 1 文字列で格納）。
  * expiresAtEpochMs は「受信時刻 + expires_in*1000」の絶対時刻。
  */
 data class OAuthAccount(
-    val provider: String, // "BITBUCKET"（将来 GITHUB 拡張余地）
+    val provider: OAuthProvider,
     val accessToken: String,
     val refreshToken: String?,
     val expiresAtEpochMs: Long,
     val scopes: String?,
 ) {
     fun toJson(): String = JSONObject().apply {
-        put("provider", provider)
+        put("provider", provider.name)
         put("accessToken", accessToken)
         put("refreshToken", refreshToken ?: JSONObject.NULL)
         put("expiresAtEpochMs", expiresAtEpochMs)
@@ -27,7 +30,7 @@ data class OAuthAccount(
         fun fromJson(s: String): OAuthAccount {
             val o = JSONObject(s)
             return OAuthAccount(
-                provider = o.getString("provider"),
+                provider = OAuthProvider.valueOf(o.getString("provider")),
                 accessToken = o.getString("accessToken"),
                 refreshToken = o.optStringOrNull("refreshToken"),
                 expiresAtEpochMs = o.getLong("expiresAtEpochMs"),
@@ -36,7 +39,7 @@ data class OAuthAccount(
         }
 
         /** 交換結果＋受信時刻から保存モデルを作る。 */
-        fun fromTokens(provider: String, tokens: OAuthTokens, nowMs: Long): OAuthAccount =
+        fun fromTokens(provider: OAuthProvider, tokens: OAuthTokens, nowMs: Long): OAuthAccount =
             OAuthAccount(
                 provider = provider,
                 accessToken = tokens.accessToken,

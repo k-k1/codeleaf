@@ -63,6 +63,6 @@ class BitbucketOAuthService(
 
     companion object {
         const val DEFAULT_REDIRECT_URI = "codeleaf://oauth"
-        const val PROVIDER = "BITBUCKET"
+        val PROVIDER = OAuthProvider.BITBUCKET
     }
 }

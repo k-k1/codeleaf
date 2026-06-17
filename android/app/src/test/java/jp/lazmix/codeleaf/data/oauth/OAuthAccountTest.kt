@@ -12,13 +12,13 @@ class OAuthAccountTest {
 
     @Test
     fun jsonRoundTrip() {
-        val a = OAuthAccount("BITBUCKET", "AT", "RT", 1_700_000_000_000, "repository")
+        val a = OAuthAccount(OAuthProvider.BITBUCKET, "AT", "RT", 1_700_000_000_000, "repository")
         assertEquals(a, OAuthAccount.fromJson(a.toJson()))
     }
 
     @Test
     fun jsonRoundTripWithNulls() {
-        val a = OAuthAccount("BITBUCKET", "AT", null, 42L, null)
+        val a = OAuthAccount(OAuthProvider.BITBUCKET, "AT", null, 42L, null)
         val back = OAuthAccount.fromJson(a.toJson())
         assertNull(back.refreshToken)
         assertNull(back.scopes)
@@ -28,7 +28,7 @@ class OAuthAccountTest {
     @Test
     fun fromTokensComputesAbsoluteExpiry() {
         val tokens = OAuthTokens("AT", "RT", 3600, "repository")
-        val a = OAuthAccount.fromTokens("BITBUCKET", tokens, nowMs = 1_000_000L)
+        val a = OAuthAccount.fromTokens(OAuthProvider.BITBUCKET, tokens, nowMs = 1_000_000L)
         assertEquals(1_000_000L + 3_600_000L, a.expiresAtEpochMs)
     }
 

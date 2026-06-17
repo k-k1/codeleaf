@@ -15,7 +15,7 @@ object GitHubDeviceFlow {
     const val TOKEN_URL = "https://github.com/login/oauth/access_token"
     const val GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
     const val DEFAULT_SCOPE = "repo"
-    const val PROVIDER = "GITHUB"
+    val PROVIDER = OAuthProvider.GITHUB
 
     /** OAuth App の user token は既定で無期限。refresh を起こさないよう遠未来の有効期限を割り当てる。 */
     const val NON_EXPIRING_SEC = 100L * 365 * 24 * 60 * 60 // ≒100年
