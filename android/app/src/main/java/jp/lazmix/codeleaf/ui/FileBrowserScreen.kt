@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,15 +56,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -77,9 +73,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.FileEntry
@@ -150,7 +144,7 @@ fun FileBrowserScreen(
         // 多ペインではこのペインは画面端でないのに、既定だと横向きの側面ナビバー インセットが
         // 本文へ右パディングとして入り、ファイル一覧の右端に余白が出ていた。bottomBar 側が
         // 下端を自前で padding するので、本文インセットから navigationBars を除外する。
-        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.navigationBars),
+        contentWindowInsets = contentInsetsExcludingNavBar,
         topBar = {
           Column {
             TopAppBar(
@@ -316,21 +310,7 @@ fun FileBrowserScreen(
             }
 
             // ブランチ切替中は全面ブロック(タッチを消費)してプログレス表示
-            if (busy) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(Modifier.height(12.dp))
-                        Text("ブランチ切替中…", color = Color.White)
-                    }
-                }
-            }
+            if (busy) BusyBlockingOverlay()
         }
     }
 
@@ -680,16 +660,3 @@ private fun BrandIcon(spec: FileIconSpec?, contentDescription: String?, fallback
     )
 }
 
-/**
- * SVG をデコードできる Coil ImageLoader。アイコンのアセットは数十KB と小さいため
- * Application 単位で 1 つあれば十分。Activity の context から remember する。
- */
-@Composable
-private fun rememberSvgLoader(): ImageLoader {
-    val context = LocalContext.current
-    return remember(context.applicationContext) {
-        ImageLoader.Builder(context.applicationContext)
-            .components { add(SvgDecoder.Factory()) }
-            .build()
-    }
-}

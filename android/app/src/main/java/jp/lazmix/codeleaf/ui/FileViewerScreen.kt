@@ -113,9 +113,7 @@ import jp.lazmix.codeleaf.render.MarkdownView
 import jp.lazmix.codeleaf.render.MdBlock
 import jp.lazmix.codeleaf.render.MdSection
 import jp.lazmix.codeleaf.render.MermaidWebView
-import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -653,11 +651,7 @@ private fun FileMetaBar(text: String) {
 @Composable
 private fun ImageViewer(file: File, contentDescription: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val loader = remember(context.applicationContext) {
-        ImageLoader.Builder(context.applicationContext)
-            .components { add(SvgDecoder.Factory()) }
-            .build()
-    }
+    val loader = rememberSvgLoader()
     var scale by remember(file.path) { mutableFloatStateOf(1f) }
     var offset by remember(file.path) { mutableStateOf(Offset.Zero) }
     Box(

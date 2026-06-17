@@ -29,6 +29,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.InputStream
 import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
 
@@ -52,6 +53,21 @@ private const val LFS_POINTER_MAGIC = "version https://git-lfs.github.com/spec/v
 
 /** 先頭テキストが Git LFS ポインタかを判定する純粋関数（テスト用）。 */
 fun isLfsPointerHead(head: String): Boolean = head.startsWith(LFS_POINTER_MAGIC)
+
+/** buf が満ちるか EOF まで読み、実際に読めたバイト数を返す。 */
+private fun InputStream.readFully(buf: ByteArray): Int {
+    var off = 0
+    while (off < buf.size) {
+        val r = read(buf, off, buf.size - off)
+        if (r < 0) break
+        off += r
+    }
+    return off
+}
+
+/** 先頭の UTF-8 BOM(U+FEFF)を除去する。 */
+private fun String.stripBom(): String =
+    if (isNotEmpty() && this[0] == '﻿') substring(1) else this
 
 /** 全文検索のヒット1件。relPath はリポルートからの相対パス、line は1始まりの行番号。 */
 data class SearchHit(
@@ -368,18 +384,8 @@ class RepoRepository(
         val size = f.length()
         val cap = minOf(size, maxBytes, Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(0)
         val buf = ByteArray(cap)
-        val n = f.inputStream().use { ins ->
-            var read = 0
-            while (read < buf.size) {
-                val r = ins.read(buf, read, buf.size - read)
-                if (r < 0) break
-                read += r
-            }
-            read
-        }
-        var s = String(buf, 0, n, charset)
-        if (s.isNotEmpty() && s[0] == '﻿') s = s.substring(1)
-        TextLoad(s, truncated = size > n.toLong())
+        val n = f.inputStream().use { it.readFully(buf) }
+        TextLoad(String(buf, 0, n, charset).stripBom(), truncated = size > n.toLong())
     }
 
     /**
@@ -391,15 +397,7 @@ class RepoRepository(
         val f = File(workDir(repo), relPath)
         val size = f.length()
         val buf = ByteArray(FileClassifier.PROBE_BYTES)
-        val n = f.inputStream().use { ins ->
-            var read = 0
-            while (read < buf.size) {
-                val r = ins.read(buf, read, buf.size - read)
-                if (r < 0) break
-                read += r
-            }
-            read
-        }
+        val n = f.inputStream().use { it.readFully(buf) }
         val head = buf.copyOf(n)
         val kind = FileClassifier.classify(relPath.substringAfterLast('/'), head)
         val textMeta = if (kind is FileKind.Text) FileClassifier.textMeta(head) else null
@@ -481,9 +479,7 @@ class RepoRepository(
         val bytes = jgit.readBytesAt(workDir(repo), relPath, sha) ?: return@withContext null
         val total = bytes.size.toLong()
         val cap = minOf(total, maxBytes, Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(0)
-        var s = String(bytes, 0, cap, charset)
-        if (s.isNotEmpty() && s[0] == '﻿') s = s.substring(1)
-        TextLoad(s, truncated = total > cap.toLong())
+        TextLoad(String(bytes, 0, cap, charset).stripBom(), truncated = total > cap.toLong())
     }
 
     /** リポジトリの表示テーマを変更して保存する。更新後の Repo を返す。 */

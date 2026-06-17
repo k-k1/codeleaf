@@ -211,8 +211,11 @@ class JgitClient {
         }
     }
 
-    /** 指定コミットにおける filePath の unified diff（第1親との差分）。 */
-    fun diff(dir: File, filePath: String, sha: String): String {
+    /**
+     * 指定コミット(sha)の第1親との unified diff を返す共通処理。
+     * [pathFilter] が非 null なら当該パスだけ、null なら全ファイルを対象にする。
+     */
+    private fun formatDiff(dir: File, sha: String, pathFilter: String?): String {
         Git.open(dir).use { git ->
             val repo = git.repository
             RevWalk(repo).use { rw ->
@@ -228,7 +231,7 @@ class JgitClient {
                     val out = ByteArrayOutputStream()
                     DiffFormatter(out).use { df ->
                         df.setRepository(repo)
-                        df.pathFilter = PathFilter.create(filePath)
+                        if (pathFilter != null) df.pathFilter = PathFilter.create(pathFilter)
                         df.format(df.scan(oldIter, newTree))
                     }
                     return out.toString(Charsets.UTF_8.name())
@@ -236,6 +239,9 @@ class JgitClient {
             }
         }
     }
+
+    /** 指定コミットにおける filePath の unified diff（第1親との差分）。 */
+    fun diff(dir: File, filePath: String, sha: String): String = formatDiff(dir, sha, filePath)
 
     /**
      * 指定コミット(sha)時点の relPath の blob バイト列を返す。
@@ -264,29 +270,7 @@ class JgitClient {
     }
 
     /** 指定コミット全体の unified diff（第1親との差分・全ファイル）。 */
-    fun commitDiff(dir: File, sha: String): String {
-        Git.open(dir).use { git ->
-            val repo = git.repository
-            RevWalk(repo).use { rw ->
-                val commit = rw.parseCommit(ObjectId.fromString(sha))
-                repo.newObjectReader().use { reader ->
-                    val newTree = CanonicalTreeParser().apply { reset(reader, commit.tree) }
-                    val oldIter = if (commit.parentCount > 0) {
-                        val parent = rw.parseCommit(commit.getParent(0).id)
-                        CanonicalTreeParser().apply { reset(reader, parent.tree) }
-                    } else {
-                        EmptyTreeIterator()
-                    }
-                    val out = ByteArrayOutputStream()
-                    DiffFormatter(out).use { df ->
-                        df.setRepository(repo)
-                        df.format(df.scan(oldIter, newTree)) // pathFilter 無し = 全ファイル
-                    }
-                    return out.toString(Charsets.UTF_8.name())
-                }
-            }
-        }
-    }
+    fun commitDiff(dir: File, sha: String): String = formatDiff(dir, sha, pathFilter = null)
 
     /**
      * 全 ref(ローカル/リモートブランチ・タグ)を起点に DAG を辿り、コミットグラフを返す。
