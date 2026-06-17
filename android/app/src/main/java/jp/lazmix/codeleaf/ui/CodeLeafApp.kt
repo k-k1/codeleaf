@@ -130,7 +130,7 @@ private val THREE_PANE_MIN_WIDTH = 960.dp
 
 @Composable
 fun CodeLeafApp() {
-    val vm: RepoListViewModel = viewModel(factory = RepoListViewModel.Factory)
+    val vm: MainViewModel = viewModel(factory = MainViewModel.Factory)
     val context = LocalContext.current
     // backStack/detailStack/graphSelected はプロセス死から復元する(rememberSaveable + @Parcelize)。
     val backStack = rememberSaveable(

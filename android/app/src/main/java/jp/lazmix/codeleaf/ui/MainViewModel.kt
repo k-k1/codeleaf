@@ -52,7 +52,7 @@ data class UiStatus(
  * 状態は [repos]・[status]・[settings] の StateFlow で公開し、画面はこれを購読する。
  * DI は手動(`AppContainer` 経由・[Factory])で、OAuth 系依存は未設定なら null(機能無効)。
  */
-class RepoListViewModel(
+class MainViewModel(
     private val repository: RepoRepository,
     private val settingsStore: SettingsStore,
     private val memos: MemoRepository,
@@ -414,7 +414,7 @@ class RepoListViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as CodeLeafApplication
-                RepoListViewModel(
+                MainViewModel(
                     app.container.repoRepository,
                     app.container.settingsStore,
                     app.container.memoRepository,
