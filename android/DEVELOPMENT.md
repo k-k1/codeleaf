@@ -125,4 +125,72 @@ OAuth App を採用した。user token は既定で無期限（`OAuthAccount.exp
 
 仕組み: `GitHubDeviceFlowService` が `device/code` 取得 → `access_token` をポーリング（`data/oauth/GitHubDeviceFlow*`）。
 redirect/Custom Tabs deep link は使わない（user_code 表示＋ポーリング方式）ので `OAuthRedirectActivity` は不要。
+
+---
+
+# 環境別の実構成（実際に使っているマシン）
+
+手順1〜10は汎用。ここからは **このプロジェクトで実際にビルド/実機検証しているマシン固有**の構成を、
+OS ごとに具体値で残す（マシン移行・再 clone のときに迷わないため）。`gradlew` 系コマンドは原則 `cd android` 後。
+
+## A. Linux（Ubuntu 26.04・現用のメイン環境）
+
+すべて **ユーザー空間導入（sudo 不要）**。Temurin JDK 21 tarball ＋ Android cmdline-tools。
+
+- **環境変数**: `source ~/android-dev/env.sh` で一括設定。
+  - `JAVA_HOME=~/android-dev/jdk-21.0.11+10`
+  - `ANDROID_SDK_ROOT=~/Android/Sdk`
+  - `PATH` に `platform-tools` / `emulator` / `cmdline-tools/latest/bin` を追加
+- **SDK 配置**: `~/Android/Sdk`（`platform-tools` / `platforms;android-35` / `build-tools;35.0.0` / `emulator` /
+  `system-images;android-35;google_apis;x86_64`）。
+- **local.properties**: `android/local.properties`（gitignore 済）に最低限 `sdk.dir=$HOME/Android/Sdk` の絶対パス
+  （`local.properties` は変数展開しないので実値で書く。例 `sdk.dir=/home/<user>/Android/Sdk`）。
+  OAuth を使うなら同ファイルに client_id/secret も置く（§9/§10）。
+  **マシン移行/再 clone で local.properties は引き継がれない → 空だと AddRepo の OAuth 選択肢が丸ごと消える**
+  （BuildConfig 経由で `*OAuthAvailable=false`）。追記後リビルドで復活。
+- **gradlew の exec ビット**: Windows clone 由来で欠落しがち。`chmod +x gradlew`
+  （`git update-index --chmod=+x gradlew` で stage 可能）。
+- **ビルド/テスト**:
+  ```bash
+  cd android
+  ./gradlew assembleDebug
+  ./gradlew testDebugUnitTest --tests "<FQN>"
+  ./gradlew connectedDebugAndroidTest    # 実機 USB 計装(エミュは下記 KVM 待ち→実機優先)
+  ```
+- **実機(USB)デバッグ**: 有効。`udev` ルール `/etc/udev/rules.d/51-android.rules` に VendorID を登録済み
+  （`0fce`=Sony / `19d2`=ZTE、`MODE=0660 GROUP=plugdev`）。検証端末: Sony SOV43 / SO-51E / ZTE NP05J。
+  ```bash
+  ./gradlew installDebug
+  adb exec-out screencap -p > x.png      # スクショ(`>` で OK)
+  ```
+- **新端末を挿したら**: `adb devices` が `no permissions` なら未登録ベンダー。`lsusb` で idVendor を確認し
+  上記ルールに1行追加（要 sudo）→ `sudo udevadm control --reload-rules` → **ケーブル抜き差し**
+  （既存接続には reload だけでは反映されない・add イベントが必要）。
+- **署名不一致**（`INSTALL_FAILED_UPDATE_INCOMPATIBLE`）: 端末に別署名の codeleaf が残っていることがある。
+  `adb uninstall jp.lazmix.codeleaf`（**アプリ内データ消失・破壊的**）してから `installDebug`。
+- **エミュ(GMD/x86_64)は KVM 待ち**: `/dev/kvm` は root:kvm 660。user を kvm グループに入れる必要がある
+  （`sudo usermod -aG kvm $USER` ＋ 再ログイン）。実機があれば不要。
+- **既知フレーク**: `PullToRefreshE2EInstrumentedTest` が実機フルスイートで稀にタイムアウト
+  （「同期完了」スナックバー待ち15s・3回中1回程度）。未修正・機能影響なし。
+
+## B. Windows（PowerShell）
+
+- **環境変数**（PowerShell セッション内）:
+  ```powershell
+  $env:JAVA_HOME="C:\programs\java\jdk-21.0.9+10"
+  $env:ANDROID_SDK_ROOT="C:\Android\Sdk"
+  ```
+- **local.properties**: `android/local.properties` に `sdk.dir=C\:\\Android\\Sdk`（バックスラッシュは要エスケープ）。
+- **ビルド/テスト**:
+  ```powershell
+  cd android
+  .\gradlew.bat assembleDebug
+  .\gradlew.bat testDebugUnitTest --tests "<FQN>"
+  .\gradlew.bat pixel6Api35DebugAndroidTest [-Pandroid.testInstrumentationRunnerArguments.class=<FQN>]
+  ```
+- **adb**: `C:\Android\Sdk\platform-tools\adb.exe`。
+- **スクショ**: `adb shell screencap -p /sdcard/x.png; adb pull /sdcard/x.png`
+  （**PowerShell の `>` リダイレクトはバイナリを壊す**ので使わない）。
+- **絶対パス注意**: Write/Edit の file_path は必ず絶対パス。git の cwd ズレ回避に
+  `git -C C:/private_workspace/git-reader ...`。
 clone 時の git username は `x-access-token`（`gitUsernameFor`）。リポ一覧は `GitHubApi`(`/user/repos`)。

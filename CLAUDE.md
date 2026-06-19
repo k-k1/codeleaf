@@ -14,18 +14,17 @@ Kotlin + Jetpack Compose(Material3) / MVVM + StateFlow / 手動DI(`CodeLeafAppli
 JGit 7.6 / Markwon 4.6.2(+WebView で Mermaid) / Prism4j(kapt) / Room / token は AndroidKeystore 暗号化。
 package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/app/src/main/java/jp/lazmix/codeleaf/`(data/git/render/ui)。
 
-## ビルド / テスト (PowerShell・cd android 前提)
-- 環境: `$env:JAVA_HOME="C:\programs\java\jdk-21.0.9+10"; $env:ANDROID_SDK_ROOT="C:\Android\Sdk"`
-- ビルド: `.\gradlew.bat assembleDebug`
-- JVM単体: `.\gradlew.bat testDebugUnitTest --tests "<FQN>"`
-- 計装(GMD): `.\gradlew.bat pixel6Api35DebugAndroidTest [-Pandroid.testInstrumentationRunnerArguments.class=<FQN>]`
-- adb は `C:\Android\Sdk\platform-tools\adb.exe`。スクショは `adb shell screencap -p /sdcard/x.png; adb pull ...`
-  (PowerShell の `>` リダイレクトはバイナリを壊す)。
+## ビルド / テスト (Linux・cd android 前提)
+- 環境: `source ~/android-dev/env.sh`(JAVA_HOME/ANDROID_SDK_ROOT/PATH を一括設定)。**環境別の実構成・USB 実機手順は `android/DEVELOPMENT.md`「環境別の実構成」(Linux=A / Windows=B)**。
+- ビルド: `./gradlew assembleDebug`
+- JVM単体: `./gradlew testDebugUnitTest --tests "<FQN>"`
+- 実機(USB)計装: `./gradlew connectedDebugAndroidTest [-Pandroid.testInstrumentationRunnerArguments.class=<FQN>]`(エミュ GMD は KVM 待ち→実機優先)。
+- 実機確認: `./gradlew installDebug`→起動→`adb exec-out screencap -p > x.png`。
 
 ## 進め方
-- 1機能 = 1スライス: 実装 → assembleDebug → (該当なら)JVM/GMD テスト → commit → push(origin/main 逐次)。
+- 1機能 = 1スライス: 実装 → assembleDebug → (該当なら)JVM単体/実機計装テスト → commit → push(origin/main 逐次)。
 - Write/Edit の file_path は**必ず絶対パス**(cwd=android だと相対は android/android/ に作られる)。
-- git は cwd ズレ回避に `git -C C:/private_workspace/git-reader ...`。コミット末尾に Co-Authored-By 行。
+- git は cwd ズレ回避に `git -C <repo ルート> ...`（リポジトリ絶対パス）。コミット末尾に Co-Authored-By 行。
 
 ## ハマりどころ(コードから読み取りにくい点)
 - **ナビ/多ペイン**(`ui/CodeLeafApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
