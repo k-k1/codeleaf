@@ -151,7 +151,16 @@ fun FileBrowserScreen(
                 title = {
                     if (showRepoActions) {
                         // 1/2ペイン: branch は下の BrowserActionRow に出すのでタイトルはリポ名1行。
-                        Text(repo.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        // リポ名タップは ≡ と同じくリポ一覧ドロワーを開く(onMenu があるときのみ)。
+                        Text(
+                            repo.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            // off-screen ドロワー内にも同名カードがあるため、タイトルは testTag で一意に掴む。
+                            modifier = Modifier
+                                .testTag("browserTitleRepoName")
+                                .then(if (onMenu != null) Modifier.clickable(onClick = onMenu) else Modifier),
+                        )
                     } else {
                         // 3ペイン(従来どおり): リポ名＋branch ▾ の2行タイトル。
                         Column {

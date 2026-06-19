@@ -3,6 +3,7 @@ package jp.lazmix.codeleaf
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -60,6 +61,23 @@ class RepoSwitchRestoreE2EInstrumentedTest {
 
     private fun repoId(name: String): Long = runBlocking {
         app.container.repoRepository.observeRepos().first().first { it.name == name }.id
+    }
+
+    /** タイトルのリポ名タップが ≡ と同等にドロワーを開き、別リポへ切替できる。 */
+    @Test
+    fun tappingTitleRepoNameOpensDrawer() {
+        // alpha を開く(compact なので Browser に入り、タイトルにリポ名が出る)。
+        compose.onNodeWithText("alpha-repo").performClick()
+        waitFor("top.txt")
+
+        // タイトルのリポ名をタップ → ドロワーが開く。相手名(beta)はドロワー内で一意。
+        // (タイトル自身も同名だが testTag で掴むので曖昧化しない。)
+        compose.onNodeWithTag("browserTitleRepoName").performClick()
+        compose.onNodeWithText("beta-repo").performClick()
+
+        // beta の中身が見え、alpha のルートファイルは見えない。
+        waitFor("bonly.txt")
+        waitGone("top.txt")
     }
 
     @Test
