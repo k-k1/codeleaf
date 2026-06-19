@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -67,5 +68,21 @@ class FileNavE2EInstrumentedTest {
         compose.onNodeWithContentDescription("前のファイル").performClick()
         waitForLine("bravo_marker")
         compose.onNodeWithText("bravo_marker").assertIsDisplayed()
+    }
+
+    /** 1ペイン: 上部のファイル名/パス表示タップで ← と同じくブラウザへ戻る。 */
+    @Test
+    fun tappingViewerTitle_returnsToBrowser() {
+        compose.onNodeWithText("a.txt").performClick()
+        waitForLine("alpha_marker")
+
+        // ファイル名/パス表示(viewerTitle)をタップ。
+        compose.onNodeWithTag("viewerTitle").performClick()
+
+        // 一覧にだけ在る兄弟 b.txt が再び見え、本文は消える(=ブラウザへ戻った)。
+        waitForLine("b.txt")
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("alpha_marker").fetchSemanticsNodes().isEmpty()
+        }
     }
 }

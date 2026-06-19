@@ -26,6 +26,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -160,6 +161,11 @@ fun FileViewerScreen(
     onBack: () -> Unit,
     /** 戻る矢印を表示するか。2/3ペインでは一覧が常に見えるため非表示にする。 */
     showBack: Boolean = true,
+    /**
+     * 上部のファイル名/パス表示をタップしたときの動作。null のときは不活性(タップ無効)にする。
+     * 1ペイン=ブラウザへ戻る / 集中モード=集中解除、2/3ペイン通常は戻る先が無いため null。
+     */
+    onTitleClick: (() -> Unit)? = null,
     /** 同一フォルダ内のファイル(repo ルート相対パス, 表示順)。前/次ファイル送りに使う。 */
     loadSiblings: suspend () -> List<String> = { emptyList() },
     /** 前/次ファイルを開く(現在のビューアを置き換える)。 */
@@ -277,7 +283,18 @@ fun FileViewerScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    // onTitleClick がある文脈(1ペイン/集中)だけタップ可能にする。無い文脈は不活性。
+                    Column(
+                        modifier = Modifier
+                            .testTag("viewerTitle")
+                            .then(
+                                if (onTitleClick != null) {
+                                    Modifier.clickable(onClickLabel = "ブラウザへ戻る", onClick = onTitleClick)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    ) {
                         // どのフォルダのファイルか分かるよう、ファイル名の上にパスのパンくずを出す。
                         if (parent.isNotEmpty()) {
                             Text(

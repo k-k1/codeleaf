@@ -610,7 +610,7 @@ fun CodeLeafApp() {
             }
 
             @Composable
-            fun ViewerPane(file: Screen.View, showBack: Boolean) {
+            fun ViewerPane(file: Screen.View, showBack: Boolean, onTitleClick: (() -> Unit)? = null) {
                 // ファイル毎に状態をスコープ。キー変更で中身は作り直しつつ、saveable(スクロール等)は holder に保持。
                 navStateHolder.SaveableStateProvider("view:${file.repo.id}/${file.sha}/${file.filePath}") {
                     val repoMemos by vm.observeMemos(file.repo.id).collectAsState(initial = emptyList())
@@ -654,6 +654,7 @@ fun CodeLeafApp() {
                         },
                         onBack = { handleBack() },
                         showBack = showBack,
+                        onTitleClick = onTitleClick,
                         // 履歴モードは作業ツリーに無いので前後送り・メモは無効。
                         loadSiblings = if (historical) {
                             { emptyList() }
@@ -725,7 +726,8 @@ fun CodeLeafApp() {
                     // 集中モード: レール・一覧を隠して全幅ビューア。
                     focused -> CodeLeafTheme(repo.themeMode) {
                         Box(Modifier.fillMaxSize()) {
-                            ViewerPane(file!!, showBack = false)
+                            // タイトルタップ=集中解除(○< と同じ。ファイルは残しブラウザを再表示)。
+                            ViewerPane(file!!, showBack = false, onTitleClick = { focusMode = false })
                             FocusHandle()
                         }
                     }
@@ -763,7 +765,8 @@ fun CodeLeafApp() {
                                 }
                             } else if (file != null) {
                                 // 1ペインでファイル表示: 常に全幅なので集中ハンドル(○<)は出さない。←=閉じる。
-                                ViewerPane(file, showBack = true)
+                                // タイトルタップも ← と同じくブラウザへ戻す。
+                                ViewerPane(file, showBack = true, onTitleClick = { handleBack() })
                             } else {
                                 BrowserPane(threePane = false, onMenu = openDrawer)
                             }

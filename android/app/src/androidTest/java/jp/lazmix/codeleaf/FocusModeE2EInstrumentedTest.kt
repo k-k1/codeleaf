@@ -1,10 +1,12 @@
 package jp.lazmix.codeleaf
 
+import android.content.pm.ActivityInfo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -56,8 +58,16 @@ class FocusModeE2EInstrumentedTest {
         compose.waitForIdle()
     }
 
+    private fun setOrientation(orientation: Int) {
+        compose.activityRule.scenario.onActivity { it.requestedOrientation = orientation }
+        compose.waitForIdle()
+    }
+
     @Test
     fun back_exitsFocusMode_keepingFileOpen() {
+        // 集中モードは多ペイン幅(>=600dp)が前提。SOV43 portrait=411dp は1ペインで
+        // 集中ハンドルが出ないため、横向きに回して検証する。
+        setOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
         // 通常表示: 集中モードへ入るハンドルが見える。
         waitForDesc("集中モード(全幅)")
 
@@ -77,5 +87,26 @@ class FocusModeE2EInstrumentedTest {
             compose.onAllNodesWithText("focus_marker").fetchSemanticsNodes().isEmpty()
         }
         compose.onNodeWithText("note.txt").assertIsDisplayed()
+    }
+
+    /**
+     * 集中モード中に上部のファイル名/パス表示をタップすると、集中だけ解除されファイルは残る
+     * (○< ハンドルと同じ)。集中モードは多ペイン幅(>=600dp)が前提なので landscape に回して検証する。
+     */
+    @Test
+    fun tappingTitle_inFocusMode_exitsFocusKeepingFileOpen() {
+        // 横向きで多ペイン幅にする(SOV43 portrait=411dp は1ペインで集中ハンドルが出ない)。
+        setOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+        waitForDesc("集中モード(全幅)")
+
+        // 集中モードへ: ハンドルが「解除」表示に変わる。
+        compose.onNodeWithContentDescription("集中モード(全幅)").performClick()
+        waitForDesc("一覧とレールを表示")
+        compose.onNodeWithText("focus_marker").assertIsDisplayed()
+
+        // タイトルタップで集中解除。ハンドルが「集中モード」へ戻り、ファイルは開いたまま。
+        compose.onNodeWithTag("viewerTitle").performClick()
+        waitForDesc("集中モード(全幅)")
+        compose.onNodeWithText("focus_marker").assertIsDisplayed()
     }
 }
