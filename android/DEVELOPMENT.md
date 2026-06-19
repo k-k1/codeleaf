@@ -126,6 +126,27 @@ OAuth App を採用した。user token は既定で無期限（`OAuthAccount.exp
 仕組み: `GitHubDeviceFlowService` が `device/code` 取得 → `access_token` をポーリング（`data/oauth/GitHubDeviceFlow*`）。
 redirect/Custom Tabs deep link は使わない（user_code 表示＋ポーリング方式）ので `OAuthRedirectActivity` は不要。
 
+## 11. リリース手順（バージョン X.Y.Z を出す）
+バージョンは `app/build.gradle.kts` の `appVersionName` 一箇所で管理（`versionCode` は機械算出）。
+リリース署名は `local.properties` の `RELEASE_KEYSTORE` / `RELEASE_KEY_ALIAS` / `RELEASE_KEY_PASSWORD`（git 管理外）。
+GitHub Release（タイトル `CodeLeaf X.Y.Z`）に署名 APK を添付する運用。**`gh` CLI が必要**。
+
+1. **CHANGELOG を追記**: `CHANGELOG.md` の先頭へ `## X.Y.Z (YYYY-MM-DD)` 節を足す
+   （`### 新機能` / `### 修正` / `### 内部・整理`。前タグ以降の `feat`/`fix` を中心に。`chore`/`docs`/`test` は割愛）。
+   差分は `git log --no-merges --format="%s" v<前版>..HEAD` で拾う。
+2. **versionName を上げる**: `appVersionName = "X.Y.Z"`（コメントも「X.Y.Z リリース版」に）。
+3. **リリースコミット**: `chore(android): X.Y.Z リリース版へ versionName を更新`（CHANGELOG と同コミットでも可）。
+   APK に埋まる `gitSha` をこのコミットに合わせるため **ビルドはコミット後**に行う。
+4. **署名 APK をビルド**: `cd android && ./gradlew assembleRelease`
+   → `app/build/outputs/apk/release/codeleaf-X.Y.Z.apk`。
+   署名検証: `"$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner" verify --print-certs <apk>`（`CN=CodeLeaf, O=Lazmix`）。
+   `sha256sum <apk>` を控える（リリースノートに載せる）。
+5. **タグ＋push**: `git tag -a vX.Y.Z -m "CodeLeaf X.Y.Z"` → `git push origin main` → `git push origin vX.Y.Z`。
+6. **GitHub Release 作成**: `gh release create vX.Y.Z <apk> --title "CodeLeaf X.Y.Z" --notes "..."`
+   （ノートは前回踏襲: アプリ説明＋主な変更＝CHANGELOG 該当節＋インストール手順／minSdk/targetSdk／署名 DN／sha256）。
+7. **次の開発版へ**: `appVersionName = "X.Y.(Z+1)"`（コメントは「X.Y.Z はタグ vX.Y.Z に凍結済み。これは次の開発版。」）
+   → `chore(android): 次の開発版へ versionName を X.Y.(Z+1) に更新` → `git push origin main`。
+
 ---
 
 # 環境別の実構成（実際に使っているマシン）

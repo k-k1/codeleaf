@@ -25,6 +25,7 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
 - 1機能 = 1スライス: 実装 → assembleDebug → (該当なら)JVM単体/実機計装テスト → commit → push(origin/main 逐次)。
 - Write/Edit の file_path は**必ず絶対パス**(cwd=android だと相対は android/android/ に作られる)。
 - git は cwd ズレ回避に `git -C <repo ルート> ...`（リポジトリ絶対パス）。コミット末尾に Co-Authored-By 行。
+- **リリース時は `CHANGELOG.md` 先頭に節を追記**してから versionName 更新。手順全体は `android/DEVELOPMENT.md` §11。
 
 ## ハマりどころ(コードから読み取りにくい点)
 - **ナビ/多ペイン**(`ui/CodeLeafApp.kt`): 手書き `backStack`。**開いているファイルは `detailStack`**(backStack と直交)。
