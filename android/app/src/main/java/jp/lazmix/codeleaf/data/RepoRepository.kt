@@ -18,6 +18,7 @@ import jp.lazmix.codeleaf.data.oauth.needsRefresh
 import jp.lazmix.codeleaf.data.oauth.normalizeRepoUrl
 import jp.lazmix.codeleaf.git.BranchInfo
 import jp.lazmix.codeleaf.git.CommitInfo
+import jp.lazmix.codeleaf.git.EntryCommit
 import android.graphics.BitmapFactory
 import jp.lazmix.codeleaf.git.GraphCommit
 import jp.lazmix.codeleaf.git.JgitClient
@@ -52,6 +53,10 @@ data class FileEntry(
 /** LFS ポインタファイルの先頭シグネチャ。 */
 private const val LFS_POINTER_MAGIC = "version https://git-lfs.github.com/spec/v1"
 private const val SYNC_TAG = "RepoSync"
+
+// 最終コミット情報: 履歴走査の打ち切り上限と、ディレクトリ単位キャッシュの最大保持件数。
+private const val META_MAX_COMMITS = 400
+private const val META_CACHE_MAX = 64
 
 /** 先頭テキストが Git LFS ポインタかを判定する純粋関数（テスト用）。 */
 fun isLfsPointerHead(head: String): Boolean = head.startsWith(LFS_POINTER_MAGIC)
@@ -167,6 +172,14 @@ class RepoRepository(
     // リポ毎に書き込み系 git 操作(sync)を直列化し、作業ツリー/index の競合を防ぐ。
     private val syncLocks = ConcurrentHashMap<Long, Mutex>()
     private fun syncLock(id: Long): Mutex = syncLocks.getOrPut(id) { Mutex() }
+
+    // ディレクトリ単位の最終コミット情報キャッシュ。キー = (repoId, HEAD sha, relDir)。
+    // 同期で HEAD sha が変わる＝キー変化で自動失効。LRU で上限件数を超えたら古いものから捨てる。
+    private data class MetaKey(val repoId: Long, val head: String, val relDir: String)
+    private data class MetaEntry(val forPaths: Set<String>, val map: Map<String, EntryCommit>)
+    private val metaCache = object : LinkedHashMap<MetaKey, MetaEntry>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<MetaKey, MetaEntry>) = size > META_CACHE_MAX
+    }
 
     fun workDir(repo: Repo): File = File(reposRoot, repo.id.toString())
 
@@ -347,6 +360,26 @@ class RepoRepository(
                     e
                 }
             }
+        }
+
+    /**
+     * [relDir] 直下の各 [entries] を最後に変更したコミット（著者・日時）を返す。設定 ON の一覧でのみ呼ぶ。
+     * 結果は (repoId, HEAD sha, relDir) でキャッシュし、再訪は即時。HEAD が変わる同期で自動失効する。
+     * 上限コミット数（[META_MAX_COMMITS]）内で解決できない対象は欠落（呼び出し側で「—」表示）。
+     */
+    suspend fun dirCommitMeta(repo: Repo, relDir: String, entries: List<FileEntry>): Map<String, EntryCommit> =
+        withContext(ioDispatcher) {
+            val paths = entries.map { it.relPath }
+            if (paths.isEmpty()) return@withContext emptyMap()
+            val dir = workDir(repo)
+            val head = jgit.headSha(dir) ?: return@withContext emptyMap()
+            val key = MetaKey(repo.id, head, relDir)
+            synchronized(metaCache) { metaCache[key] }
+                ?.takeIf { it.forPaths.containsAll(paths) }
+                ?.let { return@withContext it.map }
+            val computed = jgit.lastCommits(dir, relDir, paths, META_MAX_COMMITS)
+            synchronized(metaCache) { metaCache[key] = MetaEntry(paths.toSet(), computed) }
+            computed
         }
 
     /**
