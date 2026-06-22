@@ -24,9 +24,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -110,6 +114,8 @@ fun RepoEditScreen(
     onReorderAndGroup: (List<Repo>) -> Unit,
     onSetColor: (Repo, RepoColor) -> Unit,
     onDelete: (Repo) -> Unit,
+    /** ローカル clone が壊れたときに作り直す（削除→再 clone）。 */
+    onReclone: (Repo) -> Unit,
     onAddGroup: (String) -> Unit,
     onRenameGroup: (String, String) -> Unit,
     onDeleteGroup: (String) -> Unit,
@@ -120,6 +126,7 @@ fun RepoEditScreen(
     var draggingId by remember { mutableStateOf<Long?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var confirmDelete by remember { mutableStateOf<Repo?>(null) }
+    var confirmReclone by remember { mutableStateOf<Repo?>(null) }
     var addDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<String?>(null) }
 
@@ -182,6 +189,7 @@ fun RepoEditScreen(
                             dragOffset = if (dragging) dragOffset else 0f,
                             onSetColor = { onSetColor(repo, it) },
                             onDelete = { confirmDelete = repo },
+                            onReclone = { confirmReclone = repo },
                             dragModifier = Modifier.pointerInput(repo.id) {
                                 detectDragGestures(
                                     onDragStart = { draggingId = repo.id; dragOffset = 0f },
@@ -244,6 +252,20 @@ fun RepoEditScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = null }) { Text("キャンセル") }
+            },
+        )
+    }
+
+    confirmReclone?.let { target ->
+        AlertDialog(
+            onDismissRequest = { confirmReclone = null },
+            title = { Text("再Clone") },
+            text = { Text("「${target.name}」のローカル clone を削除して取得し直します。設定とトークンは保持されます。") },
+            confirmButton = {
+                TextButton(onClick = { confirmReclone = null; onReclone(target) }) { Text("再Clone") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReclone = null }) { Text("キャンセル") }
             },
         )
     }
@@ -337,10 +359,12 @@ private fun RepoEditCard(
     dragOffset: Float,
     onSetColor: (RepoColor) -> Unit,
     onDelete: () -> Unit,
+    onReclone: () -> Unit,
     dragModifier: Modifier,
 ) {
     val accent = repo.colorTag.accent()
     val cloning = repo.cloneState == CloneState.CLONING
+    var menuOpen by remember { mutableStateOf(false) }
     Card(
         // 地色は塗らず既定のまま。色はリポ一覧と同じく左端バーのみで主張を抑える。
         colors = CardDefaults.cardColors(),
@@ -394,10 +418,24 @@ private fun RepoEditCard(
                     }
                 }
             }
-            // clone 中は削除不可(完了前に消さない)。完了後/失敗時のみ削除ボタンを出す。
+            // clone 中はメニュー非表示(完了前に消す/作り直さない)。完了後/失敗時のみ ⋮ を出す。
             if (!cloning) {
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "削除")
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("再Clone") },
+                            leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                            onClick = { menuOpen = false; onReclone() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("削除") },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                            onClick = { menuOpen = false; onDelete() },
+                        )
+                    }
                 }
             }
         }

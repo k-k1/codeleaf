@@ -14,9 +14,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 
-/** 同期結果のスナックバー文言。失敗は例外メッセージ付き、成功は「同期完了」。各画面・VM で共通。 */
+/** 同期結果のスナックバー文言。失敗は分類済みメッセージ付き、成功は「同期完了」。各画面・VM で共通。 */
 fun syncResultMessage(error: Throwable?): String =
-    error?.let { "同期失敗: ${it.message}" } ?: "同期完了"
+    error?.let { "同期失敗: ${gitErrorMessage(it) ?: it.message}" } ?: "同期完了"
 
 /**
  * pull-to-refresh で [onSync] を実行し、[onReload] で表示を再読込して結果スナックバーを出す共通ボックス。

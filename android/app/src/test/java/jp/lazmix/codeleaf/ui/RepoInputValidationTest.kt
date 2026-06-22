@@ -85,4 +85,28 @@ class RepoInputValidationTest {
         val m = cloneErrorMessage(RuntimeException("weird gremlin"))
         assertTrue(m.contains("weird gremlin"))
     }
+
+    @Test fun uploadPack_mapsToCommunication() {
+        // JGit TransportHttp が HTTPS fetch 失敗時に出す文言。通信エラー扱いにする。
+        val m = cloneErrorMessage(RuntimeException("https://github.com/o/r.git: cannot open git-upload-pack"))
+        assertTrue(m.contains("通信"))
+    }
+
+    @Test fun connectionReset_underWrapper_mapsToCommunication() {
+        val root = java.net.SocketException("Connection reset")
+        val wrapped = RuntimeException("cannot open git-upload-pack", root)
+        assertTrue(cloneErrorMessage(wrapped).contains("通信"))
+    }
+
+    // --- syncResultMessage ---
+
+    @Test fun syncMessage_communicationError_isClassified() {
+        val m = syncResultMessage(RuntimeException("uri: cannot open git-upload-pack"))
+        assertTrue(m.contains("同期失敗"))
+        assertTrue(m.contains("通信"))
+    }
+
+    @Test fun syncMessage_success_isDone() {
+        assertTrue(syncResultMessage(null).contains("同期完了"))
+    }
 }

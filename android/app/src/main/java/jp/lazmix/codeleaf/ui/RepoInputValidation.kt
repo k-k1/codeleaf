@@ -46,10 +46,10 @@ internal fun repoUrlError(url: String): String? {
 }
 
 /**
- * clone 失敗の例外を利用者向けメッセージに変換する。原因チェーンの文言で分類し、
- * 該当しなければ素の message を添えてフォールバックする(純粋関数・テスト可能)。
+ * git 操作失敗の例外を、原因チェーンの文言から利用者向けメッセージに分類する純粋関数。
+ * 分類できなければ null を返し、呼び出し側で素の message にフォールバックする。clone/sync 共有。
  */
-internal fun cloneErrorMessage(t: Throwable): String {
+internal fun gitErrorMessage(t: Throwable): String? {
     val text = generateSequence(t) { it.cause }
         .mapNotNull { it.message }
         .joinToString(" / ")
@@ -64,8 +64,20 @@ internal fun cloneErrorMessage(t: Throwable): String {
             "リポジトリが見つかりません。URL を確認してください(private なら認証も必要)。"
         has("timed out", "timeout") ->
             "接続がタイムアウトしました。ネットワークを確認して再試行してください。"
-        has("not a git repository", "invalid remote", "cannot open git-upload-pack", "not designed to transport") ->
+        // JGit の TransportHttp が HTTPS 通信中の IOException を包む文言("cannot open git-upload-pack")と、
+        // SSL/接続断など低レベルな通信失敗をまとめて通信エラーとして扱う。
+        has("cannot open git-upload-pack", "connection reset", "connection refused",
+            "unexpected end of stream", "broken pipe", "sslhandshake", "ssl handshake",
+            "software caused connection abort", "unable to connect", "failed to connect") ->
+            "通信エラーが発生しました。ネットワーク接続を確認して再試行してください。"
+        has("not a git repository", "invalid remote", "not designed to transport") ->
             "git リポジトリとして開けませんでした。URL を確認してください。"
-        else -> "clone に失敗しました: ${t.message ?: t.javaClass.simpleName}"
+        else -> null
     }
 }
+
+/**
+ * clone 失敗の例外を利用者向けメッセージに変換する。分類できなければ素の message を添える。
+ */
+internal fun cloneErrorMessage(t: Throwable): String =
+    gitErrorMessage(t) ?: "clone に失敗しました: ${t.message ?: t.javaClass.simpleName}"

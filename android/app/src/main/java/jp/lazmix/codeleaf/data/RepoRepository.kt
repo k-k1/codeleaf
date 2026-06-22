@@ -51,6 +51,7 @@ data class FileEntry(
 
 /** LFS ポインタファイルの先頭シグネチャ。 */
 private const val LFS_POINTER_MAGIC = "version https://git-lfs.github.com/spec/v1"
+private const val SYNC_TAG = "RepoSync"
 
 /** 先頭テキストが Git LFS ポインタかを判定する純粋関数（テスト用）。 */
 fun isLfsPointerHead(head: String): Boolean = head.startsWith(LFS_POINTER_MAGIC)
@@ -205,7 +206,9 @@ class RepoRepository(
     suspend fun cloneRegistered(repo: Repo): Repo = withContext(ioDispatcher) {
         val dir = workDir(repo)
         try {
-            dir.deleteRecursively() // 再試行時の残骸を掃除してから clone
+            // 既存(READY)リポの作り直しでも一覧に進捗を出すため、まず CLONING に倒す。
+            dao.getById(repo.id)?.let { dao.update(it.copy(cloneState = CloneState.CLONING)) }
+            dir.deleteRecursively() // 再試行/作り直し時の残骸を掃除してから clone
             val cp = credentialsFor(repo)
             jgit.clone(repo.url, dir, cp)
             val branch = repo.branch.takeIf { it.isNotBlank() } ?: jgit.currentBranch(dir)
@@ -230,8 +233,14 @@ class RepoRepository(
     suspend fun sync(repo: Repo, branch: String = repo.branch): Repo = withContext(ioDispatcher) {
         syncLock(repo.id).withLock {
             // OAuth の refresh も同一リポ Mutex 内で行い、並行 sync との競合を防ぐ。
-            val cp = credentialsFor(repo)
-            jgit.sync(workDir(repo), branch, cp)
+            try {
+                val cp = credentialsFor(repo)
+                jgit.sync(workDir(repo), branch, cp)
+            } catch (t: Throwable) {
+                // UI には分類済み文言だけ出るため、原因究明用に全スタック(Caused by 含む)を残す。
+                android.util.Log.w(SYNC_TAG, "sync failed: repo=${repo.name} branch=$branch", t)
+                throw t
+            }
             val saved = repo.copy(branch = branch, lastSyncedAt = nowMillis())
             dao.update(saved)
             saved

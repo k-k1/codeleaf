@@ -35,8 +35,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -76,6 +78,8 @@ fun RepoListScreen(
     onSync: (Repo) -> Unit,
     /** 失敗(FAILED)リポの clone 再試行。 */
     onRetry: (Repo) -> Unit = {},
+    /** 同期失敗スナックバーの「再Clone」アクション(ローカル clone を作り直す)。 */
+    onReclone: (Repo) -> Unit = {},
     /** 失敗(FAILED)リポの削除。 */
     onDelete: (Repo) -> Unit = {},
     onMessageShown: () -> Unit,
@@ -92,7 +96,14 @@ fun RepoListScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(status.message) {
         status.message?.let {
-            snackbar.showSnackbar(it)
+            // 同期失敗時は「再Clone」アクション付きで出し、タップで作り直しを起動する。
+            val target = status.recloneTarget
+            val result = snackbar.showSnackbar(
+                message = it,
+                actionLabel = target?.let { "再Clone" },
+                duration = if (target != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed && target != null) onReclone(target)
             onMessageShown()
         }
     }

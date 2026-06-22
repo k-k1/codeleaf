@@ -44,6 +44,8 @@ import kotlinx.coroutines.launch
 data class UiStatus(
     val busy: Boolean = false,
     val message: String? = null,
+    /** 同期失敗時にスナックバーへ「再Clone」アクションを出す対象。null ならアクション無し。 */
+    val recloneTarget: Repo? = null,
 )
 
 /**
@@ -139,12 +141,16 @@ class MainViewModel(
         viewModelScope.launch { runClone(repo) }
     }
 
-    private suspend fun runClone(repo: Repo) {
+    /** ローカル clone が壊れたときに作り直す（削除→再 clone）。実体は [retryClone] と同じ。 */
+    fun reclone(repo: Repo) {
+        viewModelScope.launch { runClone(repo, "${repo.name} を再Clone しました") }
+    }
+
+    private suspend fun runClone(repo: Repo, successMessage: String = "${repo.name} を追加しました") {
         val ok = runCatching { repository.cloneRegistered(repo) }
         ok.exceptionOrNull()?.let { android.util.Log.w("CodeLeaf", "clone failed", it) }
         _status.value = UiStatus(
-            message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) }
-                ?: "${repo.name} を追加しました",
+            message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) } ?: successMessage,
         )
     }
 
@@ -155,6 +161,8 @@ class MainViewModel(
             _status.value = UiStatus(
                 busy = false,
                 message = syncResultMessage(ok.exceptionOrNull()),
+                // 失敗時は作り直しの導線を出す(破損・取得不能からの復帰手段)。
+                recloneTarget = repo.takeIf { ok.isFailure },
             )
         }
     }
@@ -219,7 +227,8 @@ class MainViewModel(
             val r = runCatching { repository.sync(repo, branch) }
             _status.value = UiStatus(
                 busy = false,
-                message = r.exceptionOrNull()?.let { "切替失敗: ${it.message}" },
+                message = r.exceptionOrNull()?.let { "切替失敗: ${gitErrorMessage(it) ?: it.message}" },
+                recloneTarget = repo.takeIf { r.isFailure },
             )
             r.getOrNull()?.let {
                 // 作業ツリー書換でフォルダ/ファイルが失効しうるので、保存済みナビ位置を破棄。
@@ -292,7 +301,7 @@ class MainViewModel(
     }
 
     fun clearMessage() {
-        _status.value = _status.value.copy(message = null)
+        _status.value = _status.value.copy(message = null, recloneTarget = null)
     }
 
     // --- グローバル設定 ---
