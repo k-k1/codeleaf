@@ -104,6 +104,7 @@ fun SettingsScreen(
     onSetTableMode: (TableMode) -> Unit,
     onSetStickyHeadings: (Boolean) -> Unit,
     onSetCollapseFolders: (Boolean) -> Unit,
+    onSetShowCommitInfo: (Boolean) -> Unit,
     onSetFileNameDisplay: (FileNameDisplay) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
     onSetRestoreLastPosition: (Boolean) -> Unit,
@@ -211,6 +212,14 @@ fun SettingsScreen(
                     description = "中身が1つの子フォルダだけの階層を src/main/java のようにまとめ、辿る手間を省く。",
                     checked = settings.collapseFolders,
                     onCheckedChange = onSetCollapseFolders,
+                )
+
+                SwitchSetting(
+                    title = "コミット情報を表示",
+                    description = "各ファイル/フォルダの最終更新（著者・いつ）を一覧の名前の下に出します。" +
+                        "履歴をたどるため、大きなリポでは表示に少し時間がかかることがあります。",
+                    checked = settings.showCommitInfo,
+                    onCheckedChange = onSetShowCommitInfo,
                 )
             }
 

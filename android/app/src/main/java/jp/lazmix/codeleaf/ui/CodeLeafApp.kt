@@ -536,6 +536,7 @@ fun CodeLeafApp() {
             onSetTableMode = vm::setTableMode,
             onSetStickyHeadings = vm::setStickyHeadings,
             onSetCollapseFolders = vm::setCollapseFolders,
+            onSetShowCommitInfo = vm::setShowCommitInfo,
             onSetFileNameDisplay = vm::setFileNameDisplay,
             onSetIconSet = vm::setIconSet,
             onSetRestoreLastPosition = vm::setRestoreLastPosition,

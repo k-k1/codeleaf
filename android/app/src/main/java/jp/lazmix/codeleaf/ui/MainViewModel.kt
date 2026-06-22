@@ -323,6 +323,8 @@ class MainViewModel(
 
     fun setCollapseFolders(on: Boolean) = settingsStore.setCollapseFolders(on)
 
+    fun setShowCommitInfo(on: Boolean) = settingsStore.setShowCommitInfo(on)
+
     fun setFileNameDisplay(mode: jp.lazmix.codeleaf.data.FileNameDisplay) =
         settingsStore.setFileNameDisplay(mode)
 
