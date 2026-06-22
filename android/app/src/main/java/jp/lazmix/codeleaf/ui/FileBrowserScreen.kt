@@ -81,6 +81,7 @@ import jp.lazmix.codeleaf.data.FileNameDisplay
 import jp.lazmix.codeleaf.data.IconSet
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.ThemeMode
+import jp.lazmix.codeleaf.git.EntryCommit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,8 +121,14 @@ fun FileBrowserScreen(
     showRepoActions: Boolean = true,
     iconSet: IconSet = IconSet.MATERIAL,
     fileNameDisplay: FileNameDisplay = FileNameDisplay.WRAP,
+    /**
+     * 各エントリの最終コミット(著者・日時)を取得する。null なら表示しない(設定 OFF)。
+     * 一覧描画はブロックせず、解決後に行へ流し込む。ディレクトリ離脱で自動キャンセルされる。
+     */
+    loadCommitMeta: (suspend (String, List<FileEntry>) -> Map<String, EntryCommit>)? = null,
 ) {
     var entries by remember(repo.id, path) { mutableStateOf<List<FileEntry>?>(null) }
+    var commitMeta by remember(repo.id, path) { mutableStateOf<Map<String, EntryCommit>>(emptyMap()) }
     var error by remember(repo.id, path) { mutableStateOf<String?>(null) }
     var showBranchSheet by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -136,8 +143,18 @@ fun FileBrowserScreen(
 
     LaunchedEffect(repo.id, path) {
         error = null
+        commitMeta = emptyMap()
         entries = runCatching { loadDir(path) }
             .getOrElse { error = it.message; emptyList() }
+    }
+
+    // 設定 ON のときだけ、一覧確定後に最終コミット情報を背景取得して行へ反映する。
+    // このディレクトリ(repo.id, path)を離れると key 変化で自動キャンセルされる。
+    val loaded = entries
+    LaunchedEffect(repo.id, path, loaded, loadCommitMeta != null) {
+        if (loadCommitMeta != null && loaded != null && loaded.isNotEmpty()) {
+            commitMeta = runCatching { loadCommitMeta(path, loaded) }.getOrDefault(emptyMap())
+        }
     }
 
     Scaffold(
@@ -295,6 +312,8 @@ fun FileBrowserScreen(
                                 iconSet = iconSet,
                                 nameDisplay = fileNameDisplay,
                                 isFavorite = e.relPath in favoritePaths,
+                                showCommitInfo = loadCommitMeta != null,
+                                commit = commitMeta[e.relPath],
                                 onClick = {
                                     // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)
                                     if (!locked) {
@@ -441,6 +460,8 @@ private fun EntryRow(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onHistory: (() -> Unit)? = null,
+    showCommitInfo: Boolean = false,
+    commit: EntryCommit? = null,
 ) {
     val cs = MaterialTheme.colorScheme
     val mark = FileIcons.mark(entry.name)
@@ -488,30 +509,50 @@ private fun EntryRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 FileEntryIcon(entry, iconSet)
-                FileNameText(
-                    text = entry.displayName,
-                    mode = nameDisplay,
-                    color = textColor,
-                    fontWeight = fontWeight,
-                    fontStyle = fontStyle,
-                    modifier = Modifier.weight(1f),
-                )
-                // 登録済みは小さな★で示す(チップの手前)。
-                if (isFavorite) {
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = "お気に入り",
-                        tint = cs.primary,
-                        modifier = Modifier.size(16.dp),
-                    )
+                // 名前行(名前＋★＋チップ)と、設定 ON のとき副行(著者・相対時刻)を縦に積む。
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FileNameText(
+                            text = entry.displayName,
+                            mode = nameDisplay,
+                            color = textColor,
+                            fontWeight = fontWeight,
+                            fontStyle = fontStyle,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // 登録済みは小さな★で示す(チップの手前)。
+                        if (isFavorite) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = "お気に入り",
+                                tint = cs.primary,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                        // submodule はファイル名でなくフラグで分かるので、AI 等と同様にバッジで明示する。
+                        // 未取得(取得失敗で空)は赤の「未取得」にして再同期を促す。
+                        if (entry.isSubmodule) {
+                            if (entry.submoduleUnfetched) MarkChip("未取得", cs.error)
+                            else MarkChip("SUB", cs.primary)
+                        }
+                        chip?.let { (label, color) -> MarkChip(label, color) }
+                    }
+                    if (showCommitInfo) {
+                        // 未解決/読込中は「—」。解決後に著者・相対時刻へ差し替わる。
+                        val secondary = commit?.let { "${it.author} · ${relativeTimeMillis(it.at.toEpochMilli())}" } ?: "—"
+                        Text(
+                            secondary,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = cs.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
                 }
-                // submodule はファイル名でなくフラグで分かるので、AI 等と同様にバッジで明示する。
-                // 未取得(取得失敗で空)は赤の「未取得」にして再同期を促す。
-                if (entry.isSubmodule) {
-                    if (entry.submoduleUnfetched) MarkChip("未取得", cs.error)
-                    else MarkChip("SUB", cs.primary)
-                }
-                chip?.let { (label, color) -> MarkChip(label, color) }
             }
         }
         DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {

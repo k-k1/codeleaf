@@ -592,6 +592,12 @@ fun CodeLeafApp() {
                     onOpenHistory = { historySelected = null; navigate(Screen.History(repo, it)) },
                     iconSet = settings.iconSet,
                     fileNameDisplay = settings.fileNameDisplay,
+                    // 設定 ON のときだけ最終コミット取得関数を渡す(OFF は null=走査ゼロ)。
+                    loadCommitMeta = if (settings.showCommitInfo) {
+                        { p, es -> vm.dirCommitMeta(repo, p, es) }
+                    } else {
+                        null
+                    },
                     onSwitchBranch = { branch ->
                         vm.switchBranch(repo, branch) { updated ->
                             val i = backStack.indexOfLast { it is Screen.Browse }

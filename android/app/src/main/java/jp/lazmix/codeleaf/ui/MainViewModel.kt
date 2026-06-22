@@ -28,6 +28,7 @@ import jp.lazmix.codeleaf.data.oauth.GitHubDeviceFlowService
 import jp.lazmix.codeleaf.data.oauth.OAuthAccount
 import jp.lazmix.codeleaf.data.oauth.RemoteRepo
 import jp.lazmix.codeleaf.git.BranchInfo
+import jp.lazmix.codeleaf.git.EntryCommit
 import jp.lazmix.codeleaf.git.CommitInfo
 import java.io.File
 import kotlinx.coroutines.channels.Channel
@@ -247,6 +248,10 @@ class MainViewModel(
     // --- ファイルブラウザ / 閲覧 ---
     suspend fun listDir(repo: Repo, relPath: String): List<FileEntry> =
         repository.listDir(repo, relPath, collapse = settingsStore.settings.value.collapseFolders)
+
+    /** 一覧エントリの最終コミット(著者・日時)。設定 ON のブラウザからのみ呼ぶ。 */
+    suspend fun dirCommitMeta(repo: Repo, relDir: String, entries: List<FileEntry>): Map<String, EntryCommit> =
+        repository.dirCommitMeta(repo, relDir, entries)
 
     suspend fun readFile(
         repo: Repo,
