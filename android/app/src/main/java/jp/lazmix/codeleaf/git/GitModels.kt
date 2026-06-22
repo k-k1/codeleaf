@@ -14,6 +14,23 @@ data class BranchInfo(
     val committedAt: Instant,
 )
 
+/**
+ * ファイル/フォルダを最後に変更したコミット情報（ブラウザ一覧の「いつ・誰」表示用）。
+ * author = 著者名、at = 著者日時。
+ */
+data class EntryCommit(
+    val author: String,
+    val at: Instant,
+)
+
+/**
+ * 変更パス [changedPath] が対象 [target] に属するか判定する純粋関数。
+ * target がファイルなら完全一致、フォルダ（プレフィックス）なら配下（`target/...`）を真とする。
+ * ディレクトリ最終コミットの解決で、差分パスを一覧エントリへ突き合わせるのに使う。
+ */
+internal fun matchesPathPrefix(changedPath: String, target: String): Boolean =
+    changedPath == target || changedPath.startsWith("$target/")
+
 /** コミット1件分の情報（履歴表示用）。 */
 @Parcelize
 @TypeParceler<Instant, InstantParceler>

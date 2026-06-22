@@ -2,6 +2,7 @@ package jp.lazmix.codeleaf.git
 
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand.ResetType
+import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
@@ -15,6 +16,7 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import org.eclipse.jgit.treewalk.EmptyTreeIterator
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
+import org.eclipse.jgit.util.io.DisabledOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 
@@ -106,6 +108,10 @@ class JgitClient {
     fun currentBranch(dir: File): String =
         Git.open(dir).use { it.repository.branch }
 
+    /** HEAD が指すコミット sha。最終コミット情報キャッシュの無効化キーに使う（同期で変わる）。 */
+    fun headSha(dir: File): String? =
+        Git.open(dir).use { it.repository.resolve("HEAD")?.name }
+
     /** HEAD から見たコミット履歴。filePath 指定時はそのファイルに触れたコミットのみ。 */
     fun log(dir: File, filePath: String?, limit: Int): List<CommitInfo> {
         Git.open(dir).use { git ->
@@ -114,6 +120,65 @@ class JgitClient {
             return cmd.call().map { c ->
                 CommitInfo(c.name, c.shortMessage, c.authorIdent.name, c.authorIdent.whenAsInstant)
             }
+        }
+    }
+
+    /**
+     * [relDir]（リポルートからの相対・'/'区切り・ルートは ""）直下に並ぶ各 [paths]
+     *（[FileEntry][jp.lazmix.codeleaf.data.FileEntry] の relPath。ファイルは完全パス・フォルダはプレフィックス）
+     * について、それを最後に変更したコミット（著者・著者日時）を返す。一覧の「いつ・誰」表示用。
+     *
+     * HEAD から first-parent を新しい順にたどり、各コミットと第1親の relDir 配下差分を見て、
+     * 未解決の対象に当たれば確定する。全対象が解決するか [maxCommits] 件 walk したら打ち切る
+     *（古くしか触れられていない単独ファイルが履歴全走を招くのを防ぐ）。リネーム追従は行わない。
+     * 解決できなかった対象はマップに含めない（呼び出し側で「—」表示）。
+     */
+    fun lastCommits(dir: File, relDir: String, paths: List<String>, maxCommits: Int): Map<String, EntryCommit> {
+        if (paths.isEmpty()) return emptyMap()
+        Git.open(dir).use { git ->
+            val repo = git.repository
+            val head = repo.resolve("HEAD") ?: return emptyMap()
+            val unresolved = HashSet(paths)
+            val result = HashMap<String, EntryCommit>()
+            RevWalk(repo).use { rw ->
+                rw.setFirstParent(true)
+                rw.sort(RevSort.COMMIT_TIME_DESC)
+                rw.markStart(rw.parseCommit(head))
+                val reader = repo.newObjectReader()
+                val parents = RevWalk(repo) // 親ツリー解決用(iterating walk を乱さない)
+                val df = DiffFormatter(DisabledOutputStream.INSTANCE)
+                df.setRepository(repo)
+                df.isDetectRenames = false
+                if (relDir.isNotEmpty()) df.pathFilter = PathFilter.create(relDir)
+                try {
+                    var count = 0
+                    for (commit in rw) {
+                        if (unresolved.isEmpty() || count >= maxCommits) break
+                        count++
+                        val newTree = CanonicalTreeParser().apply { reset(reader, commit.tree) }
+                        val oldTree = if (commit.parentCount > 0) {
+                            val parent = parents.parseCommit(commit.getParent(0).id)
+                            CanonicalTreeParser().apply { reset(reader, parent.tree) }
+                        } else {
+                            EmptyTreeIterator()
+                        }
+                        val diffs = df.scan(oldTree, newTree)
+                        if (diffs.isEmpty()) continue
+                        val changed = diffs.map { if (it.newPath != DiffEntry.DEV_NULL) it.newPath else it.oldPath }
+                        val ec = EntryCommit(commit.authorIdent.name, commit.authorIdent.whenAsInstant)
+                        val hit = unresolved.filter { t -> changed.any { matchesPathPrefix(it, t) } }
+                        for (t in hit) {
+                            result[t] = ec
+                            unresolved.remove(t)
+                        }
+                    }
+                } finally {
+                    df.close()
+                    parents.close()
+                    reader.close()
+                }
+            }
+            return result
         }
     }
 
