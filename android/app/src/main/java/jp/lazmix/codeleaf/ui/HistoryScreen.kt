@@ -35,6 +35,8 @@ import jp.lazmix.codeleaf.git.CommitInfo
 @Composable
 fun HistoryScreen(
     filePath: String,
+    /** submodule の履歴か。true のとき「gitlink(ポインタ)移動の履歴」である旨のバナーを出す。 */
+    isSubmodule: Boolean = false,
     loadHistory: suspend () -> List<CommitInfo>,
     onSelectCommit: (CommitInfo) -> Unit,
     onBack: () -> Unit,
@@ -62,10 +64,23 @@ fun HistoryScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            if (isSubmodule) {
+                // submodule は親リポに中身履歴が無く、gitlink(指すコミット)の移動だけが残る。
+                Text(
+                    "サブモジュールのポインタ移動の履歴です（中身の履歴ではありません）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             SyncRefreshBox(
                 snackbar = snackbar,
                 onSync = onSync,
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 // 同期後はそのファイルの履歴が増減しうるので再読込。
                 onReload = { commits = runCatching { loadHistory() }.getOrElse { error = it.message; emptyList() } },
             ) {

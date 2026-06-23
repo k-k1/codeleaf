@@ -104,7 +104,12 @@ private sealed interface Screen : Parcelable {
     ) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
-    @Parcelize data class History(override val repo: Repo, val filePath: String) : WithRepo {
+    @Parcelize data class History(
+        override val repo: Repo,
+        val filePath: String,
+        /** submodule の場合 true。親リポにある gitlink(ポインタ)移動の履歴である旨を画面で明示する。 */
+        val isSubmodule: Boolean = false,
+    ) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
     @Parcelize data class Diff(override val repo: Repo, val filePath: String, val commit: CommitInfo) : WithRepo {
@@ -589,7 +594,7 @@ fun CodeLeafApp() {
                     onOpenFile = {
                         if (detailStack.lastOrNull()?.filePath != it) pushDetail(Screen.View(repo, it))
                     },
-                    onOpenHistory = { historySelected = null; navigate(Screen.History(repo, it)) },
+                    onOpenHistory = { p, isSub -> historySelected = null; navigate(Screen.History(repo, p, isSub)) },
                     iconSet = settings.iconSet,
                     fileNameDisplay = settings.fileNameDisplay,
                     // 設定 ON のときだけ最終コミット取得関数を渡す(OFF は null=走査ゼロ)。
@@ -892,6 +897,7 @@ fun CodeLeafApp() {
             fun HistoryPane(selSha: String?, onSelect: (CommitInfo) -> Unit) {
                 HistoryScreen(
                     filePath = filePath,
+                    isSubmodule = current.isSubmodule,
                     loadHistory = { vm.fileHistory(repo, filePath) },
                     onSelectCommit = onSelect,
                     onBack = { pop() },

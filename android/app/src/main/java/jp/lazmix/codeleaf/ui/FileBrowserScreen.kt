@@ -105,8 +105,8 @@ fun FileBrowserScreen(
     onSetTheme: (ThemeMode) -> Unit,
     onOpenDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
-    /** ファイル長押しメニューから、そのファイルのコミット履歴へ。 */
-    onOpenHistory: (String) -> Unit = {},
+    /** 行長押しメニューからコミット履歴へ。第2引数は submodule か(=gitlink 移動履歴である旨の明示用)。 */
+    onOpenHistory: (String, Boolean) -> Unit = { _, _ -> },
     onSwitchBranch: (String) -> Unit,
     /** リポを出てリポ一覧へ。3ペインではレールが担うため null で ← を非表示にする。 */
     onBack: (() -> Unit)?,
@@ -328,9 +328,9 @@ fun FileBrowserScreen(
                                     }
                                 },
                                 onToggleFavorite = { onToggleFavorite(e) },
-                                // 履歴はファイルとフォルダ(配下を触れた全コミット)。submodule は親側に
-                                // 実体履歴が無い(gitlink のみ)ので対象外。
-                                onHistory = if (!e.isSubmodule) ({ onOpenHistory(e.relPath) }) else null,
+                                // 履歴はファイル・フォルダ・submodule すべて。submodule は親リポにある
+                                // gitlink(ポインタ)移動の履歴で、画面側で中身でない旨を明示する。
+                                onHistory = { onOpenHistory(e.relPath, e.isSubmodule) },
                             )
                             HorizontalDivider()
                         }
