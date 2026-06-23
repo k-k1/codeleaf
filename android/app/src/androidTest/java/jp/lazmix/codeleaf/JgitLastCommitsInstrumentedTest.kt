@@ -78,6 +78,13 @@ class JgitLastCommitsInstrumentedTest {
         assertTrue(capped.containsKey("a"))
         assertFalse(capped.containsKey("LICENSE"))
 
+        // ディレクトリ履歴: フォルダパスを log に渡すと配下を触れた全コミットを返す
+        // (フォルダ長押し→履歴の土台)。a/ は c1(追加)と c3(更新)の2件、b/ は c2 の1件。
+        val aLog = jgit.log(dir, "a", 100)
+        assertEquals(2, aLog.size)
+        assertEquals(listOf("Carol", "Alice"), aLog.map { it.author }) // 新しい順
+        assertEquals(1, jgit.log(dir, "b", 100).size)
+
         dir.deleteRecursively()
     }
 }

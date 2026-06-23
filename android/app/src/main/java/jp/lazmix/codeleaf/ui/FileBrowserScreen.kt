@@ -328,8 +328,9 @@ fun FileBrowserScreen(
                                     }
                                 },
                                 onToggleFavorite = { onToggleFavorite(e) },
-                                // 履歴はファイルのみ(ディレクトリ/サブモジュールは対象外)。
-                                onHistory = if (!e.isDir) ({ onOpenHistory(e.relPath) }) else null,
+                                // 履歴はファイルとフォルダ(配下を触れた全コミット)。submodule は親側に
+                                // 実体履歴が無い(gitlink のみ)ので対象外。
+                                onHistory = if (!e.isSubmodule) ({ onOpenHistory(e.relPath) }) else null,
                             )
                             HorizontalDivider()
                         }
