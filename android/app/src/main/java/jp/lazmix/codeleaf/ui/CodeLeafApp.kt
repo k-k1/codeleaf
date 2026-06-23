@@ -112,7 +112,13 @@ private sealed interface Screen : Parcelable {
     ) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
-    @Parcelize data class Diff(override val repo: Repo, val filePath: String, val commit: CommitInfo) : WithRepo {
+    @Parcelize data class Diff(
+        override val repo: Repo,
+        val filePath: String,
+        val commit: CommitInfo,
+        /** submodule の履歴から開いた gitlink 変更か。true なら範囲(コミット列)表示にする。 */
+        val isSubmodule: Boolean = false,
+    ) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
     @Parcelize data class CommitDetail(override val repo: Repo, val commit: GraphCommit) : WithRepo {
@@ -913,7 +919,7 @@ fun CodeLeafApp() {
                 @Composable
                 fun ContentPanes() {
                     if (!two) {
-                        HistoryPane(selSha = null, onSelect = { navigate(Screen.Diff(repo, filePath, it)) })
+                        HistoryPane(selSha = null, onSelect = { navigate(Screen.Diff(repo, filePath, it, current.isSubmodule)) })
                     } else {
                         val sel = historySelected
                         // コミット選択中だけ一覧を畳める(未選択時は一覧を出す)。
@@ -932,6 +938,11 @@ fun CodeLeafApp() {
                         sel,
                         loadDiff = { vm.fileDiff(repo, filePath, sel.sha) },
                         onOpenFile = { openDiffFile(repo, it, sel.sha) },
+                        loadSubmoduleChange = if (current.isSubmodule) {
+                            { vm.submoduleChange(repo, filePath, sel.sha) }
+                        } else {
+                            null
+                        },
                     )
                 }
                                 } else {
@@ -963,6 +974,11 @@ fun CodeLeafApp() {
                 loadDiff = { vm.fileDiff(current.repo, current.filePath, current.commit.sha) },
                 onBack = { pop() },
                 onOpenFile = { openDiffFile(current.repo, it, current.commit.sha) },
+                loadSubmoduleChange = if (current.isSubmodule) {
+                    { vm.submoduleChange(current.repo, current.filePath, current.commit.sha) }
+                } else {
+                    null
+                },
             )
         }
 

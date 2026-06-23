@@ -31,6 +31,46 @@ data class EntryCommit(
 internal fun matchesPathPrefix(changedPath: String, target: String): Boolean =
     changedPath == target || changedPath.startsWith("$target/")
 
+/** submodule の範囲表示で使うコミット1件（中身＝submodule リポのコミット）。 */
+data class SubmoduleCommit(
+    val sha: String,
+    val shortMessage: String,
+    val author: String,
+    val at: Instant,
+)
+
+/** submodule(gitlink)の変更方向。 */
+enum class SubmoduleChangeDirection {
+    /** old が new の祖先（通常の前進更新）。 */
+    FORWARD,
+    /** new が old の祖先（巻き戻し）。 */
+    BACKWARD,
+    /** 互いに祖先でない（分岐）。 */
+    DIVERGED,
+    /** submodule 追加（old 無し）。 */
+    ADD,
+    /** submodule 削除（new 無し）。 */
+    REMOVE,
+    /** submodule 実体が未取得などで解決できない（ハッシュのみ表示にフォールバック）。 */
+    UNRESOLVED,
+}
+
+/**
+ * 親コミットでの submodule(gitlink)変更。old→new と、その間の submodule コミット列を持つ。
+ * [commits] は new 側で増えた（ADD/REMOVE は tip 側の）コミットを新しい順。境界の old は [boundary]。
+ */
+data class SubmoduleChange(
+    val path: String,
+    val oldSha: String?,
+    val newSha: String?,
+    val direction: SubmoduleChangeDirection,
+    val commits: List<SubmoduleCommit>,
+    /** 基点（old）のコミット。表示の「基点」行用。ADD/解決不能時は null。 */
+    val boundary: SubmoduleCommit?,
+    /** [commits] が limit で打ち切られたか。 */
+    val truncated: Boolean,
+)
+
 /** コミット1件分の情報（履歴表示用）。 */
 @Parcelize
 @TypeParceler<Instant, InstantParceler>

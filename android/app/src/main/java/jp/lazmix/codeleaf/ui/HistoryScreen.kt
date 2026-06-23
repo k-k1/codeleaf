@@ -124,12 +124,27 @@ fun HistoryScreen(
  * ヘッダ(件名・著者・時刻・sha)＋ DiffView。コミットグラフの CommitDetailContent と対の関係。
  */
 @Composable
-fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String, onOpenFile: (String) -> Unit = {}) {
+fun FileDiffPane(
+    commit: CommitInfo,
+    loadDiff: suspend () -> String,
+    onOpenFile: (String) -> Unit = {},
+    /** submodule(gitlink)変更を解決する関数。非 null かつ解決成功時は生 diff の代わりに範囲表示する。 */
+    loadSubmoduleChange: (suspend () -> jp.lazmix.codeleaf.git.SubmoduleChange?)? = null,
+) {
     var diff by remember(commit.sha) { mutableStateOf<String?>(null) }
     var error by remember(commit.sha) { mutableStateOf<String?>(null) }
+    var subChange by remember(commit.sha) {
+        mutableStateOf<jp.lazmix.codeleaf.git.SubmoduleChange?>(null)
+    }
     LaunchedEffect(commit.sha) {
         error = null
-        diff = runCatching { loadDiff() }.getOrElse { error = it.message; "" }
+        // submodule 経路なら先に gitlink 変更を解決。解決できれば生 diff は読まない。
+        val resolved = loadSubmoduleChange?.let { runCatching { it() }.getOrNull() }
+            ?.takeIf { it.direction != jp.lazmix.codeleaf.git.SubmoduleChangeDirection.UNRESOLVED }
+        subChange = resolved
+        if (resolved == null) {
+            diff = runCatching { loadDiff() }.getOrElse { error = it.message; "" }
+        }
     }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
@@ -147,8 +162,10 @@ fun FileDiffPane(commit: CommitInfo, loadDiff: suspend () -> String, onOpenFile:
             )
         }
         HorizontalDivider()
+        val sc = subChange
         val d = diff
         when {
+            sc != null -> SubmoduleChangeContent(sc, Modifier.weight(1f).fillMaxWidth())
             error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
             d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
             d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))

@@ -4,9 +4,12 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand.ResetType
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.lib.FileMode
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevSort
+import org.eclipse.jgit.revwalk.RevTree
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.submodule.SubmoduleWalk
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -179,6 +182,92 @@ class JgitClient {
                 }
             }
             return result
+        }
+    }
+
+    /**
+     * 親コミット [parentSha] における submodule [path] の gitlink 変更を、submodule 自身のリポを
+     * 開いて old→new の範囲コミット列に解決する（submodule diff のハッシュを意味のある履歴にする）。
+     * gitlink でなければ null。submodule 実体が未取得/オブジェクト欠落なら direction=UNRESOLVED。
+     */
+    fun submoduleChange(parentDir: File, path: String, parentSha: String, limit: Int): SubmoduleChange? {
+        Git.open(parentDir).use { git ->
+            val parent = git.repository
+            var oldId: ObjectId? = null
+            var newId: ObjectId? = null
+            RevWalk(parent).use { rw ->
+                val c = rw.parseCommit(ObjectId.fromString(parentSha))
+                newId = gitlinkAt(parent, c.tree, path)
+                if (c.parentCount > 0) {
+                    oldId = gitlinkAt(parent, rw.parseCommit(c.getParent(0).id).tree, path)
+                }
+            }
+            if (oldId == null && newId == null) return null // この commit で path は gitlink でない
+            val sub = runCatching { SubmoduleWalk.getSubmoduleRepository(parent, path) }.getOrNull()
+                ?: return SubmoduleChange(
+                    path, oldId?.name, newId?.name, SubmoduleChangeDirection.UNRESOLVED, emptyList(), null, false,
+                )
+            sub.use { return resolveSubmoduleChange(it, path, oldId, newId, limit) }
+        }
+    }
+
+    /** tree 内の [path] が gitlink ならその commit id、そうでなければ null。 */
+    private fun gitlinkAt(repo: Repository, tree: RevTree, path: String): ObjectId? =
+        repo.newObjectReader().use { reader ->
+            TreeWalk.forPath(reader, path, tree)?.use { tw ->
+                if (tw.getFileMode(0) == FileMode.GITLINK) tw.getObjectId(0) else null
+            }
+        }
+
+    private fun toSubCommit(c: RevCommit) =
+        SubmoduleCommit(c.name, c.shortMessage, c.authorIdent.name, c.authorIdent.whenAsInstant)
+
+    /** submodule リポ [sub] 上で old/new を解決し、方向と範囲コミット列を組み立てる。 */
+    private fun resolveSubmoduleChange(
+        sub: Repository,
+        path: String,
+        oldId: ObjectId?,
+        newId: ObjectId?,
+        limit: Int,
+    ): SubmoduleChange {
+        RevWalk(sub).use { rw ->
+            fun parse(id: ObjectId?) = id?.let { runCatching { rw.parseCommit(it) }.getOrNull() }
+            val oldC = parse(oldId)
+            val newC = parse(newId)
+            // 片側でもオブジェクトが欠落（未取得/gc）→ 解決不能としてハッシュのみ表示に倒す。
+            if ((oldId != null && oldC == null) || (newId != null && newC == null)) {
+                return SubmoduleChange(
+                    path, oldId?.name, newId?.name, SubmoduleChangeDirection.UNRESOLVED, emptyList(), null, false,
+                )
+            }
+            val dir: SubmoduleChangeDirection
+            val fromExclusive: RevCommit?
+            val toInclusive: RevCommit
+            when {
+                oldC == null && newC != null -> { dir = SubmoduleChangeDirection.ADD; fromExclusive = null; toInclusive = newC }
+                newC == null && oldC != null -> { dir = SubmoduleChangeDirection.REMOVE; fromExclusive = null; toInclusive = oldC }
+                oldC != null && newC != null -> when {
+                    rw.isMergedInto(oldC, newC) -> { dir = SubmoduleChangeDirection.FORWARD; fromExclusive = oldC; toInclusive = newC }
+                    rw.isMergedInto(newC, oldC) -> { dir = SubmoduleChangeDirection.BACKWARD; fromExclusive = newC; toInclusive = oldC }
+                    else -> { dir = SubmoduleChangeDirection.DIVERGED; fromExclusive = oldC; toInclusive = newC }
+                }
+                else -> return SubmoduleChange(
+                    path, oldId?.name, newId?.name, SubmoduleChangeDirection.UNRESOLVED, emptyList(), null, false,
+                )
+            }
+            val commits = ArrayList<SubmoduleCommit>()
+            var truncated = false
+            RevWalk(sub).use { lw ->
+                lw.markStart(lw.parseCommit(toInclusive))
+                fromExclusive?.let { lw.markUninteresting(lw.parseCommit(it)) }
+                for (c in lw) {
+                    if (commits.size >= limit) { truncated = true; break }
+                    commits.add(toSubCommit(c))
+                }
+            }
+            // 更新系（old/new 両方あり）のときだけ基点として old を併記する。
+            val boundary = if (oldC != null && newC != null) toSubCommit(oldC) else null
+            return SubmoduleChange(path, oldId?.name, newId?.name, dir, commits, boundary, truncated)
         }
     }
 

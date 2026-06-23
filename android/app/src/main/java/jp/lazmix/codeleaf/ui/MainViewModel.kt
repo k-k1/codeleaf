@@ -292,6 +292,10 @@ class MainViewModel(
     suspend fun fileDiff(repo: Repo, relPath: String, sha: String): String =
         repository.fileDiff(repo, relPath, sha)
 
+    /** submodule(gitlink)変更を old→new の範囲コミット列に解決する。submodule diff の意味化に使う。 */
+    suspend fun submoduleChange(repo: Repo, path: String, sha: String): jp.lazmix.codeleaf.git.SubmoduleChange? =
+        repository.submoduleChange(repo, path, sha)
+
     suspend fun commitGraph(repo: Repo): List<jp.lazmix.codeleaf.git.GraphCommit> =
         repository.commitGraph(repo)
 

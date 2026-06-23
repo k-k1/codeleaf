@@ -55,6 +55,8 @@ fun DiffScreen(
     loadDiff: suspend () -> String,
     onBack: () -> Unit,
     onOpenFile: (String) -> Unit = {},
+    /** submodule(gitlink)変更を範囲表示するための解決関数。非 null=submodule 経路。 */
+    loadSubmoduleChange: (suspend () -> jp.lazmix.codeleaf.git.SubmoduleChange?)? = null,
 ) {
     Scaffold(
         // 本文(DiffView)が自前の下部バーで navigationBars を padding するため、Scaffold 側からは除外。
@@ -70,7 +72,7 @@ fun DiffScreen(
     ) { padding ->
         // コミットメッセージ見出し＋ファイル diff(2/3ペインの右と共通の FileDiffPane)。
         Box(Modifier.fillMaxSize().padding(padding)) {
-            FileDiffPane(commit, loadDiff, onOpenFile)
+            FileDiffPane(commit, loadDiff, onOpenFile, loadSubmoduleChange)
         }
     }
 }

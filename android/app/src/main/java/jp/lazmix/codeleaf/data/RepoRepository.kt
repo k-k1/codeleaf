@@ -19,6 +19,7 @@ import jp.lazmix.codeleaf.data.oauth.normalizeRepoUrl
 import jp.lazmix.codeleaf.git.BranchInfo
 import jp.lazmix.codeleaf.git.CommitInfo
 import jp.lazmix.codeleaf.git.EntryCommit
+import jp.lazmix.codeleaf.git.SubmoduleChange
 import android.graphics.BitmapFactory
 import jp.lazmix.codeleaf.git.GraphCommit
 import jp.lazmix.codeleaf.git.JgitClient
@@ -486,6 +487,10 @@ class RepoRepository(
     /** 指定コミットでのファイル unified diff。 */
     suspend fun fileDiff(repo: Repo, relPath: String, sha: String): String =
         withContext(ioDispatcher) { jgit.diff(workDir(repo), relPath, sha) }
+
+    /** submodule(gitlink)変更を old→new の範囲コミット列に解決する。gitlink でなければ null。 */
+    suspend fun submoduleChange(repo: Repo, path: String, sha: String, limit: Int = 100): SubmoduleChange? =
+        withContext(ioDispatcher) { jgit.submoduleChange(workDir(repo), path, sha, limit) }
 
     /** リポジトリ全体のコミットグラフ(全 ref から DAG)。 */
     suspend fun commitGraph(repo: Repo): List<GraphCommit> =
