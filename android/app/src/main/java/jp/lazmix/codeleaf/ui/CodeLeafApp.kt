@@ -58,7 +58,12 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import android.app.Activity
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -485,6 +490,24 @@ fun CodeLeafApp() {
         } else {
             CodeLeafTheme(repo.themeMode) { content() }
         }
+    }
+
+    // ステータス/ナビバーのアイコン明暗を「いま前面に出している画面のテーマ」に追従させる。
+    // リポ画面はリポ毎テーマ、それ以外(一覧/設定/追加)は既定テーマ。これで別テーマ選択時に
+    // バーのアイコンが背景へ溶けて見えなくなるのを防ぐ(MainActivity の起動時設定を上書きする)。
+    val foreground = backStack.last()
+    val barThemeMode = (foreground as? Screen.WithRepo)?.repo?.themeMode ?: settings.defaultTheme
+    val barDark = when (barThemeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    val rootView = LocalView.current
+    SideEffect {
+        val window = (rootView.context as? Activity)?.window ?: return@SideEffect
+        val controller = WindowCompat.getInsetsController(window, rootView)
+        controller.isAppearanceLightStatusBars = !barDark
+        controller.isAppearanceLightNavigationBars = !barDark
     }
 
     when (val current = backStack.last()) {
