@@ -809,7 +809,14 @@ private fun AddMemoSheet(
     val total = lines.size.coerceAtLeast(1)
     var start1 by remember { mutableIntStateOf((initialRange.first + 1).coerceIn(1, total)) }
     var end1 by remember { mutableIntStateOf((initialRange.last + 1).coerceIn(start1, total)) }
-    var comment by remember { mutableStateOf("") }
+    // コメント欄の初期値 = 選択行の内容(最大3行)。以後はユーザ編集を優先し範囲変更で上書きしない。
+    var comment by remember {
+        val last = (lines.size - 1).coerceAtLeast(0)
+        val s = initialRange.first.coerceIn(0, last)
+        val e = initialRange.last.coerceIn(s, last)
+        val initial = if (lines.isEmpty()) "" else lines.subList(s, e + 1).take(3).joinToString("\n")
+        mutableStateOf(initial)
+    }
     var selectedMemoId by remember { mutableStateOf(memos.firstOrNull()?.memo?.id) }
     var newTitle by remember { mutableStateOf("") }
     var pickerOpen by remember { mutableStateOf(false) }
