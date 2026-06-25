@@ -84,12 +84,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -101,9 +103,11 @@ import androidx.compose.ui.unit.sp
 import jp.lazmix.codeleaf.data.FileInfo
 import jp.lazmix.codeleaf.data.FileKind
 import jp.lazmix.codeleaf.data.LinkOpenMode
+import jp.lazmix.codeleaf.data.MemoFormat
 import jp.lazmix.codeleaf.data.TableMode
 import jp.lazmix.codeleaf.data.TextLoad
 import jp.lazmix.codeleaf.data.humanSize
+import jp.lazmix.codeleaf.data.db.MemoEntry
 import jp.lazmix.codeleaf.data.db.MemoWithCount
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.render.CodeHighlight
@@ -585,17 +589,38 @@ fun FileViewerScreen(
 
     // 行を長押ししたら、その行を起点にメモ追加シートを開く(コード/Raw 表示のみ)。
     val sheetRange = addRange
+    val clipboard = LocalClipboardManager.current
     if (sheetRange != null && text != null) {
         AddMemoSheet(
             fileName = fileName,
             lines = remember(text) { text!!.split("\n") },
             initialRange = sheetRange,
             memos = memos,
-            onSave = { lineStart, lineEnd, quote, comment, memoId, newTitle ->
+            onSave = { lineStart, lineEnd, quote, comment, memoId, newTitle, action ->
+                // いずれのアクションでも必ず保存する。COPY/SHARE はその場で整形して連携する。
                 if (memoId != null) {
                     onAddMemoEntry(memoId, lineStart, lineEnd, quote, comment)
                 } else {
                     onCreateMemoWithEntry(newTitle, lineStart, lineEnd, quote, comment)
+                }
+                if (action != MemoSubmitAction.SAVE) {
+                    val formatted = MemoFormat.entry(
+                        repo.name,
+                        MemoEntry(
+                            memoId = memoId ?: 0,
+                            filePath = filePath,
+                            lineStart = lineStart,
+                            lineEnd = lineEnd,
+                            quote = quote,
+                            comment = comment,
+                            createdAt = 0,
+                        ),
+                    )
+                    when (action) {
+                        MemoSubmitAction.COPY -> clipboard.setText(AnnotatedString(formatted))
+                        MemoSubmitAction.SHARE -> shareText(context, formatted)
+                        MemoSubmitAction.SAVE -> Unit
+                    }
                 }
                 addRange = null
             },
@@ -603,6 +628,9 @@ fun FileViewerScreen(
         )
     }
 }
+
+/** メモ追加シートの確定アクション。COPY/SHARE は保存に加えて整形テキストを連携する。 */
+private enum class MemoSubmitAction { SAVE, COPY, SHARE }
 
 /**
  * 整形 Markdown のブロック(markdown 文字列)を全文から探し、0始まりのソース行範囲を返す。
@@ -803,7 +831,10 @@ private fun AddMemoSheet(
     lines: List<String>,
     initialRange: IntRange,
     memos: List<MemoWithCount>,
-    onSave: (lineStart: Int, lineEnd: Int, quote: String, comment: String, memoId: Long?, newTitle: String) -> Unit,
+    onSave: (
+        lineStart: Int, lineEnd: Int, quote: String, comment: String,
+        memoId: Long?, newTitle: String, action: MemoSubmitAction,
+    ) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val total = lines.size.coerceAtLeast(1)
@@ -955,15 +986,21 @@ private fun AddMemoSheet(
                 )
             }
 
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
+            // 確定アクション。コピー/共有も保存したうえでクリップボード/共有シートへ連携する。
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onDismiss) { Text("キャンセル") }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.weight(1f))
                 TextButton(
                     enabled = canSave,
-                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim()) },
+                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), MemoSubmitAction.COPY) },
+                ) { Text("コピー") }
+                TextButton(
+                    enabled = canSave,
+                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), MemoSubmitAction.SHARE) },
+                ) { Text("共有") }
+                TextButton(
+                    enabled = canSave,
+                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), MemoSubmitAction.SAVE) },
                 ) { Text("保存") }
             }
         }
