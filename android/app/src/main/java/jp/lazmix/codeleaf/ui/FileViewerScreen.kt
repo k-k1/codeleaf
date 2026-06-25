@@ -52,6 +52,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
@@ -592,7 +593,6 @@ fun FileViewerScreen(
     val clipboard = LocalClipboardManager.current
     if (sheetRange != null && text != null) {
         AddMemoSheet(
-            fileName = fileName,
             lines = remember(text) { text!!.split("\n") },
             initialRange = sheetRange,
             memos = memos,
@@ -827,7 +827,6 @@ private fun hexPreview(bytes: ByteArray, max: Int): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddMemoSheet(
-    fileName: String,
     lines: List<String>,
     initialRange: IntRange,
     memos: List<MemoWithCount>,
@@ -858,7 +857,9 @@ private fun AddMemoSheet(
     val creatingNew = selectedMemoId == null
     val canSave = !creatingNew || newTitle.isNotBlank()
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // 初期表示でアクション行(キャンセル/コピー/共有/保存)まで見えるよう、半開ではなく展開状態で開く。
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -867,33 +868,20 @@ private fun AddMemoSheet(
                 // (ModalBottomSheet 既定の windowInsets は systemBars のみで IME を避けない)。
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("メモを追加", style = MaterialTheme.typography.titleMedium)
-            Text(
-                fileName,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            // 行範囲の指定。スライダーで素早く・ステッパ/直接入力で正確に(開始 ≤ 終了 ≤ 総行数)。
+            // 行範囲: 行 X〜Y / 全 N 行 をタイトル行に同居(専用の見出し行を持たず高さを節約)。
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "行 $start1 〜 $end1",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
+                Text("メモを追加", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "全 $total 行",
+                    "行 $start1 〜 $end1 / 全 $total 行",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // 総行数が2行以上のときだけスライダー(1行ファイルは range が潰れるため出さない)。
+            // 総行数が2行以上のときだけスライダー(1行ファイルは range が潰れるため出さない)。圧縮のため低めの高さに。
             if (total >= 2) {
                 RangeSlider(
                     value = start1.toFloat()..end1.toFloat(),
@@ -903,12 +891,13 @@ private fun AddMemoSheet(
                         end1 = r.endInclusive.roundToInt().coerceIn(start1, total)
                     },
                     valueRange = 1f..total.toFloat(),
+                    modifier = Modifier.height(28.dp),
                 )
             }
             // 1行単位の微調整(長押しで連続・数字タップで直接入力)。
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 LineField(
                     label = "開始",
@@ -926,7 +915,7 @@ private fun AddMemoSheet(
                 )
             }
 
-            // 引用プレビュー。
+            // 引用プレビュー(圧縮のため低め)。
             Text(
                 quote,
                 style = MaterialTheme.typography.bodySmall,
@@ -934,7 +923,7 @@ private fun AddMemoSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 140.dp)
+                    .heightIn(max = 84.dp)
                     .verticalScroll(rememberScrollState())
                     .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1084,7 +1073,7 @@ private fun LineField(
 private fun StepGlyph(symbol: String) {
     Text(
         symbol,
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         color = androidx.compose.material3.LocalContentColor.current,
     )
@@ -1109,7 +1098,7 @@ private fun RepeatingIconButton(
     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(32.dp)
             .clip(CircleShape)
             .border(1.dp, border, CircleShape)
             .then(
