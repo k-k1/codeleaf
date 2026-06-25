@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -39,10 +40,13 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -78,6 +82,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
@@ -635,6 +642,52 @@ fun FileViewerScreen(
 private enum class MemoSubmitAction { SAVE, COPY, SHARE }
 
 /**
+ * 「コピー」用の copy アイコン(material-icons-core に ContentCopy が無く、extended は
+ * 未圧縮ビルドで肥大化するため自前定義)。Material の ContentCopy(24dp)と同じパス。
+ * 塗りは Icon の tint で上書きされる。
+ */
+private val ContentCopyIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "ContentCopy",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        path(fill = SolidColor(Color.Black)) {
+            // 背面の紙(露出するL字)。
+            moveTo(16f, 1f)
+            horizontalLineTo(4f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+            verticalLineToRelative(14f)
+            horizontalLineToRelative(2f)
+            verticalLineTo(3f)
+            horizontalLineToRelative(12f)
+            verticalLineTo(1f)
+            close()
+            // 前面の紙(外周)。
+            moveTo(19f, 5f)
+            horizontalLineTo(8f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+            verticalLineToRelative(14f)
+            curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
+            horizontalLineToRelative(11f)
+            curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+            verticalLineTo(7f)
+            curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+            close()
+            // 前面の紙(内側くり抜き)。
+            moveTo(19f, 21f)
+            horizontalLineTo(8f)
+            verticalLineTo(7f)
+            horizontalLineToRelative(11f)
+            verticalLineToRelative(14f)
+            close()
+        }
+    }.build()
+}
+
+/**
  * 整形 Markdown のブロック(markdown 文字列)を全文から探し、0始まりのソース行範囲を返す。
  * 見つからない(空・重複等)場合は null。範囲はメモ追加シートで微調整できる。
  */
@@ -984,21 +1037,44 @@ private fun AddMemoSheet(
             }
 
             // 確定アクション。コピー/共有も保存したうえでクリップボード/共有シートへ連携する。
+            // 保存=主アクション(filled)、コピー/共有=アイコン付き text。キャンセルは×アイコンのみ。
+            val submit = { action: MemoSubmitAction ->
+                onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), action)
+            }
+            val actionPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onDismiss) { Text("キャンセル") }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "キャンセル")
+                }
                 Spacer(Modifier.weight(1f))
                 TextButton(
                     enabled = canSave,
-                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), MemoSubmitAction.COPY) },
-                ) { Text("コピー") }
+                    onClick = { submit(MemoSubmitAction.COPY) },
+                    contentPadding = actionPadding,
+                ) {
+                    Icon(ContentCopyIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("コピー")
+                }
                 TextButton(
                     enabled = canSave,
-                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), MemoSubmitAction.SHARE) },
-                ) { Text("共有") }
-                TextButton(
+                    onClick = { submit(MemoSubmitAction.SHARE) },
+                    contentPadding = actionPadding,
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("共有")
+                }
+                Spacer(Modifier.width(4.dp))
+                Button(
                     enabled = canSave,
-                    onClick = { onSave(s0 + 1, e0 + 1, quote, comment, selectedMemoId, newTitle.trim(), MemoSubmitAction.SAVE) },
-                ) { Text("保存") }
+                    onClick = { submit(MemoSubmitAction.SAVE) },
+                    contentPadding = actionPadding,
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("保存")
+                }
             }
         }
     }
