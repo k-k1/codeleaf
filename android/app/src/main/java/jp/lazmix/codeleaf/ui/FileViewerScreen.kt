@@ -38,6 +38,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -53,6 +54,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
@@ -937,18 +939,24 @@ private fun AddMemoSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // 追加先メモ帳: 既存から選ぶ or 新規作成。
+            // 追加先メモ帳: 既存から選ぶ or 新規作成。枠＋▾ で「選べる」ことを明示する。
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("メモ帳", style = MaterialTheme.typography.bodyMedium)
+                Text("保存先", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.width(12.dp))
-                Box {
-                    TextButton(onClick = { pickerOpen = true }) {
+                Box(Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { pickerOpen = true }, modifier = Modifier.fillMaxWidth()) {
                         val label = if (creatingNew) {
                             "新しいメモ帳"
                         } else {
                             memos.firstOrNull { it.memo.id == selectedMemoId }?.memo?.title ?: "メモ帳"
                         }
-                        Text(label)
+                        Text(
+                            label,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = "保存先を選択")
                     }
                     DropdownMenu(expanded = pickerOpen, onDismissRequest = { pickerOpen = false }) {
                         memos.forEach { m ->
