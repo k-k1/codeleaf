@@ -15,6 +15,19 @@ data class BranchInfo(
 )
 
 /**
+ * コミットで変更されたファイル1件の概要（本文は読まない安価なスキャン結果）。
+ * displayPath=表示用(リネームは "旧 → 新")、openPath=ファイルを開く対象(=新側)、
+ * filterPath=その1ファイルだけを遅延整形する際の PathFilter 対象(削除は旧側、それ以外は新側)。
+ * changeType=ADD/MODIFY/DELETE/RENAME/COPY。
+ */
+data class DiffFileSummary(
+    val displayPath: String,
+    val openPath: String,
+    val filterPath: String,
+    val changeType: String,
+)
+
+/**
  * ファイル/フォルダを最後に変更したコミット情報（ブラウザ一覧の「いつ・誰」表示用）。
  * author = 著者名、at = 著者日時。
  */

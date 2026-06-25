@@ -18,6 +18,7 @@ import jp.lazmix.codeleaf.data.oauth.needsRefresh
 import jp.lazmix.codeleaf.data.oauth.normalizeRepoUrl
 import jp.lazmix.codeleaf.git.BranchInfo
 import jp.lazmix.codeleaf.git.CommitInfo
+import jp.lazmix.codeleaf.git.DiffFileSummary
 import jp.lazmix.codeleaf.git.EntryCommit
 import jp.lazmix.codeleaf.git.SubmoduleChange
 import android.graphics.BitmapFactory
@@ -496,9 +497,13 @@ class RepoRepository(
     suspend fun commitGraph(repo: Repo): List<GraphCommit> =
         withContext(ioDispatcher) { jgit.commitGraph(workDir(repo)) }
 
-    /** 指定コミット全体の unified diff(第1親との全ファイル差分)。 */
+    /** 指定コミット全体の unified diff(第1親との全ファイル差分・後方互換)。 */
     suspend fun commitDiff(repo: Repo, sha: String): String =
         withContext(ioDispatcher) { jgit.commitDiff(workDir(repo), sha) }
+
+    /** 指定コミットの変更ファイル一覧(本文未整形の安価スキャン)。 */
+    suspend fun commitFileSummaries(repo: Repo, sha: String): List<DiffFileSummary> =
+        withContext(ioDispatcher) { jgit.commitFileSummaries(workDir(repo), sha) }
 
     /**
      * 指定コミット(sha)時点の relPath の種別を判定する(履歴表示用)。

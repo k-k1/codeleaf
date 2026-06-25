@@ -89,8 +89,11 @@ package `jp.lazmix.codeleaf` / minSdk 31 / targetSdk 35。ソースは `android/
   **submodule 毎に個別 update＋リトライ**(`SUBMODULE_RETRIES`・1個の失敗が他を巻き込まない)。取得失敗は致命にせず `Log.w(JgitSubmodule)`。
   **未取得の可視化**: `listDir` が空の submodule ディレクトリを `FileEntry.submoduleUnfetched` にし、ブラウザで赤「未取得」バッジ(通常は紫「SUB」)。
   メイン URL の https 選択は Bitbucket API 側(`httpsCloneHref`)。
-- **diff 表示**(`DiffScreen.kt` `DiffText`/`parseDiffRows`): `diff --git`/index/---/+++ 等のノイズ行を畳みファイル名ヘッダ帯に
+- **diff 表示**(`DiffScreen.kt` `DiffView`/`CommitDiffView`・`DiffParse.kt`): `diff --git`/index/---/+++ 等のノイズ行を畳みファイル名ヘッダ帯に
   (非ASCIIは `gitUnquotePath` で8進復元)。ファイル毎に折りたたみ(`groupDiffByFile`)、追加緑/削除赤背景、@@ から行番号ガター、長行は自動改行。
+  **大量ファイル/巨大 diff 対策**: 描画は `LazyColumn`(全行描画は ANR/OOM の主因)、パースは `Dispatchers.Default`。
+  コミット詳細は `commitFileSummaries`(本文未整形の安価スキャン)で一覧を先出し→**展開時に各ファイルを遅延整形**(`CommitDiffView`)。
+  8ファイル超は既定で全折りたたみ。整形は1ファイル512KiB/全体2MiB で打ち切り注記(`JgitClient` `CapOutputStream`)。横スクロールは行ごと共有 `ScrollState`。
 - **整形/スティッキー**: セクションは LazyColumn 化しない(Mermaid WebView 再生成回避)。
   表ヘッダ・見出しの固定は `graphicsLayer.translationY + zIndex + positionInRoot` による擬似スティッキー。
 - **ファイルアイコン**: 拡張子 → 種別キー → `assets/<セット>/<キー>.svg` を Coil で描画(`ui/FileIcons.kt`)。

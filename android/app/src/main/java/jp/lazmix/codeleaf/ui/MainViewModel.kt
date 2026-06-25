@@ -302,6 +302,10 @@ class MainViewModel(
     suspend fun commitDiff(repo: Repo, sha: String): String =
         repository.commitDiff(repo, sha)
 
+    /** コミットの変更ファイル一覧(本文未整形・安価)。各ファイル本文は fileDiff で遅延取得する。 */
+    suspend fun commitFileSummaries(repo: Repo, sha: String): List<jp.lazmix.codeleaf.git.DiffFileSummary> =
+        repository.commitFileSummaries(repo, sha)
+
     /** リポ毎テーマを変更（保存後、更新済み Repo を onDone で返す）。 */
     fun setRepoTheme(repo: Repo, mode: ThemeMode, onDone: (Repo) -> Unit) {
         viewModelScope.launch {

@@ -22,9 +22,34 @@ import org.eclipse.jgit.treewalk.filter.PathFilter
 import org.eclipse.jgit.util.io.DisabledOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
 
 private const val SUBMODULE_TAG = "JgitSubmodule"
 private const val SUBMODULE_RETRIES = 3
+
+/** diff 1ファイルあたりの整形上限(バイト)。巨大な生成物/ロックでの OOM/ANR を防ぐため超過分は切り詰める。 */
+private const val MAX_FILE_DIFF_BYTES = 512 * 1024
+/** コミット全体 diff(全ファイル一括・後方互換経路)の整形上限。 */
+private const val MAX_COMMIT_DIFF_BYTES = 2 * 1024 * 1024
+
+/** [maxBytes] を超えた書き込みは捨て、[truncated] を立てる OutputStream。巨大 diff の上限超過を安全に打ち切る。 */
+private class CapOutputStream(private val out: ByteArrayOutputStream, private val maxBytes: Int) : OutputStream() {
+    var truncated = false
+        private set
+
+    override fun write(b: Int) {
+        if (out.size() < maxBytes) out.write(b) else truncated = true
+    }
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        val room = maxBytes - out.size()
+        when {
+            room <= 0 -> truncated = true
+            len <= room -> out.write(b, off, len)
+            else -> { out.write(b, off, room); truncated = true }
+        }
+    }
+}
 
 /**
  * JGit を薄くラップした git クライアント。全メソッドはブロッキング I/O のため、
@@ -275,7 +300,7 @@ class JgitClient {
      * 指定コミット(sha)の第1親との unified diff を返す共通処理。
      * [pathFilter] が非 null なら当該パスだけ、null なら全ファイルを対象にする。
      */
-    private fun formatDiff(dir: File, sha: String, pathFilter: String?): String {
+    private fun formatDiff(dir: File, sha: String, pathFilter: String?, maxBytes: Int = MAX_FILE_DIFF_BYTES): String {
         Git.open(dir).use { git ->
             val repo = git.repository
             RevWalk(repo).use { rw ->
@@ -288,19 +313,60 @@ class JgitClient {
                     } else {
                         EmptyTreeIterator()
                     }
-                    val out = ByteArrayOutputStream()
-                    DiffFormatter(out).use { df ->
+                    val buf = ByteArrayOutputStream()
+                    val cap = CapOutputStream(buf, maxBytes)
+                    DiffFormatter(cap).use { df ->
                         df.setRepository(repo)
                         if (pathFilter != null) df.pathFilter = PathFilter.create(pathFilter)
                         df.format(df.scan(oldIter, newTree))
                     }
-                    return out.toString(Charsets.UTF_8.name())
+                    val text = buf.toString(Charsets.UTF_8.name())
+                    return if (cap.truncated) text + "\n… (diff が大きいため以降を省略しました)\n" else text
                 }
             }
         }
     }
 
-    /** 指定コミットにおける filePath の unified diff（第1親との差分）。 */
+    /**
+     * コミット(sha)の変更ファイル一覧を安価にスキャンする（本文は整形しない＝OOM/ANR を避ける）。
+     * 第1親との差分。rename 検出はしない（add＋delete として現れる）。
+     */
+    fun commitFileSummaries(dir: File, sha: String): List<DiffFileSummary> {
+        Git.open(dir).use { git ->
+            val repo = git.repository
+            RevWalk(repo).use { rw ->
+                val commit = rw.parseCommit(ObjectId.fromString(sha))
+                repo.newObjectReader().use { reader ->
+                    val newTree = CanonicalTreeParser().apply { reset(reader, commit.tree) }
+                    val oldIter = if (commit.parentCount > 0) {
+                        CanonicalTreeParser().apply { reset(reader, rw.parseCommit(commit.getParent(0).id).tree) }
+                    } else {
+                        EmptyTreeIterator()
+                    }
+                    DiffFormatter(DisabledOutputStream.INSTANCE).use { df ->
+                        df.setRepository(repo)
+                        return df.scan(oldIter, newTree).map { it.toSummary() }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun DiffEntry.toSummary(): DiffFileSummary {
+        val old = oldPath
+        val new = newPath
+        val display = when {
+            changeType == DiffEntry.ChangeType.DELETE -> old
+            changeType == DiffEntry.ChangeType.ADD -> new
+            old == new -> new
+            else -> "$old → $new"
+        }
+        val open = if (new != DiffEntry.DEV_NULL) new else old
+        val filter = if (changeType == DiffEntry.ChangeType.DELETE) old else new
+        return DiffFileSummary(display, open, filter, changeType.name)
+    }
+
+    /** 指定コミットにおける filePath の unified diff（第1親との差分・遅延整形用）。 */
     fun diff(dir: File, filePath: String, sha: String): String = formatDiff(dir, sha, filePath)
 
     /**
@@ -329,8 +395,8 @@ class JgitClient {
         return null
     }
 
-    /** 指定コミット全体の unified diff（第1親との差分・全ファイル）。 */
-    fun commitDiff(dir: File, sha: String): String = formatDiff(dir, sha, pathFilter = null)
+    /** 指定コミット全体の unified diff（第1親との差分・全ファイル・後方互換経路）。 */
+    fun commitDiff(dir: File, sha: String): String = formatDiff(dir, sha, pathFilter = null, maxBytes = MAX_COMMIT_DIFF_BYTES)
 
     /**
      * 全 ref(ローカル/リモートブランチ・タグ)を起点に DAG を辿り、コミットグラフを返す。

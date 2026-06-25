@@ -35,12 +35,18 @@ import jp.lazmix.codeleaf.git.GraphCommit
  * 2ペインの右ペイン(`CommitDetailContent`)と compact の全画面(`CommitDetailScreen`)で共有する。
  */
 @Composable
-fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String, onOpenFile: (String) -> Unit = {}) {
-    var diff by remember(commit.sha) { mutableStateOf<String?>(null) }
+fun CommitDetailContent(
+    commit: GraphCommit,
+    loadFiles: suspend () -> List<jp.lazmix.codeleaf.git.DiffFileSummary>,
+    loadFileDiff: suspend (jp.lazmix.codeleaf.git.DiffFileSummary) -> String,
+    onOpenFile: (String) -> Unit = {},
+) {
+    // ファイル一覧だけ先に安価取得し、各ファイル本文は展開時に遅延整形する（大量ファイルでも固まらない）。
+    var files by remember(commit.sha) { mutableStateOf<List<jp.lazmix.codeleaf.git.DiffFileSummary>?>(null) }
     var error by remember(commit.sha) { mutableStateOf<String?>(null) }
     LaunchedEffect(commit.sha) {
         error = null
-        diff = runCatching { loadDiff() }.getOrElse { error = it.message; "" }
+        files = runCatching { loadFiles() }.getOrElse { error = it.message; emptyList() }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -96,12 +102,12 @@ fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String, onO
             }
         }
         HorizontalDivider()
-        val d = diff
+        val fs = files
         when {
             error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
-            d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-            d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
-            else -> DiffView(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
+            fs == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+            fs.isEmpty() -> Text("差分なし", Modifier.padding(16.dp))
+            else -> CommitDiffView(fs, loadFileDiff, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
 }
@@ -110,7 +116,8 @@ fun CommitDetailContent(commit: GraphCommit, loadDiff: suspend () -> String, onO
 @Composable
 fun CommitDetailScreen(
     commit: GraphCommit,
-    loadDiff: suspend () -> String,
+    loadFiles: suspend () -> List<jp.lazmix.codeleaf.git.DiffFileSummary>,
+    loadFileDiff: suspend (jp.lazmix.codeleaf.git.DiffFileSummary) -> String,
     onBack: () -> Unit,
     onOpenFile: (String) -> Unit = {},
 ) {
@@ -127,7 +134,7 @@ fun CommitDetailScreen(
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            CommitDetailContent(commit, loadDiff, onOpenFile)
+            CommitDetailContent(commit, loadFiles, loadFileDiff, onOpenFile)
         }
     }
 }

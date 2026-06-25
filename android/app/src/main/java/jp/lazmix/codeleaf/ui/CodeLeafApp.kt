@@ -891,7 +891,8 @@ fun CodeLeafApp() {
                                     key(sel.sha) {
                     CommitDetailContent(
                         sel,
-                        loadDiff = { vm.commitDiff(repo, sel.sha) },
+                        loadFiles = { vm.commitFileSummaries(repo, sel.sha) },
+                        loadFileDiff = { vm.fileDiff(repo, it.filterPath, sel.sha) },
                         onOpenFile = { openDiffFile(repo, it, sel.sha) },
                     )
                 }
@@ -1008,7 +1009,8 @@ fun CodeLeafApp() {
         is Screen.CommitDetail -> CodeLeafTheme(current.repo.themeMode) {
             CommitDetailScreen(
                 commit = current.commit,
-                loadDiff = { vm.commitDiff(current.repo, current.commit.sha) },
+                loadFiles = { vm.commitFileSummaries(current.repo, current.commit.sha) },
+                loadFileDiff = { vm.fileDiff(current.repo, it.filterPath, current.commit.sha) },
                 onBack = { handleBack() },
                 onOpenFile = { openDiffFile(current.repo, it, current.commit.sha) },
             )
