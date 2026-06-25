@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.ScrollState
@@ -823,6 +824,10 @@ private fun AddMemoSheet(
         Column(
             Modifier
                 .fillMaxWidth()
+                // GBoard 等の IME 表示時にビューポートを縮め、フォーカス中の入力欄が
+                // verticalScroll の自動 bringIntoView で keyboard 上に出るようにする
+                // (ModalBottomSheet 既定の windowInsets は systemBars のみで IME を避けない)。
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
