@@ -414,6 +414,11 @@ class MainViewModel(
         viewModelScope.launch { memos.deleteEntry(id) }
     }
 
+    /** メモ帳は残してエントリだけ全削除。 */
+    fun clearMemoEntries(memoId: Long) {
+        viewModelScope.launch { memos.clearEntries(memoId) }
+    }
+
     // --- お気に入り ---
     fun observeFavorites(repoId: Long) = favorites.observeFavorites(repoId)
 

@@ -42,4 +42,8 @@ interface MemoDao {
 
     @Query("DELETE FROM memo_entries WHERE id = :id")
     suspend fun deleteEntry(id: Long)
+
+    /** メモ帳は残しエントリだけ全削除する。 */
+    @Query("DELETE FROM memo_entries WHERE memoId = :memoId")
+    suspend fun clearEntries(memoId: Long)
 }

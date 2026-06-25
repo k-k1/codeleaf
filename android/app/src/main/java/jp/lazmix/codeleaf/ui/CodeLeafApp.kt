@@ -1039,6 +1039,7 @@ fun CodeLeafApp() {
                 onOpenEntry = { e -> openFileAt(current.repo, e.filePath, e.lineStart) },
                 onDeleteEntry = { vm.deleteMemoEntry(it) },
                 onRenameMemo = { vm.renameMemo(current.memoId, it) },
+                onClearEntries = { vm.clearMemoEntries(current.memoId) },
                 onDeleteMemo = { vm.deleteMemo(current.memoId); pop() },
                 onBack = { pop() },
             )

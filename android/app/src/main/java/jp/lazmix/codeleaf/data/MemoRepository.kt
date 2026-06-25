@@ -56,4 +56,10 @@ class MemoRepository(
     }
 
     suspend fun deleteEntry(id: Long) = dao.deleteEntry(id)
+
+    /** メモ帳を残したままエントリを全削除し、updatedAt を更新する。 */
+    suspend fun clearEntries(memoId: Long) {
+        dao.clearEntries(memoId)
+        dao.touchMemo(memoId, now())
+    }
 }

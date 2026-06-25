@@ -58,6 +58,7 @@ fun MemoDetailScreen(
     onOpenEntry: (MemoEntry) -> Unit,
     onDeleteEntry: (id: Long) -> Unit,
     onRenameMemo: (title: String) -> Unit,
+    onClearEntries: () -> Unit,
     onDeleteMemo: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -66,6 +67,7 @@ fun MemoDetailScreen(
 
     var topMenu by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
+    var showClearEntries by remember { mutableStateOf(false) }
     var showDeleteMemo by remember { mutableStateOf(false) }
 
     fun memoText(): String = MemoFormat.memo(repoName, memoTitle, entries)
@@ -109,6 +111,13 @@ fun MemoDetailScreen(
                                 text = { Text("名前を変更") },
                                 onClick = { topMenu = false; showRename = true },
                             )
+                            // メモ帳は残しエントリだけ全消し(エントリがあるときだけ提示)。
+                            if (entries.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("中身を全てクリア") },
+                                    onClick = { topMenu = false; showClearEntries = true },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("メモ帳を削除") },
                                 onClick = { topMenu = false; showDeleteMemo = true },
@@ -149,6 +158,17 @@ fun MemoDetailScreen(
             confirmLabel = "変更",
             onConfirm = { showRename = false; onRenameMemo(it) },
             onDismiss = { showRename = false },
+        )
+    }
+    if (showClearEntries) {
+        AlertDialog(
+            onDismissRequest = { showClearEntries = false },
+            title = { Text("中身を全てクリア") },
+            text = { Text("「${memoTitle}」のエントリ${entries.size}件をすべて削除します(メモ帳は残ります)。元に戻せません。") },
+            confirmButton = {
+                TextButton(onClick = { showClearEntries = false; onClearEntries() }) { Text("クリア") }
+            },
+            dismissButton = { TextButton(onClick = { showClearEntries = false }) { Text("キャンセル") } },
         )
     }
     if (showDeleteMemo) {
