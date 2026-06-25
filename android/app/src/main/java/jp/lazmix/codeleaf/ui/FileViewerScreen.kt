@@ -474,11 +474,16 @@ fun FileViewerScreen(
                                             onNavigateToFile = onNavigateToFile,
                                             onNavigateToDir = onNavigateToDir,
                                             onExternalLink = openExternal,
-                                            // 長押しでこのブロックのソース行を起点にメモ追加(選択モード中は無効)。
+                                            // 長押しした行を起点にメモ追加。表示行をソース行へ突き合わせ、
+                                            // 特定できなければブロック全体にフォールバック(選択モード中は無効)。
                                             onLongPress = if (selectionMode) {
                                                 null
                                             } else {
-                                                blockLineRange(body, block.markdown)?.let { range -> { addRange = range } }
+                                                { lineText ->
+                                                    val range = touchedSourceLine(body, block.markdown, lineText)
+                                                        ?: blockLineRange(body, block.markdown)
+                                                    if (range != null) addRange = range
+                                                }
                                             },
                                             selectable = selectionMode,
                                             modifier = Modifier.fillMaxWidth(),
@@ -699,6 +704,34 @@ internal fun blockLineRange(fullText: String, blockMarkdown: String): IntRange? 
     val start = fullText.substring(0, idx).count { it == '\n' }
     return start..(start + blk.count { it == '\n' })
 }
+
+/**
+ * 長押しした表示行(レンダリング後テキスト)を、ブロック内のソース行に突き合わせて単一行範囲を返す。
+ * 記号(`*`/`#`/`` ` ``/`-` など)や空白を無視した英数・かな比較で、表示行を含むソース行を探す。
+ * [renderedLine] が空、または対応行が見つからない(段落のソフト改行跨ぎ等)場合は null(=ブロック全体へ)。
+ */
+internal fun touchedSourceLine(fullText: String, blockMarkdown: String, renderedLine: String): IntRange? {
+    val needle = normalizeForLineMatch(renderedLine)
+    if (needle.isEmpty()) return null
+    val blk = blockMarkdown.trim('\n')
+    val idx = fullText.indexOf(blk)
+    if (idx < 0) return null
+    val blockStartLine = fullText.substring(0, idx).count { it == '\n' }
+    blk.split("\n").forEachIndexed { i, line ->
+        val hay = normalizeForLineMatch(line)
+        if (hay.isNotEmpty() && hay.contains(needle)) {
+            val ln = blockStartLine + i
+            return ln..ln
+        }
+    }
+    return null
+}
+
+private val MD_LINK_RE = Regex("""!?\[([^\]]*)]\([^)]*\)""")
+
+/** 行マッチ用の正規化: リンク/画像 [text](url) を text に畳み、記号・空白を落として英数・かなのみにする。 */
+private fun normalizeForLineMatch(s: String): String =
+    s.replace(MD_LINK_RE, "$1").filter { it.isLetterOrDigit() }
 
 /**
  * 上部メタバーの1行を組み立てる(純粋関数)。テキストはエンコード/BOM/改行/サイズ、

@@ -31,4 +31,37 @@ class BlockLineRangeTest {
         assertNull(blockLineRange(doc, "not present"))
         assertNull(blockLineRange(doc, "\n\n"))
     }
+
+    // --- touchedSourceLine: 長押しした表示行 → ブロック内の単一ソース行 ---
+
+    @Test
+    fun touched_picksSpecificLineWithinBlock() {
+        // ブロックは 2..3 行だが、長押し表示行 "still first" は 3 行目だけを指す。
+        assertEquals(3..3, touchedSourceLine(doc, "first para\nstill first", "still first"))
+        assertEquals(2..2, touchedSourceLine(doc, "first para\nstill first", "first para"))
+    }
+
+    @Test
+    fun touched_ignoresMarkupAndWhitespace() {
+        // 表示行は記号が剥がれている。ソース行 "- **重要** な点" に対し表示は "重要 な点"。
+        val d = "- 普通の項目\n- **重要** な点\n- 最後\n"
+        assertEquals(1..1, touchedSourceLine(d, d, "重要 な点"))
+        // 行頭の箇条書き記号やリンク記法も無視して一致。
+        val d2 = "see [docs](x.md) here\nother line\n"
+        assertEquals(0..0, touchedSourceLine(d2, d2, "see docs here"))
+    }
+
+    @Test
+    fun touched_wrappedFragmentMatchesItsSourceLine() {
+        // 折り返しで表示行が長いソース行の断片でも、その行に含まれれば一致。
+        val d = "alpha beta gamma delta epsilon\nnext\n"
+        assertEquals(0..0, touchedSourceLine(d, d, "gamma delta"))
+    }
+
+    @Test
+    fun touched_emptyOrNoMatchReturnsNull() {
+        assertNull(touchedSourceLine(doc, "first para\nstill first", ""))
+        assertNull(touchedSourceLine(doc, "first para\nstill first", "   "))
+        assertNull(touchedSourceLine(doc, "first para\nstill first", "nowhere"))
+    }
 }

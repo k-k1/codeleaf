@@ -451,8 +451,12 @@ fun MarkdownView(
     onNavigateToFile: (String) -> Unit,
     onNavigateToDir: (String) -> Unit,
     onExternalLink: (String) -> Unit,
-    /** このブロックを長押ししたとき呼ぶ(整形 Markdown でのメモ追加)。null なら無効。 */
-    onLongPress: (() -> Unit)? = null,
+    /**
+     * このブロックを長押ししたとき呼ぶ(整形 Markdown でのメモ追加)。null なら無効。
+     * 引数は長押しした表示行(レンダリング後)のテキスト。呼び出し側でソース行へ突き合わせる
+     * (空文字=位置不明。ブロック全体にフォールバックさせる)。
+     */
+    onLongPress: ((touchedLineText: String) -> Unit)? = null,
     /** テキスト選択を有効にするか(選択モード)。ON のとき長押しメモは無効・リンクは維持。 */
     selectable: Boolean = false,
     modifier: Modifier = Modifier,
@@ -486,6 +490,8 @@ fun MarkdownView(
     val rendered = remember(markdown, baseDir.path) {
         MarkdownRenderer.preprocess(markdown, baseDir)
     }
+    // 直近のタッチ Y(長押しした表示行の特定に使う)。再コンポーズ跨ぎで保持する。
+    val lastTouchY = remember { floatArrayOf(-1f) }
     AndroidView(
         modifier = modifier,
         factory = { ctx -> TextView(ctx) },
@@ -499,15 +505,33 @@ fun MarkdownView(
             tv.setTextIsSelectable(selectable)
             tv.movementMethod =
                 if (selectable) SelectableLinkMovementMethod.getInstance() else LinkMovementMethod.getInstance()
-            tv.setOnLongClickListener(
-                if (selectable) {
-                    null
-                } else {
-                    View.OnLongClickListener { latestLongPress?.invoke(); latestLongPress != null }
-                },
-            )
+            if (selectable) {
+                tv.setOnTouchListener(null)
+                tv.setOnLongClickListener(null)
+            } else {
+                // タッチ位置を記録(消費しない=リンク/長押し判定はそのまま)。
+                tv.setOnTouchListener { _, ev -> lastTouchY[0] = ev.y; false }
+                tv.setOnLongClickListener(
+                    View.OnLongClickListener {
+                        val cb = latestLongPress ?: return@OnLongClickListener false
+                        cb(touchedLineText(tv, lastTouchY[0]))
+                        true
+                    },
+                )
+            }
         },
     )
+}
+
+/** 長押しした Y 位置の表示行(レンダリング後)のテキストを返す。特定不能なら空文字。 */
+private fun touchedLineText(tv: TextView, y: Float): String {
+    if (y < 0f) return ""
+    val layout = tv.layout ?: return ""
+    val line = layout.getLineForVertical((y + tv.scrollY).toInt())
+    val start = layout.getLineStart(line)
+    val end = layout.getLineEnd(line)
+    if (start !in 0..tv.text.length || end !in start..tv.text.length) return ""
+    return tv.text.subSequence(start, end).toString().trim()
 }
 
 /**
