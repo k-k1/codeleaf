@@ -27,11 +27,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
 import jp.lazmix.codeleaf.BuildConfig
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.AppSettings
 import jp.lazmix.codeleaf.data.FileNameDisplay
 import jp.lazmix.codeleaf.data.FontScale
@@ -57,6 +61,30 @@ private fun fontLabel(f: FontScale) = when (f) {
     FontScale.SMALL -> "小"
     FontScale.MEDIUM -> "中"
     FontScale.LARGE -> "大"
+}
+
+/**
+ * UI 言語の選択肢。SYSTEM は端末言語に追従(空ロケール)、JA/EN は明示指定。
+ * 永続化は AppCompatDelegate(API33+ は OS、未満は appcompat バックポート)が担うため
+ * SettingsStore には保持しない。言語名は各言語自身で表示するのが通例なので JA/EN は固定表記。
+ */
+private enum class UiLanguage(val tag: String?) { SYSTEM(null), JAPANESE("ja"), ENGLISH("en") }
+
+/** 現在の適用ロケールから選択中の UiLanguage を判定する。 */
+private fun currentUiLanguage(): UiLanguage {
+    val locales = AppCompatDelegate.getApplicationLocales()
+    if (locales.isEmpty) return UiLanguage.SYSTEM
+    return when (locales[0]?.language) {
+        "ja" -> UiLanguage.JAPANESE
+        "en" -> UiLanguage.ENGLISH
+        else -> UiLanguage.SYSTEM
+    }
+}
+
+/** 言語を適用する。空タグ=システム既定。呼び出し後 appcompat が Activity を再生成する。 */
+private fun applyUiLanguage(lang: UiLanguage) {
+    val list = lang.tag?.let { LocaleListCompat.forLanguageTags(it) } ?: LocaleListCompat.getEmptyLocaleList()
+    AppCompatDelegate.setApplicationLocales(list)
 }
 
 /** 設定の1セクション。見出し(primary色)＋配下項目を一定間隔で並べる。 */
@@ -118,7 +146,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("設定") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     BackButton(onBack)
                 },
@@ -129,7 +157,7 @@ fun SettingsScreen(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SettingsSection("表示・テーマ") {
+            SettingsSection(stringResource(R.string.settings_section_display)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("デフォルトテーマ", style = MaterialTheme.typography.titleMedium)
                     Text(
@@ -160,6 +188,33 @@ fun SettingsScreen(
                                 onClick = { onSetFontScale(f) },
                                 shape = SegmentedButtonDefaults.itemShape(i, FontScale.entries.size),
                             ) { Text(fontLabel(f)) }
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.settings_language_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.settings_language_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    // 選択中ロケールは AppCompatDelegate から都度読む(切替時に Activity 再生成→再 compose で反映)。
+                    val current = currentUiLanguage()
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        UiLanguage.entries.forEachIndexed { i, lang ->
+                            SegmentedButton(
+                                selected = current == lang,
+                                onClick = { applyUiLanguage(lang) },
+                                shape = SegmentedButtonDefaults.itemShape(i, UiLanguage.entries.size),
+                            ) {
+                                Text(
+                                    when (lang) {
+                                        UiLanguage.SYSTEM -> stringResource(R.string.language_system)
+                                        UiLanguage.JAPANESE -> "日本語"
+                                        UiLanguage.ENGLISH -> "English"
+                                    },
+                                )
+                            }
                         }
                     }
                 }

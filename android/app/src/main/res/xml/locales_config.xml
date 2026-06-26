@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- per-app 言語のサポート言語一覧(Android13+ のシステム「アプリ別の言語」画面が参照)。
+     既定リソースは values/(英語)。端末言語が ja のとき values-ja/、その他は英語にフォールバック。 -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="ja" />
+</locale-config>

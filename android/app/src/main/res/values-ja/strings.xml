@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 日本語ロケール。既定(英語)= values/strings.xml と同じ name を上書きする。 -->
+<resources>
+    <!-- 設定画面 -->
+    <string name="settings_title">設定</string>
+    <string name="settings_section_display">表示・テーマ</string>
+    <string name="settings_language_title">言語</string>
+    <string name="settings_language_desc">アプリ UI の言語を設定します。「システム」は端末の言語設定に追従し、未対応の言語は英語にフォールバックします。</string>
+    <string name="language_system">システム</string>
+</resources>

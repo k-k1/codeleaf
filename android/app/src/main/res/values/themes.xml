@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Compose 側で MaterialTheme を使うため、土台は NoActionBar の DayNight のみ -->
-    <style name="Theme.CodeLeaf" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Compose 側で MaterialTheme を使うため土台は最小限。per-app 言語(AppCompatDelegate)を
+         API31/32 でもバックポートで使うため AppCompat 系を親にする(従来の Light.NoActionBar を踏襲)。 -->
+    <style name="Theme.CodeLeaf" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

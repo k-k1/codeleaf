@@ -154,6 +154,7 @@ configurations.all {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat) // per-app 言語(AppCompatDelegate.setApplicationLocales)を API31/32 でもバックポートで使うため
     implementation(libs.androidx.browser)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

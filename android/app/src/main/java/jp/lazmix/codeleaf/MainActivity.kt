@@ -1,9 +1,9 @@
 package jp.lazmix.codeleaf
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
@@ -12,7 +12,9 @@ import androidx.compose.ui.Modifier
 import jp.lazmix.codeleaf.ui.CodeLeafApp
 import jp.lazmix.codeleaf.ui.CodeLeafTheme
 
-class MainActivity : ComponentActivity() {
+// per-app 言語(AppCompatDelegate.setApplicationLocales)を API31/32 でもバックポートで効かせるため
+// ComponentActivity ではなく AppCompatActivity を基底にする(描画は従来どおり Compose)。
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // システムバーは透過(edge-to-edge)。各画面の Scaffold/IconRail/SlimBottomBar が

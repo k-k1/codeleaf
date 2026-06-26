@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 既定(フォールバック)ロケール=英語。端末が ja のときは values-ja/ が使われる。
+     スライス1では言語切替の機構を通すための最小セットのみ。以降の画面単位で順次追加する。 -->
+<resources>
+    <!-- 設定画面 -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_display">Display &amp; theme</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_desc">Sets the language of the app UI. \"System\" follows your device language; unsupported languages fall back to English.</string>
+    <string name="language_system">System</string>
+</resources>
