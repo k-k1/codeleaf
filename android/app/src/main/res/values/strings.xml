@@ -292,4 +292,18 @@
     <string name="browser_unfavorite">Remove from favorites</string>
     <string name="browser_copy_filename">Copy file name</string>
     <string name="browser_copy_filepath">Copy file path</string>
+
+    <!-- リポジトリ編集画面 -->
+    <string name="repoedit_add_group">Add group</string>
+    <string name="repoedit_delete_title">Delete repository</string>
+    <string name="repoedit_delete_confirm">Delete \"%1$s\". Its clone data and saved token are also removed. This cannot be undone.</string>
+    <string name="repoedit_reclone_confirm">Delete the local clone of \"%1$s\" and fetch it again. Settings and token are kept.</string>
+    <string name="repoedit_new_group">New group</string>
+    <string name="repoedit_rename_group">Rename group</string>
+    <string name="repoedit_ungrouped">Ungrouped (shown only under \"All\")</string>
+    <string name="repoedit_delete_group_cd">Delete group</string>
+    <string name="repoedit_dropzone">Drag here to add</string>
+    <string name="repoedit_reorder_cd">Reorder / move between groups</string>
+    <string name="repoedit_group_name_label">Group name</string>
+    <string name="repoedit_color_cd">Color: %1$s</string>
 </resources>

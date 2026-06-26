@@ -292,4 +292,18 @@
     <string name="browser_unfavorite">お気に入りから解除</string>
     <string name="browser_copy_filename">ファイル名をコピー</string>
     <string name="browser_copy_filepath">ファイルのパスをコピー</string>
+
+    <!-- リポジトリ編集画面 -->
+    <string name="repoedit_add_group">グループを追加</string>
+    <string name="repoedit_delete_title">リポジトリを削除</string>
+    <string name="repoedit_delete_confirm">「%1$s」を削除します。clone データと保存トークンも消えます。元に戻せません。</string>
+    <string name="repoedit_reclone_confirm">「%1$s」のローカル clone を削除して取得し直します。設定とトークンは保持されます。</string>
+    <string name="repoedit_new_group">新規グループ</string>
+    <string name="repoedit_rename_group">グループ名を変更</string>
+    <string name="repoedit_ungrouped">未分類（「すべて」のみに表示）</string>
+    <string name="repoedit_delete_group_cd">グループを削除</string>
+    <string name="repoedit_dropzone">ここにドラッグして追加</string>
+    <string name="repoedit_reorder_cd">並べ替え・グループ移動</string>
+    <string name="repoedit_group_name_label">グループ名</string>
+    <string name="repoedit_color_cd">色:%1$s</string>
 </resources>

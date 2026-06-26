@@ -56,12 +56,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.db.CloneState
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.RepoColor
@@ -146,13 +148,13 @@ fun RepoEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("リポジトリを編集") },
+                title = { Text(stringResource(R.string.cd_edit_repo)) },
                 navigationIcon = {
                     BackButton(onBack)
                 },
                 actions = {
                     IconButton(onClick = onAdd) {
-                        Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repo))
                     }
                 },
             )
@@ -236,7 +238,7 @@ fun RepoEditScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("  グループを追加")
+                    Text("  " + stringResource(R.string.repoedit_add_group))
                 }
             }
         }
@@ -245,13 +247,13 @@ fun RepoEditScreen(
     confirmDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("リポジトリを削除") },
-            text = { Text("「${target.name}」を削除します。clone データと保存トークンも消えます。元に戻せません。") },
+            title = { Text(stringResource(R.string.repoedit_delete_title)) },
+            text = { Text(stringResource(R.string.repoedit_delete_confirm, target.name)) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = null; onDelete(target) }) { Text("削除") }
+                TextButton(onClick = { confirmDelete = null; onDelete(target) }) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = null }) { Text("キャンセル") }
+                TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -259,20 +261,20 @@ fun RepoEditScreen(
     confirmReclone?.let { target ->
         AlertDialog(
             onDismissRequest = { confirmReclone = null },
-            title = { Text("再Clone") },
-            text = { Text("「${target.name}」のローカル clone を削除して取得し直します。設定とトークンは保持されます。") },
+            title = { Text(stringResource(R.string.reclone_action)) },
+            text = { Text(stringResource(R.string.repoedit_reclone_confirm, target.name)) },
             confirmButton = {
-                TextButton(onClick = { confirmReclone = null; onReclone(target) }) { Text("再Clone") }
+                TextButton(onClick = { confirmReclone = null; onReclone(target) }) { Text(stringResource(R.string.reclone_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmReclone = null }) { Text("キャンセル") }
+                TextButton(onClick = { confirmReclone = null }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
 
     if (addDialog) {
         GroupNameDialog(
-            title = "新規グループ",
+            title = stringResource(R.string.repoedit_new_group),
             initial = "",
             onConfirm = { onAddGroup(it); addDialog = false },
             onDismiss = { addDialog = false },
@@ -280,7 +282,7 @@ fun RepoEditScreen(
     }
     renameTarget?.let { old ->
         GroupNameDialog(
-            title = "グループ名を変更",
+            title = stringResource(R.string.repoedit_rename_group),
             initial = old,
             onConfirm = { onRenameGroup(old, it); renameTarget = null },
             onDismiss = { renameTarget = null },
@@ -303,7 +305,7 @@ private fun GroupHeader(group: String?, onRename: () -> Unit, onDelete: () -> Un
     ) {
         if (group == null) {
             Text(
-                "未分類（「すべて」のみに表示）",
+                stringResource(R.string.repoedit_ungrouped),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -320,7 +322,7 @@ private fun GroupHeader(group: String?, onRename: () -> Unit, onDelete: () -> Un
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "グループを削除", modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.repoedit_delete_group_cd), modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -342,7 +344,7 @@ private fun DropZoneRow() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            "ここにドラッグして追加",
+            stringResource(R.string.repoedit_dropzone),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -388,7 +390,7 @@ private fun RepoEditCard(
                     .then(dragModifier),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Default.Menu, contentDescription = "並べ替え・グループ移動")
+                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.repoedit_reorder_cd))
             }
             Column(Modifier.weight(1f).padding(end = 4.dp)) {
                 // 名前の右に host(github/bitbucket)・ブランチ。
@@ -422,16 +424,16 @@ private fun RepoEditCard(
             if (!cloning) {
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text("再Clone") },
+                            text = { Text(stringResource(R.string.reclone_action)) },
                             leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
                             onClick = { menuOpen = false; onReclone() },
                         )
                         DropdownMenuItem(
-                            text = { Text("削除") },
+                            text = { Text(stringResource(R.string.action_delete)) },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                             onClick = { menuOpen = false; onDelete() },
                         )
@@ -460,7 +462,7 @@ private fun GroupNameDialog(title: String, initial: String, onConfirm: (String) 
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
-                label = { Text("グループ名") },
+                label = { Text(stringResource(R.string.repoedit_group_name_label)) },
             )
         },
         confirmButton = {
@@ -469,7 +471,7 @@ private fun GroupNameDialog(title: String, initial: String, onConfirm: (String) 
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("キャンセル") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
@@ -477,6 +479,7 @@ private fun GroupNameDialog(title: String, initial: String, onConfirm: (String) 
 @Composable
 private fun ColorDot(color: RepoColor, selected: Boolean, onClick: () -> Unit) {
     val fill = color.accent() ?: MaterialTheme.colorScheme.surfaceVariant
+    val colorCd = stringResource(R.string.repoedit_color_cd, color.name)
     Box(
         Modifier
             .size(22.dp)
@@ -488,6 +491,6 @@ private fun ColorDot(color: RepoColor, selected: Boolean, onClick: () -> Unit) {
                 shape = CircleShape,
             )
             .clickable(onClick = onClick)
-            .semantics { contentDescription = "色:${color.name}" },
+            .semantics { contentDescription = colorCd },
     )
 }
