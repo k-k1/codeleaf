@@ -1,10 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 日本語ロケール。既定(英語)= values/strings.xml と同じ name を上書きする。 -->
+<!-- 日本語ロケール。既定(英語)= values/strings.xml と同じ name を上書きする。
+     計装テストは ja で走るため、テスト参照文字列は現行リテラルと一字一句一致させること。 -->
 <resources>
-    <!-- 設定画面 -->
+    <!-- 共通の操作 -->
+    <string name="action_delete">削除</string>
+    <string name="action_cancel">キャンセル</string>
+
+    <!-- 設定: 全般 -->
     <string name="settings_title">設定</string>
     <string name="settings_section_display">表示・テーマ</string>
+    <string name="settings_section_filelist">ファイル一覧</string>
+    <string name="settings_section_repo">リポジトリ</string>
+    <string name="settings_section_viewer">ビューア</string>
+    <string name="settings_section_links">リンク</string>
+    <string name="settings_section_data">データ</string>
+    <string name="settings_section_about">このアプリ</string>
+
+    <!-- 設定: 言語 -->
     <string name="settings_language_title">言語</string>
     <string name="settings_language_desc">アプリ UI の言語を設定します。「システム」は端末の言語設定に追従し、未対応の言語は英語にフォールバックします。</string>
     <string name="language_system">システム</string>
+
+    <!-- 設定: テーマ -->
+    <string name="settings_theme_title">デフォルトテーマ</string>
+    <string name="settings_theme_desc">一覧・設定画面の配色と、リポジトリ追加時の初期テーマに使われます。</string>
+    <string name="theme_system">システム</string>
+    <string name="theme_light">ライト</string>
+    <string name="theme_dark">ダーク</string>
+
+    <!-- 設定: フォントサイズ -->
+    <string name="settings_font_title">フォントサイズ</string>
+    <string name="settings_font_desc">Markdown 整形表示とコード表示の本文サイズに反映されます。</string>
+    <string name="font_small">小</string>
+    <string name="font_medium">中</string>
+    <string name="font_large">大</string>
+
+    <!-- 設定: ファイルアイコン -->
+    <string name="settings_iconset_title">ファイルアイコン</string>
+    <string name="settings_iconset_desc">ファイル一覧の拡張子アイコンの見た目。Material/VS Code はフルカラー、Seti は単色グリフ。</string>
+
+    <!-- 設定: ファイル名表示 -->
+    <string name="settings_filename_title">ファイル名の表示</string>
+    <string name="settings_filename_desc">長い名前の扱い。折り返し=全文を複数行。中央省略=先頭と末尾を残す。末尾省略=末尾を…。</string>
+    <string name="filename_wrap">折り返し</string>
+    <string name="filename_middle">中央省略</string>
+    <string name="filename_end">末尾省略</string>
+
+    <!-- 設定: ファイル一覧スイッチ -->
+    <string name="settings_collapse_title">単一フォルダを畳む</string>
+    <string name="settings_collapse_desc">中身が1つの子フォルダだけの階層を src/main/java のようにまとめ、辿る手間を省く。</string>
+    <string name="settings_commitinfo_title">コミット情報を表示</string>
+    <string name="settings_commitinfo_desc">各ファイル/フォルダの最終更新（著者・いつ）を一覧の名前の下に出します。履歴をたどるため、大きなリポでは表示に少し時間がかかることがあります。</string>
+
+    <!-- 設定: リポジトリ -->
+    <string name="settings_restore_title">前回の位置を復元</string>
+    <string name="settings_restore_desc">リポを開いたとき、前回いたフォルダと開いていたファイルを復元します。OFF なら常にトップ・ファイルを開いていない状態で開きます。</string>
+
+    <!-- 設定: ビューア -->
+    <string name="settings_wrap_title">コードの折り返し（既定）</string>
+    <string name="settings_wrap_desc">コード/Raw 表示を開いたときの初期状態。OFF は横スクロール。</string>
+    <string name="settings_diffwrap_title">diff の折り返し（既定）</string>
+    <string name="settings_diffwrap_desc">差分・コミット・履歴の diff 表示を開いたときの初期状態。OFF は横スクロール。</string>
+    <string name="settings_linenum_title">行番号を表示</string>
+    <string name="settings_linenum_desc">コード/テキスト/Raw 表示で各行に行番号を付ける。</string>
+    <string name="settings_selecttext_title">テキスト選択を既定で有効</string>
+    <string name="settings_selecttext_desc">本文を選択してコピーできる状態でビューアを開く。各ビューアの ⋮ でも個別に切替できます。ON の間は長押しメモ追加が無効になります。</string>
+    <string name="settings_sticky_title">見出しを上部に固定</string>
+    <string name="settings_sticky_desc">Markdown 整形表示で、現在地の見出し(h1&gt;h2&gt;h3…)を上部にスティッキー表示。</string>
+
+    <!-- 設定: Markdown テーブル -->
+    <string name="settings_table_title">Markdown テーブルの表示</string>
+    <string name="settings_table_desc">インライン=本文に折り返し埋込（既定）。横スクロール=ヘッダ固定＋横スクロールの表。</string>
+    <string name="table_inline">インライン</string>
+    <string name="table_scrollable">横スクロール</string>
+
+    <!-- 設定: リンク -->
+    <string name="settings_link_title">外部リンクの開き方</string>
+    <string name="settings_link_desc">http/https リンクをアプリ内ブラウザ(Custom Tabs)か外部ブラウザのどちらで開くか。相対リンクは常にアプリ内遷移。</string>
+    <string name="link_inapp">アプリ内</string>
+    <string name="link_browser">外部ブラウザ</string>
+
+    <!-- 設定: データ -->
+    <string name="settings_cache_title">キャッシュ</string>
+    <string name="settings_cache_desc">登録中のリポジトリ: %1$d 件（clone データ・保存トークンを含む）</string>
+    <string name="settings_clearcache">キャッシュを全削除</string>
+    <string name="settings_clearcache_confirm">登録中の %1$d 件のリポジトリ（clone データと保存トークン）をすべて削除します。元に戻せません。</string>
+
+    <!-- 設定: このアプリ -->
+    <string name="settings_version_title">バージョン</string>
+    <string name="settings_build_line">ビルド: %1$s · %2$s · %3$s</string>
+    <string name="settings_licenses">オープンソースライセンス</string>
 </resources>

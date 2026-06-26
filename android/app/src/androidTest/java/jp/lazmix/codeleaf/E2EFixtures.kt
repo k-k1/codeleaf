@@ -1,5 +1,8 @@
 package jp.lazmix.codeleaf
 
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import androidx.test.platform.app.InstrumentationRegistry
 import jp.lazmix.codeleaf.data.NewRepo
 import jp.lazmix.codeleaf.data.db.GitHost
 import jp.lazmix.codeleaf.data.db.ThemeMode
@@ -12,6 +15,19 @@ import java.io.File
  * 計装 E2E 共通のリポジトリ・フィクスチャ。各テストの @Before で重複していた
  * 「全リポ削除 → ローカル git リポ作成 → file:// で clone」を集約する(ネットワーク非依存)。
  */
+
+/**
+ * UI 言語(per-app 言語)をシステム既定へ戻して決定論化する。日本語前提の文字列/testTag を assert する
+ * E2E は、前回実行や手動操作で英語等に上書きされた状態が永続化されていると全滅するため、@Before で呼ぶ。
+ * 既に空(=システム)なら no-op で Activity 再生成も起きない。setApplicationLocales は main で呼ぶ必要がある。
+ */
+fun resetAppLocaleToSystem() {
+    InstrumentationRegistry.getInstrumentation().runOnMainSync {
+        if (!AppCompatDelegate.getApplicationLocales().isEmpty) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+        }
+    }
+}
 
 /** 既存リポを一掃して決定論化する(前回失敗実行の残骸対策)。 */
 fun CodeLeafApplication.cleanRepos() = runBlocking {

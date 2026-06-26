@@ -44,12 +44,16 @@ import jp.lazmix.codeleaf.data.LinkOpenMode
 import jp.lazmix.codeleaf.data.TableMode
 import jp.lazmix.codeleaf.data.db.ThemeMode
 
-private fun themeLabel(m: ThemeMode) = when (m) {
-    ThemeMode.SYSTEM -> "システム"
-    ThemeMode.LIGHT -> "ライト"
-    ThemeMode.DARK -> "ダーク"
-}
+@Composable
+private fun themeLabel(m: ThemeMode) = stringResource(
+    when (m) {
+        ThemeMode.SYSTEM -> R.string.theme_system
+        ThemeMode.LIGHT -> R.string.theme_light
+        ThemeMode.DARK -> R.string.theme_dark
+    },
+)
 
+// アイコンセットは固有名(ブランド)なので翻訳しない。
 private fun iconSetLabel(s: IconSet) = when (s) {
     IconSet.DEVICON -> "Devicon"
     IconSet.MATERIAL -> "Material"
@@ -57,11 +61,14 @@ private fun iconSetLabel(s: IconSet) = when (s) {
     IconSet.SETI -> "Seti"
 }
 
-private fun fontLabel(f: FontScale) = when (f) {
-    FontScale.SMALL -> "小"
-    FontScale.MEDIUM -> "中"
-    FontScale.LARGE -> "大"
-}
+@Composable
+private fun fontLabel(f: FontScale) = stringResource(
+    when (f) {
+        FontScale.SMALL -> R.string.font_small
+        FontScale.MEDIUM -> R.string.font_medium
+        FontScale.LARGE -> R.string.font_large
+    },
+)
 
 /**
  * UI 言語の選択肢。SYSTEM は端末言語に追従(空ロケール)、JA/EN は明示指定。
@@ -159,9 +166,9 @@ fun SettingsScreen(
         ) {
             SettingsSection(stringResource(R.string.settings_section_display)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("デフォルトテーマ", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_theme_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "一覧・設定画面の配色と、リポジトリ追加時の初期テーマに使われます。",
+                        stringResource(R.string.settings_theme_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -176,9 +183,9 @@ fun SettingsScreen(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("フォントサイズ", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_font_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Markdown 整形表示とコード表示の本文サイズに反映されます。",
+                        stringResource(R.string.settings_font_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -222,11 +229,11 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            SettingsSection("ファイル一覧") {
+            SettingsSection(stringResource(R.string.settings_section_filelist)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("ファイルアイコン", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_iconset_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "ファイル一覧の拡張子アイコンの見た目。Material/VS Code はフルカラー、Seti は単色グリフ。",
+                        stringResource(R.string.settings_iconset_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -241,16 +248,16 @@ fun SettingsScreen(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("ファイル名の表示", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_filename_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "長い名前の扱い。折り返し=全文を複数行。中央省略=先頭と末尾を残す。末尾省略=末尾を…。",
+                        stringResource(R.string.settings_filename_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                         val items = listOf(
-                            FileNameDisplay.WRAP to "折り返し",
-                            FileNameDisplay.MIDDLE_ELLIPSIS to "中央省略",
-                            FileNameDisplay.END_ELLIPSIS to "末尾省略",
+                            FileNameDisplay.WRAP to stringResource(R.string.filename_wrap),
+                            FileNameDisplay.MIDDLE_ELLIPSIS to stringResource(R.string.filename_middle),
+                            FileNameDisplay.END_ELLIPSIS to stringResource(R.string.filename_end),
                         )
                         items.forEachIndexed { i, (mode, label) ->
                             SegmentedButton(
@@ -263,16 +270,15 @@ fun SettingsScreen(
                 }
 
                 SwitchSetting(
-                    title = "単一フォルダを畳む",
-                    description = "中身が1つの子フォルダだけの階層を src/main/java のようにまとめ、辿る手間を省く。",
+                    title = stringResource(R.string.settings_collapse_title),
+                    description = stringResource(R.string.settings_collapse_desc),
                     checked = settings.collapseFolders,
                     onCheckedChange = onSetCollapseFolders,
                 )
 
                 SwitchSetting(
-                    title = "コミット情報を表示",
-                    description = "各ファイル/フォルダの最終更新（著者・いつ）を一覧の名前の下に出します。" +
-                        "履歴をたどるため、大きなリポでは表示に少し時間がかかることがあります。",
+                    title = stringResource(R.string.settings_commitinfo_title),
+                    description = stringResource(R.string.settings_commitinfo_desc),
                     checked = settings.showCommitInfo,
                     onCheckedChange = onSetShowCommitInfo,
                 )
@@ -280,11 +286,10 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            SettingsSection("リポジトリ") {
+            SettingsSection(stringResource(R.string.settings_section_repo)) {
                 SwitchSetting(
-                    title = "前回の位置を復元",
-                    description = "リポを開いたとき、前回いたフォルダと開いていたファイルを復元します。" +
-                        "OFF なら常にトップ・ファイルを開いていない状態で開きます。",
+                    title = stringResource(R.string.settings_restore_title),
+                    description = stringResource(R.string.settings_restore_desc),
                     checked = settings.restoreLastPosition,
                     onCheckedChange = onSetRestoreLastPosition,
                 )
@@ -292,47 +297,49 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            SettingsSection("ビューア") {
+            SettingsSection(stringResource(R.string.settings_section_viewer)) {
                 SwitchSetting(
-                    title = "コードの折り返し（既定）",
-                    description = "コード/Raw 表示を開いたときの初期状態。OFF は横スクロール。",
+                    title = stringResource(R.string.settings_wrap_title),
+                    description = stringResource(R.string.settings_wrap_desc),
                     checked = settings.wrapByDefault,
                     onCheckedChange = onSetWrapByDefault,
                 )
                 SwitchSetting(
-                    title = "diff の折り返し（既定）",
-                    description = "差分・コミット・履歴の diff 表示を開いたときの初期状態。OFF は横スクロール。",
+                    title = stringResource(R.string.settings_diffwrap_title),
+                    description = stringResource(R.string.settings_diffwrap_desc),
                     checked = settings.diffWrap,
                     onCheckedChange = onSetDiffWrap,
                 )
                 SwitchSetting(
-                    title = "行番号を表示",
-                    description = "コード/テキスト/Raw 表示で各行に行番号を付ける。",
+                    title = stringResource(R.string.settings_linenum_title),
+                    description = stringResource(R.string.settings_linenum_desc),
                     checked = settings.showLineNumbers,
                     onCheckedChange = onSetShowLineNumbers,
                 )
                 SwitchSetting(
-                    title = "テキスト選択を既定で有効",
-                    description = "本文を選択してコピーできる状態でビューアを開く。各ビューアの ⋮ でも個別に切替できます。" +
-                        "ON の間は長押しメモ追加が無効になります。",
+                    title = stringResource(R.string.settings_selecttext_title),
+                    description = stringResource(R.string.settings_selecttext_desc),
                     checked = settings.selectByDefault,
                     onCheckedChange = onSetSelectByDefault,
                 )
                 SwitchSetting(
-                    title = "見出しを上部に固定",
-                    description = "Markdown 整形表示で、現在地の見出し(h1>h2>h3…)を上部にスティッキー表示。",
+                    title = stringResource(R.string.settings_sticky_title),
+                    description = stringResource(R.string.settings_sticky_desc),
                     checked = settings.stickyHeadings,
                     onCheckedChange = onSetStickyHeadings,
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Markdown テーブルの表示", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_table_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "インライン=本文に折り返し埋込（既定）。横スクロール=ヘッダ固定＋横スクロールの表。",
+                        stringResource(R.string.settings_table_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        val items = listOf(TableMode.INLINE to "インライン", TableMode.SCROLLABLE to "横スクロール")
+                        val items = listOf(
+                            TableMode.INLINE to stringResource(R.string.table_inline),
+                            TableMode.SCROLLABLE to stringResource(R.string.table_scrollable),
+                        )
                         items.forEachIndexed { i, (mode, label) ->
                             SegmentedButton(
                                 selected = settings.tableMode == mode,
@@ -346,15 +353,18 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            SettingsSection("リンク") {
+            SettingsSection(stringResource(R.string.settings_section_links)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("外部リンクの開き方", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_link_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "http/https リンクをアプリ内ブラウザ(Custom Tabs)か外部ブラウザのどちらで開くか。相対リンクは常にアプリ内遷移。",
+                        stringResource(R.string.settings_link_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        val items = listOf(LinkOpenMode.IN_APP to "アプリ内", LinkOpenMode.BROWSER to "外部ブラウザ")
+                        val items = listOf(
+                            LinkOpenMode.IN_APP to stringResource(R.string.link_inapp),
+                            LinkOpenMode.BROWSER to stringResource(R.string.link_browser),
+                        )
                         items.forEachIndexed { i, (mode, label) ->
                             SegmentedButton(
                                 selected = settings.linkOpenMode == mode,
@@ -368,32 +378,37 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            SettingsSection("データ") {
+            SettingsSection(stringResource(R.string.settings_section_data)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("キャッシュ", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_cache_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "登録中のリポジトリ: ${repoCount} 件（clone データ・保存トークンを含む）",
+                        stringResource(R.string.settings_cache_desc, repoCount),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedButton(
                         onClick = { confirmClear = true },
                         enabled = repoCount > 0,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("キャッシュを全削除") }
+                    ) { Text(stringResource(R.string.settings_clearcache)) }
                 }
             }
 
             HorizontalDivider()
 
-            SettingsSection("このアプリ") {
+            SettingsSection(stringResource(R.string.settings_section_about)) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("バージョン", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_version_title), style = MaterialTheme.typography.titleMedium)
                     Text(
                         "CodeLeaf ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
-                        "ビルド: ${BuildConfig.BUILD_TIME} · ${BuildConfig.GIT_SHA} · ${BuildConfig.BUILD_TYPE}",
+                        stringResource(
+                            R.string.settings_build_line,
+                            BuildConfig.BUILD_TIME,
+                            BuildConfig.GIT_SHA,
+                            BuildConfig.BUILD_TYPE,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -404,7 +419,7 @@ fun SettingsScreen(
                     )
                 }
                 OutlinedButton(onClick = onLicenses, modifier = Modifier.fillMaxWidth()) {
-                    Text("オープンソースライセンス")
+                    Text(stringResource(R.string.settings_licenses))
                 }
             }
         }
@@ -413,16 +428,16 @@ fun SettingsScreen(
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
-            title = { Text("キャッシュを全削除") },
-            text = { Text("登録中の ${repoCount} 件のリポジトリ（clone データと保存トークン）をすべて削除します。元に戻せません。") },
+            title = { Text(stringResource(R.string.settings_clearcache)) },
+            text = { Text(stringResource(R.string.settings_clearcache_confirm, repoCount)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmClear = false
                     onClearCache()
-                }) { Text("削除") }
+                }) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClear = false }) { Text("キャンセル") }
+                TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }

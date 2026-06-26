@@ -39,6 +39,7 @@ class SettingsE2EInstrumentedTest {
     @Before
     fun setUp() {
         // 既定値に戻し、既存リポを一掃してから検証用リポを 1 件用意する。
+        resetAppLocaleToSystem() // ja 前提の文字列 assert が残留ロケール上書きで壊れないように
         app.container.settingsStore.setDefaultTheme(ThemeMode.SYSTEM)
         app.container.settingsStore.setFontScale(FontScale.MEDIUM)
         app.cleanRepos()

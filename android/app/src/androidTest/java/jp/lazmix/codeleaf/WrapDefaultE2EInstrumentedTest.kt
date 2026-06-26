@@ -33,6 +33,7 @@ class WrapDefaultE2EInstrumentedTest {
 
     @Before
     fun setUp() {
+        resetAppLocaleToSystem() // ja 前提の文字列 assert が残留ロケール上書きで壊れないように
         app.container.settingsStore.setWrapByDefault(true) // 既定値から開始
         app.container.settingsStore.setFontScale(FontScale.MEDIUM)
         app.cleanRepos()

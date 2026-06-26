@@ -1,11 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 既定(フォールバック)ロケール=英語。端末が ja のときは values-ja/ が使われる。
-     スライス1では言語切替の機構を通すための最小セットのみ。以降の画面単位で順次追加する。 -->
+     name は画面/用途ごとに接頭辞を付ける。共通の操作ラベルは action_ 接頭辞。 -->
 <resources>
-    <!-- 設定画面 -->
+    <!-- 共通の操作 -->
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- 設定: 全般 -->
     <string name="settings_title">Settings</string>
     <string name="settings_section_display">Display &amp; theme</string>
+    <string name="settings_section_filelist">File list</string>
+    <string name="settings_section_repo">Repository</string>
+    <string name="settings_section_viewer">Viewer</string>
+    <string name="settings_section_links">Links</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_section_about">About</string>
+
+    <!-- 設定: 言語 -->
     <string name="settings_language_title">Language</string>
     <string name="settings_language_desc">Sets the language of the app UI. \"System\" follows your device language; unsupported languages fall back to English.</string>
     <string name="language_system">System</string>
+
+    <!-- 設定: テーマ -->
+    <string name="settings_theme_title">Default theme</string>
+    <string name="settings_theme_desc">Used for the colors of the list and settings screens, and as the initial theme when adding a repository.</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- 設定: フォントサイズ -->
+    <string name="settings_font_title">Font size</string>
+    <string name="settings_font_desc">Applies to the body text size of rendered Markdown and code views.</string>
+    <string name="font_small">Small</string>
+    <string name="font_medium">Medium</string>
+    <string name="font_large">Large</string>
+
+    <!-- 設定: ファイルアイコン -->
+    <string name="settings_iconset_title">File icons</string>
+    <string name="settings_iconset_desc">Appearance of file-extension icons in the list. Material/VS Code are full color; Seti is monochrome glyphs.</string>
+
+    <!-- 設定: ファイル名表示 -->
+    <string name="settings_filename_title">File name display</string>
+    <string name="settings_filename_desc">How long names are handled. Wrap = full text over multiple lines. Middle ellipsis = keep the start and end. End ellipsis = trim the end with ….</string>
+    <string name="filename_wrap">Wrap</string>
+    <string name="filename_middle">Middle ellipsis</string>
+    <string name="filename_end">End ellipsis</string>
+
+    <!-- 設定: ファイル一覧スイッチ -->
+    <string name="settings_collapse_title">Collapse single folders</string>
+    <string name="settings_collapse_desc">Combine chains that have only one child folder into a single entry like src/main/java, saving taps.</string>
+    <string name="settings_commitinfo_title">Show commit info</string>
+    <string name="settings_commitinfo_desc">Shows each file/folder\'s last update (author and when) under its name in the list. It walks history, so it may take a little time in large repositories.</string>
+
+    <!-- 設定: リポジトリ -->
+    <string name="settings_restore_title">Restore last position</string>
+    <string name="settings_restore_desc">When you open a repository, restores the folder you were in and the file you had open. When off, it always opens at the top with no file open.</string>
+
+    <!-- 設定: ビューア -->
+    <string name="settings_wrap_title">Wrap code (default)</string>
+    <string name="settings_wrap_desc">Initial state when opening a code/raw view. Off scrolls horizontally.</string>
+    <string name="settings_diffwrap_title">Wrap diff (default)</string>
+    <string name="settings_diffwrap_desc">Initial state when opening a diff view for changes, commits, and history. Off scrolls horizontally.</string>
+    <string name="settings_linenum_title">Show line numbers</string>
+    <string name="settings_linenum_desc">Adds a line number to each line in code/text/raw views.</string>
+    <string name="settings_selecttext_title">Enable text selection by default</string>
+    <string name="settings_selecttext_desc">Opens viewers with body text selectable for copying. You can also toggle it per viewer from ⋮. While on, long-press to add a memo is disabled.</string>
+    <string name="settings_sticky_title">Pin headings to top</string>
+    <string name="settings_sticky_desc">In rendered Markdown, sticks the current heading path (h1 &gt; h2 &gt; h3 …) to the top.</string>
+
+    <!-- 設定: Markdown テーブル -->
+    <string name="settings_table_title">Markdown table display</string>
+    <string name="settings_table_desc">Inline = wrapped and embedded in the body (default). Scrollable = a table with a fixed header and horizontal scrolling.</string>
+    <string name="table_inline">Inline</string>
+    <string name="table_scrollable">Scrollable</string>
+
+    <!-- 設定: リンク -->
+    <string name="settings_link_title">How to open external links</string>
+    <string name="settings_link_desc">Whether to open http/https links in the in-app browser (Custom Tabs) or an external browser. Relative links always navigate in-app.</string>
+    <string name="link_inapp">In-app</string>
+    <string name="link_browser">External browser</string>
+
+    <!-- 設定: データ -->
+    <string name="settings_cache_title">Cache</string>
+    <string name="settings_cache_desc">Registered repositories: %1$d (including clone data and saved tokens)</string>
+    <string name="settings_clearcache">Clear all cache</string>
+    <string name="settings_clearcache_confirm">This permanently deletes all %1$d registered repositories (clone data and saved tokens). It cannot be undone.</string>
+
+    <!-- 設定: このアプリ -->
+    <string name="settings_version_title">Version</string>
+    <string name="settings_build_line">Build: %1$s · %2$s · %3$s</string>
+    <string name="settings_licenses">Open-source licenses</string>
 </resources>
