@@ -8,7 +8,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
+import jp.lazmix.codeleaf.R
 
 /**
  * 同梱 OSS ライブラリのライセンス一覧。データは aboutlibraries Gradle プラグインが各依存の POM から
@@ -20,7 +22,7 @@ fun LicensesScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("オープンソースライセンス") },
+                title = { Text(stringResource(R.string.settings_licenses)) },
                 navigationIcon = { BackButton(onBack) },
             )
         },

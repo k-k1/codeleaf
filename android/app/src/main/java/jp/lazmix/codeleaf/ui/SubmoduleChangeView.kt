@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -134,8 +135,9 @@ private fun SubCommitRow(c: SubmoduleCommit, boundary: Boolean) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        val context = LocalContext.current
         Text(
-            "${shortSha(c.sha)} · ${c.author} · ${relativeTimeMillis(c.at.toEpochMilli())}",
+            "${shortSha(c.sha)} · ${c.author} · ${relativeTimeMillis(c.at.toEpochMilli(), context)}",
             style = MaterialTheme.typography.labelSmall,
             color = cs.onSurfaceVariant,
         )

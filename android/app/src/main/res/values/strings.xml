@@ -308,4 +308,73 @@
     <string name="repoedit_reorder_cd">Reorder / move between groups</string>
     <string name="repoedit_group_name_label">Group name</string>
     <string name="repoedit_color_cd">Color: %1$s</string>
+
+    <!-- 相対時刻 -->
+    <string name="time_just_now">Just now</string>
+    <string name="time_min_ago">%1$d min ago</string>
+    <string name="time_hour_ago">%1$d hr ago</string>
+    <string name="time_day_ago">%1$d days ago</string>
+    <string name="time_month_ago">%1$d months ago</string>
+    <string name="time_year_ago">%1$d years ago</string>
+
+    <!-- diff/履歴 共通 -->
+    <string name="diff_none">No changes</string>
+    <string name="diff_load_failed">Failed to load diff: %1$s</string>
+    <string name="fetch_failed">Failed to fetch: %1$s</string>
+
+    <!-- 履歴画面 -->
+    <string name="history_title">History: %1$s</string>
+    <string name="history_submodule_note">This is the history of submodule pointer moves (not the contents history).</string>
+    <string name="history_load_failed">Failed to load history: %1$s</string>
+    <string name="history_empty">No history</string>
+
+    <!-- submodule 変更ビュー -->
+    <string name="submodule_no_diff_commits">No submodule commits to diff</string>
+    <string name="submodule_more_omitted">More omitted (showing up to the limit)</string>
+    <string name="submodule_n_forward">%1$d commits ↑</string>
+    <string name="submodule_n_backward">Reverted %1$d ↓</string>
+    <string name="submodule_n_diverged">Diverged %1$d</string>
+    <string name="submodule_add">Added</string>
+    <string name="submodule_remove">Removed</string>
+    <string name="submodule_new_added">Newly added → %1$s</string>
+    <string name="submodule_removed_arrow">%1$s → removed</string>
+    <string name="submodule_boundary">Base · %1$s</string>
+
+    <!-- お気に入り画面 -->
+    <string name="favorites_empty">No favorites yet. Long-press an item in the file list to add one.</string>
+    <string name="favorites_root">(directly under root)</string>
+    <string name="favorites_deleted">(deleted)</string>
+    <string name="favorites_remove_cd">Remove from favorites</string>
+    <string name="favorites_reorder_cd">Reorder</string>
+
+    <!-- 検索画面 -->
+    <string name="search_title">Search: %1$s</string>
+    <string name="search_regex_hint">Search by regex (space = AND)</string>
+    <string name="search_fulltext_hint">Full-text search in files (space = AND)</string>
+    <string name="search_filter_hint">Filter by path/extension (optional, e.g. .md / docs/)</string>
+    <string name="search_no_match">No matches</string>
+    <string name="search_result_count">%1$d hits / %2$d files</string>
+
+    <!-- diff 画面 -->
+    <string name="diff_expand_all">Expand all</string>
+    <string name="diff_collapse_all">Collapse all</string>
+    <string name="diff_expand_cd">Expand</string>
+    <string name="diff_collapse_cd">Collapse</string>
+    <string name="diff_open_file_cd">Open file</string>
+
+    <!-- コミットグラフ -->
+    <string name="graph_empty">No commits</string>
+    <string name="graph_switch_branch">Switch branch</string>
+    <string name="graph_current_branch">%1$s (current branch)</string>
+
+    <!-- コミット詳細 -->
+    <string name="commit_no_message">(no message)</string>
+    <string name="commit_expand">Show more</string>
+    <string name="commit_collapse">Collapse</string>
+
+    <!-- ブランチ選択シート / オーバーレイ / PDF -->
+    <string name="branchsheet_select">Select branch</string>
+    <string name="branchsheet_filter">Filter</string>
+    <string name="bottombar_switching">Switching branch…</string>
+    <string name="pdf_cannot_open">Cannot open PDF</string>
 </resources>

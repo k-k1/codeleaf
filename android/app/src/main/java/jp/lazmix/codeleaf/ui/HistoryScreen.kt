@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.git.CommitInfo
@@ -105,8 +106,9 @@ fun HistoryScreen(
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                             ) {
                                 Text(c.shortMessage, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                val context = LocalContext.current
                                 Text(
-                                    "${shortSha(c.sha)} · ${c.author} · ${relativeTimeMillis(c.committedAt.toEpochMilli())}",
+                                    "${shortSha(c.sha)} · ${c.author} · ${relativeTimeMillis(c.committedAt.toEpochMilli(), context)}",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -155,8 +157,9 @@ fun FileDiffPane(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(4.dp))
+            val context = LocalContext.current
             Text(
-                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli())} · ${shortSha(commit.sha)}",
+                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli(), context)} · ${shortSha(commit.sha)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

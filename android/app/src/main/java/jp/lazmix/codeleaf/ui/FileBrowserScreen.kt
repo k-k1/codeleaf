@@ -469,6 +469,7 @@ private fun EntryRow(
     val cs = MaterialTheme.colorScheme
     val mark = FileIcons.mark(entry.name)
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current // 相対時刻のロケール解決に使う。
     var rowMenu by remember { mutableStateOf(false) }
 
     // 分類ごとの描画スタイル(先頭バー/文字色/字形/チップ)を解決する。
@@ -545,7 +546,7 @@ private fun EntryRow(
                     }
                     if (showCommitInfo) {
                         // 未解決/読込中は「—」。解決後に著者・相対時刻へ差し替わる。
-                        val secondary = commit?.let { "${it.author} · ${relativeTimeMillis(it.at.toEpochMilli())}" } ?: "—"
+                        val secondary = commit?.let { "${it.author} · ${relativeTimeMillis(it.at.toEpochMilli(), context)}" } ?: "—"
                         Text(
                             secondary,
                             style = MaterialTheme.typography.labelSmall,

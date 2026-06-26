@@ -33,6 +33,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import jp.lazmix.codeleaf.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -58,7 +60,7 @@ fun PdfViewer(file: File, modifier: Modifier = Modifier) {
 
     if (session == null || session.pageCount <= 0) {
         Box(modifier, contentAlignment = Alignment.Center) {
-            Text("PDF を開けません", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.pdf_cannot_open), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }

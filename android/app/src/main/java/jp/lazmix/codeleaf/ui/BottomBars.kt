@@ -23,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import jp.lazmix.codeleaf.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -61,7 +63,7 @@ val contentInsetsExcludingNavBar: WindowInsets
  * 呼び出し側は最前面に `if (busy) BusyBlockingOverlay()` のように重ねて使う。
  */
 @Composable
-fun BusyBlockingOverlay(text: String = "ブランチ切替中…") {
+fun BusyBlockingOverlay(text: String = stringResource(R.string.bottombar_switching)) {
     Box(
         Modifier
             .fillMaxSize()

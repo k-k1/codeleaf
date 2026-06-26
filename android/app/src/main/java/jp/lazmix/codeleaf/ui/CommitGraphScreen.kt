@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -231,8 +232,9 @@ private fun GraphCommitRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                val context = LocalContext.current
                 Text(
-                    "${row.commit.author} · ${relativeTimeMillis(row.commit.committedAt.toEpochMilli())} · ${shortSha(row.commit.sha)}",
+                    "${row.commit.author} · ${relativeTimeMillis(row.commit.committedAt.toEpochMilli(), context)} · ${shortSha(row.commit.sha)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

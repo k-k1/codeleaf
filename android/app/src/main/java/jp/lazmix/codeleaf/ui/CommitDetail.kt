@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.git.GraphCommit
@@ -67,8 +68,9 @@ fun CommitDetailContent(
             )
             Spacer(Modifier.height(4.dp))
             // メタ: 著者・時刻・ハッシュ。
+            val context = LocalContext.current
             Text(
-                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli())} · ${shortSha(commit.sha)}",
+                "${commit.author} · ${relativeTimeMillis(commit.committedAt.toEpochMilli(), context)} · ${shortSha(commit.sha)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
