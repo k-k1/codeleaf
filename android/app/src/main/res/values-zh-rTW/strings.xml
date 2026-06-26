@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 繁體中文（台灣用語）。dev 術語（commit/diff/branch/clone/fetch/submodule 等）保留英文。 -->
+<resources>
+    <!-- 通用操作 -->
+    <string name="action_delete">刪除</string>
+    <string name="action_cancel">取消</string>
+
+    <!-- 設定：一般 -->
+    <string name="settings_title">設定</string>
+    <string name="settings_section_display">顯示與主題</string>
+    <string name="settings_section_filelist">檔案清單</string>
+    <string name="settings_section_repo">儲存庫</string>
+    <string name="settings_section_viewer">檢視器</string>
+    <string name="settings_section_links">連結</string>
+    <string name="settings_section_data">資料</string>
+    <string name="settings_section_about">關於</string>
+
+    <!-- 設定：語言 -->
+    <string name="settings_language_title">語言</string>
+    <string name="settings_language_desc">設定應用程式介面的語言。\"系統\"跟隨裝置語言；不支援的語言回退到英文。</string>
+    <string name="language_system">系統</string>
+
+    <!-- 設定：主題 -->
+    <string name="settings_theme_title">預設主題</string>
+    <string name="settings_theme_desc">用於清單和設定畫面的顏色，以及新增儲存庫時的初始主題。</string>
+    <string name="theme_system">系統</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
+
+    <!-- 設定：字型大小 -->
+    <string name="settings_font_title">字型大小</string>
+    <string name="settings_font_desc">套用於算繪後的 Markdown 和程式碼檢視的內文字級。</string>
+    <string name="font_small">小</string>
+    <string name="font_medium">中</string>
+    <string name="font_large">大</string>
+
+    <!-- 設定：檔案圖示 -->
+    <string name="settings_iconset_title">檔案圖示</string>
+    <string name="settings_iconset_desc">清單中依副檔名顯示的圖示外觀。Material/VS Code 為全彩，Seti 為單色字形。</string>
+
+    <!-- 設定：檔案名稱顯示 -->
+    <string name="settings_filename_title">檔案名稱顯示</string>
+    <string name="settings_filename_desc">長名稱的處理方式。換行 = 多行顯示全文。中間省略 = 保留首尾。結尾省略 = 以…截斷結尾。</string>
+    <string name="filename_wrap">換行</string>
+    <string name="filename_middle">中間省略</string>
+    <string name="filename_end">結尾省略</string>
+
+    <!-- 設定：檔案清單開關 -->
+    <string name="settings_collapse_title">摺疊單一資料夾</string>
+    <string name="settings_collapse_desc">將只有一個子資料夾的連鎖合併為一個項目，如 src/main/java，減少輕觸。</string>
+    <string name="settings_commitinfo_title">顯示 commit 資訊</string>
+    <string name="settings_commitinfo_desc">在清單中每個檔案/資料夾名稱下方顯示其最後更新（作者與時間）。會走訪歷史，因此在大型儲存庫中可能稍慢。</string>
+
+    <!-- 設定：儲存庫 -->
+    <string name="settings_restore_title">還原上次位置</string>
+    <string name="settings_restore_desc">開啟儲存庫時，還原你先前所在的資料夾和開啟的檔案。關閉時一律從頂層開啟且不開啟任何檔案。</string>
+
+    <!-- 設定：檢視器 -->
+    <string name="settings_wrap_title">程式碼換行（預設）</string>
+    <string name="settings_wrap_desc">開啟程式碼/raw 檢視時的初始狀態。關閉時水平捲動。</string>
+    <string name="settings_diffwrap_title">diff 換行（預設）</string>
+    <string name="settings_diffwrap_desc">開啟變更、commit 和歷史的 diff 檢視時的初始狀態。關閉時水平捲動。</string>
+    <string name="settings_linenum_title">顯示行號</string>
+    <string name="settings_linenum_desc">在程式碼/文字/raw 檢視的每一行加上行號。</string>
+    <string name="settings_selecttext_title">預設啟用文字選取</string>
+    <string name="settings_selecttext_desc">以內文可選取以便複製的方式開啟檢視器。也可在 ⋮ 中依檢視器切換。啟用時，長按新增備註會被停用。</string>
+    <string name="settings_sticky_title">將標題固定至頂部</string>
+    <string name="settings_sticky_desc">在算繪後的 Markdown 中，將目前標題路徑（h1 &gt; h2 &gt; h3 …）固定至頂部。</string>
+
+    <!-- 設定：Markdown 表格 -->
+    <string name="settings_table_title">Markdown 表格顯示</string>
+    <string name="settings_table_desc">內嵌 = 換行並嵌入內文（預設）。可捲動 = 表頭固定 + 水平捲動的表格。</string>
+    <string name="table_inline">內嵌</string>
+    <string name="table_scrollable">可捲動</string>
+
+    <!-- 設定：連結 -->
+    <string name="settings_link_title">外部連結的開啟方式</string>
+    <string name="settings_link_desc">http/https 連結在應用程式內瀏覽器（Custom Tabs）還是外部瀏覽器開啟。相對連結一律在應用程式內導覽。</string>
+    <string name="link_inapp">應用程式內</string>
+    <string name="link_browser">外部瀏覽器</string>
+
+    <!-- 設定：資料 -->
+    <string name="settings_cache_title">快取</string>
+    <string name="settings_cache_desc">已註冊儲存庫：%1$d 個（包含 clone 資料和已儲存的 token）</string>
+    <string name="settings_clearcache">清除所有快取</string>
+    <string name="settings_clearcache_confirm">這將永久刪除已註冊的 %1$d 個儲存庫（clone 資料和已儲存的 token）。無法復原。</string>
+
+    <!-- 設定：關於 -->
+    <string name="settings_version_title">版本</string>
+    <string name="settings_build_line">建置：%1$s · %2$s · %3$s</string>
+    <string name="settings_licenses">開放原始碼授權</string>
+
+    <!-- 通用操作/圖示說明 -->
+    <string name="action_copy">複製</string>
+    <string name="action_share">分享</string>
+    <string name="action_save">儲存</string>
+    <string name="cd_menu">選單</string>
+
+    <!-- 檔案檢視器 -->
+    <string name="viewer_back_to_browser">返回瀏覽器</string>
+    <string name="viewer_menu_rendered">顯示算繪</string>
+    <string name="viewer_menu_raw">顯示 raw</string>
+    <string name="viewer_menu_history">歷史</string>
+    <string name="viewer_menu_memo">備註</string>
+    <string name="viewer_menu_select_start">選取文字</string>
+    <string name="viewer_menu_select_end">結束選取</string>
+    <string name="viewer_toc">☰ 目錄</string>
+    <string name="viewer_wrap_on">換行：開</string>
+    <string name="viewer_wrap_off">換行：關</string>
+    <string name="cd_prev_file">上一個檔案</string>
+    <string name="cd_next_file">下一個檔案</string>
+    <string name="viewer_truncated">僅顯示開頭部分（共 %1$s）</string>
+    <string name="viewer_load_failed">載入失敗：%1$s</string>
+    <string name="viewer_toc_title">目錄</string>
+    <string name="viewer_binary_cannot_display">%1$s · 無法以文字顯示</string>
+    <string name="viewer_binary_head">開頭位元組</string>
+    <string name="viewer_large_title">大型檔案</string>
+    <string name="viewer_large_desc">%1$s · 顯示可能較慢</string>
+    <string name="viewer_large_show">顯示</string>
+
+    <!-- 備註新增面板 -->
+    <string name="memo_add_title">新增備註</string>
+    <string name="memo_line_range">第 %1$d–%2$d 行，共 %3$d 行</string>
+    <string name="memo_line_start">起始</string>
+    <string name="memo_line_end">結束</string>
+    <string name="memo_comment">評論</string>
+    <string name="memo_save_to">儲存至</string>
+    <string name="memo_new_notebook">新增備註本</string>
+    <string name="memo_notebook">備註本</string>
+    <string name="cd_pick_save_to">選擇目標</string>
+    <string name="memo_untitled">（無標題）</string>
+    <string name="memo_new_notebook_plus">＋ 新增備註本</string>
+    <string name="memo_new_notebook_title">新備註本標題</string>
+
+    <!-- 檔案中繼資訊 -->
+    <string name="encoding_unknown">未知</string>
+    <string name="encoding_no_bom">無 BOM</string>
+    <string name="eol_mixed">混合</string>
+    <string name="eol_none">無換行</string>
+
+    <!-- 二進位類型標籤 -->
+    <string name="bin_zip">ZIP 封存</string>
+    <string name="bin_jar">JAR 封存</string>
+    <string name="bin_apk">APK 安裝套件</string>
+    <string name="bin_aar">AAR 程式庫</string>
+    <string name="bin_office">Office 文件</string>
+    <string name="bin_opendocument">OpenDocument</string>
+    <string name="bin_epub">EPUB 電子書</string>
+    <string name="bin_gzip">gzip 壓縮</string>
+    <string name="bin_bzip2">bzip2 壓縮</string>
+    <string name="bin_xz">xz 壓縮</string>
+    <string name="bin_7z">7z 封存</string>
+    <string name="bin_rar">RAR 封存</string>
+    <string name="bin_elf">ELF 可執行檔</string>
+    <string name="bin_javaclass">Java class 檔案</string>
+    <string name="bin_macho">Mach-O 二進位</string>
+    <string name="bin_winpe">Windows 可執行檔</string>
+    <string name="bin_wasm">WebAssembly</string>
+    <string name="bin_sqlite">SQLite 資料庫</string>
+    <string name="bin_mp3">MP3 音訊</string>
+    <string name="bin_ogg">Ogg 媒體</string>
+    <string name="bin_flac">FLAC 音訊</string>
+    <string name="bin_wav">WAV 音訊</string>
+    <string name="bin_avi">AVI 影片</string>
+    <string name="bin_mp4">MP4/影片</string>
+    <string name="bin_font">字型</string>
+    <string name="bin_unknown">二進位</string>
+
+    <!-- 新增儲存庫畫面 -->
+    <string name="addrepo_title">新增儲存庫</string>
+    <string name="addrepo_host">主機</string>
+    <string name="addrepo_auth_method">驗證</string>
+    <string name="addrepo_oauth_title">使用 %1$s 登入（OAuth）</string>
+    <string name="addrepo_login_bitbucket">使用 Bitbucket 登入</string>
+    <string name="addrepo_logged_in">✓ 已登入</string>
+    <string name="addrepo_other_account">其他帳號</string>
+    <string name="addrepo_oauth_unconfigured">未設定 OAuth 登入（請在 local.properties 中設定 client_id/secret 以啟用）。</string>
+    <string name="addrepo_display_name">顯示名稱（選填，自動填入）</string>
+    <string name="addrepo_theme">主題</string>
+    <string name="addrepo_cloning">正在 clone…</string>
+    <string name="addrepo_save_clone">儲存並 clone</string>
+    <string name="addrepo_token_method">輸入 token</string>
+    <string name="addrepo_repos_loading">正在載入儲存庫…</string>
+    <string name="addrepo_no_repos">沒有可 clone 的儲存庫（已全部註冊，或均無法存取）。</string>
+    <string name="addrepo_select_repo">選擇儲存庫</string>
+    <string name="addrepo_gh_enter_code">在瀏覽器中輸入下方的代碼以核准登入。</string>
+    <string name="addrepo_gh_copy_hint">輕觸複製 / 在此輸入：%1$s</string>
+    <string name="addrepo_open_browser">開啟瀏覽器</string>
+    <string name="addrepo_gh_waiting">等待核准…</string>
+    <string name="addrepo_gh_getting_code">正在取得代碼…</string>
+    <string name="addrepo_login_github">使用 GitHub 登入</string>
+    <string name="addrepo_url_label">URL（https://...）</string>
+    <string name="addrepo_username_required">使用者名稱（Bitbucket：Atlassian 電子郵件，必填）</string>
+    <string name="addrepo_username_optional">使用者名稱（選填）</string>
+    <string name="addrepo_token_label">Token（PAT / API token）</string>
+    <string name="addrepo_login_failed">登入失敗</string>
+    <string name="addrepo_repos_load_failed">載入儲存庫清單失敗</string>
+    <string name="addrepo_login_start_failed">啟動登入失敗</string>
+
+    <!-- 狀態/snackbar 訊息 -->
+    <string name="error_unknown">未知錯誤</string>
+    <string name="git_err_auth">驗證失敗。請檢查 token 及其權限（GitHub PAT 需要 Contents: Read-only）。</string>
+    <string name="git_err_host">無法連線到主機。請檢查 URL 和網路連線。</string>
+    <string name="git_err_not_found">找不到儲存庫。請檢查 URL（私人儲存庫還需要驗證）。</string>
+    <string name="git_err_timeout">連線逾時。請檢查網路後重試。</string>
+    <string name="git_err_network">發生網路錯誤。請檢查連線後重試。</string>
+    <string name="git_err_not_repo">無法作為 git 儲存庫開啟。請檢查 URL。</string>
+    <string name="clone_failed">clone 失敗：%1$s</string>
+    <string name="sync_done">同步完成</string>
+    <string name="sync_failed">同步失敗：%1$s</string>
+    <string name="switch_failed">切換失敗：%1$s</string>
+    <string name="repo_added">已新增 %1$s</string>
+    <string name="repo_recloned">已重新 clone %1$s</string>
+    <string name="repo_syncing">正在同步 %1$s…</string>
+    <string name="branch_switching">正在切換至 %1$s…</string>
+    <string name="cache_deleting">正在刪除…</string>
+    <string name="cache_delete_failed">刪除失敗：%1$s</string>
+    <string name="cache_deleted">快取已刪除</string>
+    <string name="reclone_action">重新 clone</string>
+
+    <!-- URL 驗證錯誤 -->
+    <string name="repo_url_err_whitespace">URL 含有空格</string>
+    <string name="repo_url_err_file_abs">file:// 之後請使用絕對路徑（例如 file:///path/to/repo）</string>
+    <string name="repo_url_err_owner_repo">URL 缺少 owner/repo（例如 https://github.com/owner/repo.git）</string>
+    <string name="repo_url_err_format">URL 格式無效（例如 https://github.com/owner/repo.git）</string>
+
+    <!-- 共用圖示說明 -->
+    <string name="cd_back">返回</string>
+    <string name="cd_settings">設定</string>
+    <string name="cd_add_repo">新增儲存庫</string>
+    <string name="cd_edit_repo">編輯儲存庫</string>
+    <string name="cd_collapse_repos">摺疊儲存庫清單</string>
+    <string name="cd_show_repos">顯示儲存庫清單</string>
+    <string name="cd_retry">重試</string>
+    <string name="cd_favorites">我的最愛</string>
+    <string name="cd_commit_graph">commit 圖</string>
+    <string name="cd_sync">同步</string>
+
+    <!-- 儲存庫清單 -->
+    <string name="group_all">全部</string>
+    <string name="repolist_empty_title">還沒有儲存庫</string>
+    <string name="repolist_empty_desc">從右上角的 + 新增 GitHub / Bitbucket 儲存庫。</string>
+    <string name="repo_state_cloning">正在 clone…</string>
+    <string name="repo_state_failed">clone 失敗 — 請重試</string>
+    <string name="repo_synced_at">已同步：%1$s</string>
+    <string name="repo_never_synced">從未同步</string>
+
+    <!-- 多窗格/檢視器導覽輔助 -->
+    <string name="placeholder_select_repo">選擇儲存庫</string>
+    <string name="placeholder_select_file">選擇檔案</string>
+    <string name="placeholder_select_commit">選擇 commit</string>
+    <string name="file_not_found_at_revision">此版本中沒有該檔案</string>
+    <string name="revision_at">在 commit %1$s</string>
+    <string name="focus_expand">顯示清單與側欄</string>
+    <string name="focus_collapse">專注模式（全寬）</string>
+    <string name="pane_expand">顯示清單</string>
+    <string name="pane_collapse">隱藏清單</string>
+
+    <!-- 通用操作（追加） -->
+    <string name="action_create">建立</string>
+    <string name="action_change">變更</string>
+    <string name="action_clear">清空</string>
+
+    <!-- 備註本清單 / 詳細 -->
+    <string name="memos_title">備註</string>
+    <string name="memos_empty">還沒有備註本。用右上角的 + 新增，或在檢視檔案時長按某一行。</string>
+    <string name="memo_entry_count">%1$d 個項目</string>
+    <string name="memo_title_label">標題</string>
+    <string name="memos_share_all">全部分享</string>
+    <string name="memos_copy_all">全部複製</string>
+    <string name="memos_rename">重新命名</string>
+    <string name="memos_rename_heading">重新命名備註本</string>
+    <string name="memos_delete_title">刪除備註本</string>
+    <string name="memos_delete_confirm">刪除\"%1$s\"及其所有項目。無法復原。</string>
+    <string name="memodetail_empty">還沒有項目。在檢視檔案時長按某一行以新增。</string>
+    <string name="memodetail_clear_title">清空所有項目</string>
+    <string name="memodetail_clear_confirm">刪除\"%1$s\"中的全部 %2$d 個項目（保留備註本）。無法復原。</string>
+    <string name="entry_delete_title">刪除項目</string>
+    <string name="entry_delete_confirm">刪除此項目。</string>
+    <string name="entry_edit_comment">編輯評論</string>
+    <string name="entry_edit_comment_heading">編輯評論</string>
+
+    <!-- 檔案瀏覽器 -->
+    <string name="cd_repo_list">儲存庫</string>
+    <string name="cd_search">搜尋</string>
+    <string name="cd_up">上一層</string>
+    <string name="browser_switch_branch">切換 branch（%1$s）</string>
+    <string name="browser_root">根目錄</string>
+    <string name="browser_empty_dir">（空資料夾）</string>
+    <string name="browser_lfs">這是 Git LFS 檔案（未取得其內容，無法顯示）。</string>
+    <string name="browser_unfetched">未取得</string>
+    <string name="browser_favorite">加入我的最愛</string>
+    <string name="browser_unfavorite">從我的最愛移除</string>
+    <string name="browser_copy_filename">複製檔案名稱</string>
+    <string name="browser_copy_filepath">複製檔案路徑</string>
+
+    <!-- 儲存庫編輯畫面 -->
+    <string name="repoedit_add_group">新增群組</string>
+    <string name="repoedit_delete_title">刪除儲存庫</string>
+    <string name="repoedit_delete_confirm">刪除\"%1$s\"。其 clone 資料和已儲存的 token 也會被移除。無法復原。</string>
+    <string name="repoedit_reclone_confirm">刪除\"%1$s\"的本機 clone 並重新取得。設定和 token 會保留。</string>
+    <string name="repoedit_new_group">新群組</string>
+    <string name="repoedit_rename_group">重新命名群組</string>
+    <string name="repoedit_ungrouped">未分組（僅在\"全部\"下顯示）</string>
+    <string name="repoedit_delete_group_cd">刪除群組</string>
+    <string name="repoedit_dropzone">拖曳至此處以新增</string>
+    <string name="repoedit_reorder_cd">重新排序 / 在群組間移動</string>
+    <string name="repoedit_group_name_label">群組名稱</string>
+    <string name="repoedit_color_cd">顏色：%1$s</string>
+
+    <!-- 相對時間 -->
+    <string name="time_just_now">剛剛</string>
+    <string name="time_min_ago">%1$d 分鐘前</string>
+    <string name="time_hour_ago">%1$d 小時前</string>
+    <string name="time_day_ago">%1$d 天前</string>
+    <string name="time_month_ago">%1$d 個月前</string>
+    <string name="time_year_ago">%1$d 年前</string>
+
+    <!-- diff/歷史 通用 -->
+    <string name="diff_none">無變更</string>
+    <string name="diff_load_failed">載入 diff 失敗：%1$s</string>
+    <string name="fetch_failed">取得失敗：%1$s</string>
+
+    <!-- 歷史畫面 -->
+    <string name="history_title">歷史：%1$s</string>
+    <string name="history_submodule_note">這是 submodule 指標移動的歷史（不是內容歷史）。</string>
+    <string name="history_load_failed">載入歷史失敗：%1$s</string>
+    <string name="history_empty">無歷史</string>
+
+    <!-- submodule 變更檢視 -->
+    <string name="submodule_no_diff_commits">沒有可比較的 submodule commit</string>
+    <string name="submodule_more_omitted">其餘已省略（顯示至上限）</string>
+    <string name="submodule_n_forward">%1$d 個 commit ↑</string>
+    <string name="submodule_n_backward">還原 %1$d 個 ↓</string>
+    <string name="submodule_n_diverged">分歧 %1$d 個</string>
+    <string name="submodule_add">已新增</string>
+    <string name="submodule_remove">已移除</string>
+    <string name="submodule_new_added">新增 → %1$s</string>
+    <string name="submodule_removed_arrow">%1$s → 已移除</string>
+    <string name="submodule_boundary">基準 · %1$s</string>
+
+    <!-- 我的最愛畫面 -->
+    <string name="favorites_empty">還沒有我的最愛。在檔案清單中長按某一項以新增。</string>
+    <string name="favorites_root">（根目錄正下方）</string>
+    <string name="favorites_deleted">（已刪除）</string>
+    <string name="favorites_remove_cd">從我的最愛移除</string>
+    <string name="favorites_reorder_cd">重新排序</string>
+
+    <!-- 搜尋畫面 -->
+    <string name="search_title">搜尋：%1$s</string>
+    <string name="search_regex_hint">以正規表示式搜尋（空格 = AND）</string>
+    <string name="search_fulltext_hint">在檔案內全文搜尋（空格 = AND）</string>
+    <string name="search_filter_hint">依路徑/副檔名篩選（選填，例如 .md / docs/）</string>
+    <string name="search_no_match">無相符項目</string>
+    <string name="search_result_count">%1$d 處 / %2$d 個檔案</string>
+
+    <!-- diff 畫面 -->
+    <string name="diff_expand_all">全部展開</string>
+    <string name="diff_collapse_all">全部摺疊</string>
+    <string name="diff_expand_cd">展開</string>
+    <string name="diff_collapse_cd">摺疊</string>
+    <string name="diff_open_file_cd">開啟檔案</string>
+
+    <!-- commit 圖 -->
+    <string name="graph_empty">無 commit</string>
+    <string name="graph_switch_branch">切換 branch</string>
+    <string name="graph_current_branch">%1$s（目前 branch）</string>
+
+    <!-- commit 詳細 -->
+    <string name="commit_no_message">（無訊息）</string>
+    <string name="commit_expand">顯示更多</string>
+    <string name="commit_collapse">摺疊</string>
+
+    <!-- branch 選擇面板 / 遮罩 / PDF -->
+    <string name="branchsheet_select">選擇 branch</string>
+    <string name="branchsheet_filter">篩選</string>
+    <string name="bottombar_switching">正在切換 branch…</string>
+    <string name="pdf_cannot_open">無法開啟 PDF</string>
+</resources>
