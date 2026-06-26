@@ -1,6 +1,7 @@
 package jp.lazmix.codeleaf.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -10,8 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -75,15 +81,24 @@ private fun fontLabel(f: FontScale) = stringResource(
  * 永続化は AppCompatDelegate(API33+ は OS、未満は appcompat バックポート)が担うため
  * SettingsStore には保持しない。言語名は各言語自身で表示するのが通例なので JA/EN は固定表記。
  */
-private enum class UiLanguage(val tag: String?) { SYSTEM(null), JAPANESE("ja"), ENGLISH("en") }
+// endonym = 各言語の自称表記(ピッカーに表示。SYSTEM だけ null でリソース解決)。
+// 言語追加はこの enum に1行足すだけ(ピッカーは entries を回す)＋ values-XX/ ＋ locales_config。
+private enum class UiLanguage(val tag: String?, val endonym: String?) {
+    SYSTEM(null, null),
+    JAPANESE("ja", "日本語"),
+    ENGLISH("en", "English"),
+    SPANISH("es", "Español"),
+}
 
-/** 現在の適用ロケールから選択中の UiLanguage を判定する。 */
+/** 現在の適用ロケールから選択中の UiLanguage を判定する。zh は地域/字種で簡体/繁体を分ける。 */
 private fun currentUiLanguage(): UiLanguage {
     val locales = AppCompatDelegate.getApplicationLocales()
     if (locales.isEmpty) return UiLanguage.SYSTEM
-    return when (locales[0]?.language) {
-        "ja" -> UiLanguage.JAPANESE
-        "en" -> UiLanguage.ENGLISH
+    val tag = locales[0]?.toLanguageTag()?.lowercase() ?: return UiLanguage.SYSTEM
+    return when {
+        tag.startsWith("ja") -> UiLanguage.JAPANESE
+        tag.startsWith("es") -> UiLanguage.SPANISH
+        tag.startsWith("en") -> UiLanguage.ENGLISH
         else -> UiLanguage.SYSTEM
     }
 }
@@ -206,20 +221,20 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                     // 選択中ロケールは AppCompatDelegate から都度読む(切替時に Activity 再生成→再 compose で反映)。
+                    // 言語が増えるとセグメントは横に収まらないため、ドロップダウンで選ばせる。
                     val current = currentUiLanguage()
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        UiLanguage.entries.forEachIndexed { i, lang ->
-                            SegmentedButton(
-                                selected = current == lang,
-                                onClick = { applyUiLanguage(lang) },
-                                shape = SegmentedButtonDefaults.itemShape(i, UiLanguage.entries.size),
-                            ) {
-                                Text(
-                                    when (lang) {
-                                        UiLanguage.SYSTEM -> stringResource(R.string.language_system)
-                                        UiLanguage.JAPANESE -> "日本語"
-                                        UiLanguage.ENGLISH -> "English"
-                                    },
+                    val systemLabel = stringResource(R.string.language_system)
+                    var langMenu by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { langMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(current.endonym ?: systemLabel, modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = langMenu, onDismissRequest = { langMenu = false }) {
+                            UiLanguage.entries.forEach { lang ->
+                                DropdownMenuItem(
+                                    text = { Text(lang.endonym ?: systemLabel) },
+                                    onClick = { langMenu = false; applyUiLanguage(lang) },
                                 )
                             }
                         }

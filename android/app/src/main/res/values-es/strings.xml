@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Español. dev 用語(commit/diff/branch/clone/fetch/submodule 等)は英語のまま。 -->
+<resources>
+    <!-- 共通の操作 -->
+    <string name="action_delete">Eliminar</string>
+    <string name="action_cancel">Cancelar</string>
+
+    <!-- 設定: 全般 -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_section_display">Pantalla y tema</string>
+    <string name="settings_section_filelist">Lista de archivos</string>
+    <string name="settings_section_repo">Repositorio</string>
+    <string name="settings_section_viewer">Visor</string>
+    <string name="settings_section_links">Enlaces</string>
+    <string name="settings_section_data">Datos</string>
+    <string name="settings_section_about">Acerca de</string>
+
+    <!-- 設定: 言語 -->
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_language_desc">Define el idioma de la interfaz. \"Sistema\" sigue el idioma del dispositivo; los idiomas no admitidos usan inglés.</string>
+    <string name="language_system">Sistema</string>
+
+    <!-- 設定: テーマ -->
+    <string name="settings_theme_title">Tema predeterminado</string>
+    <string name="settings_theme_desc">Se usa para los colores de las pantallas de lista y ajustes, y como tema inicial al añadir un repositorio.</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+
+    <!-- 設定: フォントサイズ -->
+    <string name="settings_font_title">Tamaño de fuente</string>
+    <string name="settings_font_desc">Se aplica al tamaño del texto del cuerpo en Markdown renderizado y vistas de código.</string>
+    <string name="font_small">Pequeño</string>
+    <string name="font_medium">Mediano</string>
+    <string name="font_large">Grande</string>
+
+    <!-- 設定: ファイルアイコン -->
+    <string name="settings_iconset_title">Iconos de archivo</string>
+    <string name="settings_iconset_desc">Aspecto de los iconos por extensión en la lista. Material/VS Code son a todo color; Seti son glifos monocromos.</string>
+
+    <!-- 設定: ファイル名表示 -->
+    <string name="settings_filename_title">Visualización del nombre de archivo</string>
+    <string name="settings_filename_desc">Cómo se tratan los nombres largos. Ajustar = texto completo en varias líneas. Elipsis central = conserva inicio y final. Elipsis final = recorta el final con ….</string>
+    <string name="filename_wrap">Ajustar</string>
+    <string name="filename_middle">Elipsis central</string>
+    <string name="filename_end">Elipsis final</string>
+
+    <!-- 設定: ファイル一覧スイッチ -->
+    <string name="settings_collapse_title">Contraer carpetas únicas</string>
+    <string name="settings_collapse_desc">Combina cadenas con una sola carpeta hija en una entrada como src/main/java, ahorrando toques.</string>
+    <string name="settings_commitinfo_title">Mostrar info del commit</string>
+    <string name="settings_commitinfo_desc">Muestra la última actualización de cada archivo/carpeta (autor y cuándo) bajo su nombre en la lista. Recorre el historial, por lo que puede tardar un poco en repositorios grandes.</string>
+
+    <!-- 設定: リポジトリ -->
+    <string name="settings_restore_title">Restaurar última posición</string>
+    <string name="settings_restore_desc">Al abrir un repositorio, restaura la carpeta en la que estabas y el archivo que tenías abierto. Si está desactivado, abre siempre al principio sin ningún archivo abierto.</string>
+
+    <!-- 設定: ビューア -->
+    <string name="settings_wrap_title">Ajustar código (predeterminado)</string>
+    <string name="settings_wrap_desc">Estado inicial al abrir una vista de código/raw. Si está desactivado, se desplaza horizontalmente.</string>
+    <string name="settings_diffwrap_title">Ajustar diff (predeterminado)</string>
+    <string name="settings_diffwrap_desc">Estado inicial al abrir una vista de diff para cambios, commits e historial. Si está desactivado, se desplaza horizontalmente.</string>
+    <string name="settings_linenum_title">Mostrar números de línea</string>
+    <string name="settings_linenum_desc">Añade un número de línea a cada línea en las vistas de código/texto/raw.</string>
+    <string name="settings_selecttext_title">Activar selección de texto por defecto</string>
+    <string name="settings_selecttext_desc">Abre los visores con el texto del cuerpo seleccionable para copiar. También puedes activarlo por visor desde ⋮. Mientras está activo, se desactiva la pulsación larga para añadir una nota.</string>
+    <string name="settings_sticky_title">Fijar encabezados arriba</string>
+    <string name="settings_sticky_desc">En Markdown renderizado, fija arriba la ruta del encabezado actual (h1 &gt; h2 &gt; h3 …).</string>
+
+    <!-- 設定: Markdown テーブル -->
+    <string name="settings_table_title">Visualización de tablas Markdown</string>
+    <string name="settings_table_desc">En línea = ajustado e incrustado en el cuerpo (predeterminado). Desplazable = una tabla con encabezado fijo y desplazamiento horizontal.</string>
+    <string name="table_inline">En línea</string>
+    <string name="table_scrollable">Desplazable</string>
+
+    <!-- 設定: リンク -->
+    <string name="settings_link_title">Cómo abrir enlaces externos</string>
+    <string name="settings_link_desc">Si abrir los enlaces http/https en el navegador integrado (Custom Tabs) o en un navegador externo. Los enlaces relativos siempre navegan dentro de la app.</string>
+    <string name="link_inapp">En la app</string>
+    <string name="link_browser">Navegador externo</string>
+
+    <!-- 設定: データ -->
+    <string name="settings_cache_title">Caché</string>
+    <string name="settings_cache_desc">Repositorios registrados: %1$d (incluye datos de clone y tokens guardados)</string>
+    <string name="settings_clearcache">Borrar toda la caché</string>
+    <string name="settings_clearcache_confirm">Esto elimina permanentemente los %1$d repositorios registrados (datos de clone y tokens guardados). No se puede deshacer.</string>
+
+    <!-- 設定: このアプリ -->
+    <string name="settings_version_title">Versión</string>
+    <string name="settings_build_line">Compilación: %1$s · %2$s · %3$s</string>
+    <string name="settings_licenses">Licencias de código abierto</string>
+
+    <!-- 共通の操作/アイコン説明 -->
+    <string name="action_copy">Copiar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_save">Guardar</string>
+    <string name="cd_menu">Menú</string>
+
+    <!-- ファイルビューア -->
+    <string name="viewer_back_to_browser">Volver al explorador</string>
+    <string name="viewer_menu_rendered">Ver renderizado</string>
+    <string name="viewer_menu_raw">Ver raw</string>
+    <string name="viewer_menu_history">Historial</string>
+    <string name="viewer_menu_memo">Nota</string>
+    <string name="viewer_menu_select_start">Seleccionar texto</string>
+    <string name="viewer_menu_select_end">Salir de selección</string>
+    <string name="viewer_toc">☰ Contenido</string>
+    <string name="viewer_wrap_on">Ajuste: activado</string>
+    <string name="viewer_wrap_off">Ajuste: desactivado</string>
+    <string name="cd_prev_file">Archivo anterior</string>
+    <string name="cd_next_file">Archivo siguiente</string>
+    <string name="viewer_truncated">Mostrando solo el principio (total %1$s)</string>
+    <string name="viewer_load_failed">Error al cargar: %1$s</string>
+    <string name="viewer_toc_title">Contenido</string>
+    <string name="viewer_binary_cannot_display">%1$s · No se puede mostrar como texto</string>
+    <string name="viewer_binary_head">Primeros bytes</string>
+    <string name="viewer_large_title">Archivo grande</string>
+    <string name="viewer_large_desc">%1$s · La visualización puede ser lenta</string>
+    <string name="viewer_large_show">Mostrar</string>
+
+    <!-- メモ追加シート -->
+    <string name="memo_add_title">Añadir nota</string>
+    <string name="memo_line_range">Líneas %1$d–%2$d de %3$d</string>
+    <string name="memo_line_start">Inicio</string>
+    <string name="memo_line_end">Fin</string>
+    <string name="memo_comment">Comentario</string>
+    <string name="memo_save_to">Guardar en</string>
+    <string name="memo_new_notebook">Nuevo cuaderno</string>
+    <string name="memo_notebook">Cuaderno</string>
+    <string name="cd_pick_save_to">Seleccionar destino</string>
+    <string name="memo_untitled">(sin título)</string>
+    <string name="memo_new_notebook_plus">＋ Nuevo cuaderno</string>
+    <string name="memo_new_notebook_title">Título del nuevo cuaderno</string>
+
+    <!-- ファイルメタ -->
+    <string name="encoding_unknown">Desconocido</string>
+    <string name="encoding_no_bom">Sin BOM</string>
+    <string name="eol_mixed">Mixto</string>
+    <string name="eol_none">Sin salto de línea</string>
+
+    <!-- バイナリ種別ラベル -->
+    <string name="bin_zip">Archivo ZIP</string>
+    <string name="bin_jar">Archivo JAR</string>
+    <string name="bin_apk">Paquete APK</string>
+    <string name="bin_aar">Biblioteca AAR</string>
+    <string name="bin_office">Documento de Office</string>
+    <string name="bin_opendocument">OpenDocument</string>
+    <string name="bin_epub">Libro EPUB</string>
+    <string name="bin_gzip">Comprimido gzip</string>
+    <string name="bin_bzip2">Comprimido bzip2</string>
+    <string name="bin_xz">Comprimido xz</string>
+    <string name="bin_7z">Archivo 7z</string>
+    <string name="bin_rar">Archivo RAR</string>
+    <string name="bin_elf">Ejecutable ELF</string>
+    <string name="bin_javaclass">Archivo class de Java</string>
+    <string name="bin_macho">Binario Mach-O</string>
+    <string name="bin_winpe">Ejecutable de Windows</string>
+    <string name="bin_wasm">WebAssembly</string>
+    <string name="bin_sqlite">Base de datos SQLite</string>
+    <string name="bin_mp3">Audio MP3</string>
+    <string name="bin_ogg">Medio Ogg</string>
+    <string name="bin_flac">Audio FLAC</string>
+    <string name="bin_wav">Audio WAV</string>
+    <string name="bin_avi">Vídeo AVI</string>
+    <string name="bin_mp4">MP4/vídeo</string>
+    <string name="bin_font">Fuente</string>
+    <string name="bin_unknown">Binario</string>
+
+    <!-- リポジトリ追加画面 -->
+    <string name="addrepo_title">Añadir repositorio</string>
+    <string name="addrepo_host">Host</string>
+    <string name="addrepo_auth_method">Autenticación</string>
+    <string name="addrepo_oauth_title">Iniciar sesión con %1$s (OAuth)</string>
+    <string name="addrepo_login_bitbucket">Iniciar sesión con Bitbucket</string>
+    <string name="addrepo_logged_in">✓ Sesión iniciada</string>
+    <string name="addrepo_other_account">Otra cuenta</string>
+    <string name="addrepo_oauth_unconfigured">El inicio de sesión con OAuth no está configurado (define client_id/secret en local.properties para activarlo).</string>
+    <string name="addrepo_display_name">Nombre visible (opcional, se rellena solo)</string>
+    <string name="addrepo_theme">Tema</string>
+    <string name="addrepo_cloning">Clonando…</string>
+    <string name="addrepo_save_clone">Guardar y clonar</string>
+    <string name="addrepo_token_method">Introducir un token</string>
+    <string name="addrepo_repos_loading">Cargando repositorios…</string>
+    <string name="addrepo_no_repos">No hay repositorios disponibles para clonar (todos están registrados o ninguno es accesible).</string>
+    <string name="addrepo_select_repo">Selecciona un repositorio</string>
+    <string name="addrepo_gh_enter_code">Introduce el código de abajo en tu navegador para aprobar el inicio de sesión.</string>
+    <string name="addrepo_gh_copy_hint">Toca para copiar / introdúcelo en: %1$s</string>
+    <string name="addrepo_open_browser">Abrir navegador</string>
+    <string name="addrepo_gh_waiting">Esperando aprobación…</string>
+    <string name="addrepo_gh_getting_code">Obteniendo código…</string>
+    <string name="addrepo_login_github">Iniciar sesión con GitHub</string>
+    <string name="addrepo_url_label">URL (https://...)</string>
+    <string name="addrepo_username_required">Usuario (Bitbucket: correo de Atlassian, obligatorio)</string>
+    <string name="addrepo_username_optional">Usuario (opcional)</string>
+    <string name="addrepo_token_label">Token (PAT / API token)</string>
+    <string name="addrepo_login_failed">Error al iniciar sesión</string>
+    <string name="addrepo_repos_load_failed">Error al cargar la lista de repositorios</string>
+    <string name="addrepo_login_start_failed">No se pudo iniciar la sesión</string>
+
+    <!-- 状態/snackbar メッセージ -->
+    <string name="error_unknown">Error desconocido</string>
+    <string name="git_err_auth">Error de autenticación. Comprueba el token y sus permisos (un PAT de GitHub necesita Contents: Read-only).</string>
+    <string name="git_err_host">No se puede contactar con el host. Comprueba la URL y tu conexión de red.</string>
+    <string name="git_err_not_found">Repositorio no encontrado. Comprueba la URL (los repos privados también requieren autenticación).</string>
+    <string name="git_err_timeout">Se agotó el tiempo de conexión. Comprueba tu red e inténtalo de nuevo.</string>
+    <string name="git_err_network">Se produjo un error de red. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="git_err_not_repo">No se pudo abrir como repositorio git. Comprueba la URL.</string>
+    <string name="clone_failed">Error al clonar: %1$s</string>
+    <string name="sync_done">Sincronización completa</string>
+    <string name="sync_failed">Error de sincronización: %1$s</string>
+    <string name="switch_failed">Error al cambiar: %1$s</string>
+    <string name="repo_added">%1$s añadido</string>
+    <string name="repo_recloned">%1$s vuelto a clonar</string>
+    <string name="repo_syncing">Sincronizando %1$s…</string>
+    <string name="branch_switching">Cambiando a %1$s…</string>
+    <string name="cache_deleting">Eliminando…</string>
+    <string name="cache_delete_failed">Error al eliminar: %1$s</string>
+    <string name="cache_deleted">Caché eliminada</string>
+    <string name="reclone_action">Volver a clonar</string>
+
+    <!-- URL 検証エラー -->
+    <string name="repo_url_err_whitespace">La URL contiene espacios en blanco</string>
+    <string name="repo_url_err_file_abs">Después de file:// usa una ruta absoluta (p. ej. file:///ruta/al/repo)</string>
+    <string name="repo_url_err_owner_repo">La URL no tiene owner/repo (p. ej. https://github.com/owner/repo.git)</string>
+    <string name="repo_url_err_format">El formato de la URL no es válido (p. ej. https://github.com/owner/repo.git)</string>
+
+    <!-- 共有アイコン説明 -->
+    <string name="cd_back">Atrás</string>
+    <string name="cd_settings">Ajustes</string>
+    <string name="cd_add_repo">Añadir repositorio</string>
+    <string name="cd_edit_repo">Editar repositorios</string>
+    <string name="cd_collapse_repos">Contraer lista de repositorios</string>
+    <string name="cd_show_repos">Mostrar lista de repositorios</string>
+    <string name="cd_retry">Reintentar</string>
+    <string name="cd_favorites">Favoritos</string>
+    <string name="cd_commit_graph">Gráfico de commits</string>
+    <string name="cd_sync">Sincronizar</string>
+
+    <!-- リポジトリ一覧 -->
+    <string name="group_all">Todos</string>
+    <string name="repolist_empty_title">Aún no hay repositorios</string>
+    <string name="repolist_empty_desc">Añade un repositorio de GitHub / Bitbucket desde + arriba a la derecha.</string>
+    <string name="repo_state_cloning">Clonando…</string>
+    <string name="repo_state_failed">Error al clonar — reinténtalo</string>
+    <string name="repo_synced_at">Sincronizado: %1$s</string>
+    <string name="repo_never_synced">Nunca sincronizado</string>
+
+    <!-- 多ペイン/ビューアのナビ補助 -->
+    <string name="placeholder_select_repo">Selecciona un repositorio</string>
+    <string name="placeholder_select_file">Selecciona un archivo</string>
+    <string name="placeholder_select_commit">Selecciona un commit</string>
+    <string name="file_not_found_at_revision">No hay archivo en esta revisión</string>
+    <string name="revision_at">En el commit %1$s</string>
+    <string name="focus_expand">Mostrar lista y barra</string>
+    <string name="focus_collapse">Modo enfoque (ancho completo)</string>
+    <string name="pane_expand">Mostrar lista</string>
+    <string name="pane_collapse">Ocultar lista</string>
+
+    <!-- 共通アクション(追加) -->
+    <string name="action_create">Crear</string>
+    <string name="action_change">Cambiar</string>
+    <string name="action_clear">Vaciar</string>
+
+    <!-- メモ帳一覧 / 詳細 -->
+    <string name="memos_title">Notas</string>
+    <string name="memos_empty">Aún no hay cuadernos. Crea uno con + arriba a la derecha, o mantén pulsada una línea mientras ves un archivo.</string>
+    <string name="memo_entry_count">%1$d entradas</string>
+    <string name="memo_title_label">Título</string>
+    <string name="memos_share_all">Compartir todo</string>
+    <string name="memos_copy_all">Copiar todo</string>
+    <string name="memos_rename">Renombrar</string>
+    <string name="memos_rename_heading">Renombrar cuaderno</string>
+    <string name="memos_delete_title">Eliminar cuaderno</string>
+    <string name="memos_delete_confirm">Eliminar \"%1$s\" y todas sus entradas. No se puede deshacer.</string>
+    <string name="memodetail_empty">Aún no hay entradas. Mantén pulsada una línea mientras ves un archivo para añadir una.</string>
+    <string name="memodetail_clear_title">Vaciar todas las entradas</string>
+    <string name="memodetail_clear_confirm">Eliminar las %2$d entradas de \"%1$s\" (el cuaderno se conserva). No se puede deshacer.</string>
+    <string name="entry_delete_title">Eliminar entrada</string>
+    <string name="entry_delete_confirm">Eliminar esta entrada.</string>
+    <string name="entry_edit_comment">Editar comentario</string>
+    <string name="entry_edit_comment_heading">Editar comentario</string>
+
+    <!-- ファイルブラウザ -->
+    <string name="cd_repo_list">Repositorios</string>
+    <string name="cd_search">Buscar</string>
+    <string name="cd_up">Subir un nivel</string>
+    <string name="browser_switch_branch">Cambiar de branch (%1$s)</string>
+    <string name="browser_root">Raíz</string>
+    <string name="browser_empty_dir">(carpeta vacía)</string>
+    <string name="browser_lfs">Es un archivo Git LFS (su contenido no se descarga, por lo que no se puede mostrar).</string>
+    <string name="browser_unfetched">No descargado</string>
+    <string name="browser_favorite">Añadir a favoritos</string>
+    <string name="browser_unfavorite">Quitar de favoritos</string>
+    <string name="browser_copy_filename">Copiar nombre de archivo</string>
+    <string name="browser_copy_filepath">Copiar ruta del archivo</string>
+
+    <!-- リポジトリ編集画面 -->
+    <string name="repoedit_add_group">Añadir grupo</string>
+    <string name="repoedit_delete_title">Eliminar repositorio</string>
+    <string name="repoedit_delete_confirm">Eliminar \"%1$s\". También se eliminan sus datos de clone y el token guardado. No se puede deshacer.</string>
+    <string name="repoedit_reclone_confirm">Eliminar el clone local de \"%1$s\" y volver a descargarlo. Se conservan los ajustes y el token.</string>
+    <string name="repoedit_new_group">Nuevo grupo</string>
+    <string name="repoedit_rename_group">Renombrar grupo</string>
+    <string name="repoedit_ungrouped">Sin grupo (se muestra solo bajo \"Todos\")</string>
+    <string name="repoedit_delete_group_cd">Eliminar grupo</string>
+    <string name="repoedit_dropzone">Arrastra aquí para añadir</string>
+    <string name="repoedit_reorder_cd">Reordenar / mover entre grupos</string>
+    <string name="repoedit_group_name_label">Nombre del grupo</string>
+    <string name="repoedit_color_cd">Color: %1$s</string>
+
+    <!-- 相対時刻 -->
+    <string name="time_just_now">Ahora mismo</string>
+    <string name="time_min_ago">hace %1$d min</string>
+    <string name="time_hour_ago">hace %1$d h</string>
+    <string name="time_day_ago">hace %1$d días</string>
+    <string name="time_month_ago">hace %1$d meses</string>
+    <string name="time_year_ago">hace %1$d años</string>
+
+    <!-- diff/履歴 共通 -->
+    <string name="diff_none">Sin cambios</string>
+    <string name="diff_load_failed">Error al cargar el diff: %1$s</string>
+    <string name="fetch_failed">Error al obtener: %1$s</string>
+
+    <!-- 履歴画面 -->
+    <string name="history_title">Historial: %1$s</string>
+    <string name="history_submodule_note">Este es el historial de movimientos del puntero del submodule (no el historial del contenido).</string>
+    <string name="history_load_failed">Error al cargar el historial: %1$s</string>
+    <string name="history_empty">Sin historial</string>
+
+    <!-- submodule 変更ビュー -->
+    <string name="submodule_no_diff_commits">No hay commits de submodule para comparar</string>
+    <string name="submodule_more_omitted">Se omiten más (mostrando hasta el límite)</string>
+    <string name="submodule_n_forward">%1$d commits ↑</string>
+    <string name="submodule_n_backward">Revertidos %1$d ↓</string>
+    <string name="submodule_n_diverged">Divergidos %1$d</string>
+    <string name="submodule_add">Añadido</string>
+    <string name="submodule_remove">Eliminado</string>
+    <string name="submodule_new_added">Recién añadido → %1$s</string>
+    <string name="submodule_removed_arrow">%1$s → eliminado</string>
+    <string name="submodule_boundary">Base · %1$s</string>
+
+    <!-- お気に入り画面 -->
+    <string name="favorites_empty">Aún no hay favoritos. Mantén pulsado un elemento en la lista de archivos para añadir uno.</string>
+    <string name="favorites_root">(directamente en la raíz)</string>
+    <string name="favorites_deleted">(eliminado)</string>
+    <string name="favorites_remove_cd">Quitar de favoritos</string>
+    <string name="favorites_reorder_cd">Reordenar</string>
+
+    <!-- 検索画面 -->
+    <string name="search_title">Buscar: %1$s</string>
+    <string name="search_regex_hint">Buscar con regex (espacio = AND)</string>
+    <string name="search_fulltext_hint">Búsqueda de texto completo en archivos (espacio = AND)</string>
+    <string name="search_filter_hint">Filtrar por ruta/extensión (opcional, p. ej. .md / docs/)</string>
+    <string name="search_no_match">Sin coincidencias</string>
+    <string name="search_result_count">%1$d coincidencias / %2$d archivos</string>
+
+    <!-- diff 画面 -->
+    <string name="diff_expand_all">Expandir todo</string>
+    <string name="diff_collapse_all">Contraer todo</string>
+    <string name="diff_expand_cd">Expandir</string>
+    <string name="diff_collapse_cd">Contraer</string>
+    <string name="diff_open_file_cd">Abrir archivo</string>
+
+    <!-- コミットグラフ -->
+    <string name="graph_empty">Sin commits</string>
+    <string name="graph_switch_branch">Cambiar de branch</string>
+    <string name="graph_current_branch">%1$s (branch actual)</string>
+
+    <!-- コミット詳細 -->
+    <string name="commit_no_message">(sin mensaje)</string>
+    <string name="commit_expand">Mostrar más</string>
+    <string name="commit_collapse">Contraer</string>
+
+    <!-- ブランチ選択シート / オーバーレイ / PDF -->
+    <string name="branchsheet_select">Seleccionar branch</string>
+    <string name="branchsheet_filter">Filtrar</string>
+    <string name="bottombar_switching">Cambiando de branch…</string>
+    <string name="pdf_cannot_open">No se puede abrir el PDF</string>
+</resources>
