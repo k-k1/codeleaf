@@ -25,8 +25,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.BranchInfo
 
 /** ブランチ選択シート（直近コミット順・フィルタ・現在ブランチ表示）。 */
@@ -48,11 +50,11 @@ fun BranchSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-            Text("ブランチを選択", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.branchsheet_select), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = filter,
                 onValueChange = { filter = it },
-                label = { Text("フィルタ") },
+                label = { Text(stringResource(R.string.branchsheet_filter)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             )
