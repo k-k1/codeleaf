@@ -997,7 +997,6 @@ private fun AddMemoSheet(
     }
     var selectedMemoId by remember { mutableStateOf(memos.firstOrNull()?.memo?.id) }
     var newTitle by remember { mutableStateOf("") }
-    var pickerOpen by remember { mutableStateOf(false) }
 
     val s0 = (start1 - 1).coerceIn(0, total - 1)
     val e0 = (end1 - 1).coerceIn(s0, total - 1)
@@ -1089,35 +1088,24 @@ private fun AddMemoSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.memo_save_to), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.width(12.dp))
-                Box(Modifier.weight(1f)) {
-                    OutlinedButton(onClick = { pickerOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                        val label = if (creatingNew) {
-                            stringResource(R.string.memo_new_notebook)
-                        } else {
-                            memos.firstOrNull { it.memo.id == selectedMemoId }?.memo?.title
-                                ?: stringResource(R.string.memo_notebook)
-                        }
-                        Text(
-                            label,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_pick_save_to))
-                    }
-                    DropdownMenu(expanded = pickerOpen, onDismissRequest = { pickerOpen = false }) {
-                        memos.forEach { m ->
-                            DropdownMenuItem(
-                                text = { Text(m.memo.title.ifBlank { stringResource(R.string.memo_untitled) }) },
-                                onClick = { selectedMemoId = m.memo.id; pickerOpen = false },
-                            )
-                        }
-                        if (memos.isNotEmpty()) HorizontalDivider()
+                val pickerLabel = if (creatingNew) {
+                    stringResource(R.string.memo_new_notebook)
+                } else {
+                    memos.firstOrNull { it.memo.id == selectedMemoId }?.memo?.title
+                        ?: stringResource(R.string.memo_notebook)
+                }
+                DropdownSelectField(value = pickerLabel, modifier = Modifier.weight(1f)) { dismiss ->
+                    memos.forEach { m ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.memo_new_notebook_plus)) },
-                            onClick = { selectedMemoId = null; pickerOpen = false },
+                            text = { Text(m.memo.title.ifBlank { stringResource(R.string.memo_untitled) }) },
+                            onClick = { selectedMemoId = m.memo.id; dismiss() },
                         )
                     }
+                    if (memos.isNotEmpty()) HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.memo_new_notebook_plus)) },
+                        onClick = { selectedMemoId = null; dismiss() },
+                    )
                 }
             }
             if (creatingNew) {

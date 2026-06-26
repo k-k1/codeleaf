@@ -12,13 +12,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -232,26 +229,13 @@ fun SettingsScreen(
                     // ExposedDropdownMenu はアンカー(フィールド)幅にメニューが揃うので、左寄せの細い一覧にならない。
                     val current = currentUiLanguage()
                     val systemLabel = stringResource(R.string.language_system)
-                    var langMenu by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(expanded = langMenu, onExpandedChange = { langMenu = it }) {
-                        OutlinedTextField(
-                            value = current.endonym ?: systemLabel,
-                            onValueChange = {},
-                            readOnly = true,
-                            singleLine = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = langMenu) },
-                            modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                                .fillMaxWidth(),
-                        )
-                        ExposedDropdownMenu(expanded = langMenu, onDismissRequest = { langMenu = false }) {
-                            UiLanguage.entries.forEach { lang ->
-                                DropdownMenuItem(
-                                    text = { Text(lang.endonym ?: systemLabel) },
-                                    onClick = { langMenu = false; applyUiLanguage(lang) },
-                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                                )
-                            }
+                    DropdownSelectField(value = current.endonym ?: systemLabel) { dismiss ->
+                        UiLanguage.entries.forEach { lang ->
+                            DropdownMenuItem(
+                                text = { Text(lang.endonym ?: systemLabel) },
+                                onClick = { dismiss(); applyUiLanguage(lang) },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                            )
                         }
                     }
                 }

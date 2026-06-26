@@ -459,23 +459,15 @@ private fun RepoDropdown(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         else -> {
-            var expanded by remember { mutableStateOf(false) }
-            Box(Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        selected?.fullName ?: stringResource(R.string.addrepo_select_repo),
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
+            DropdownSelectField(
+                value = selected?.fullName ?: stringResource(R.string.addrepo_select_repo),
+                modifier = Modifier.fillMaxWidth(),
+            ) { dismiss ->
+                options.forEach { repo ->
+                    DropdownMenuItem(
+                        text = { Text(repo.fullName) },
+                        onClick = { onSelect(repo); dismiss() },
                     )
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-                }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    options.forEach { repo ->
-                        DropdownMenuItem(
-                            text = { Text(repo.fullName) },
-                            onClick = { onSelect(repo); expanded = false },
-                        )
-                    }
                 }
             }
         }
