@@ -47,9 +47,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.lazmix.codeleaf.CodeLeafApplication
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.CommitInfo
 import jp.lazmix.codeleaf.git.DiffFileSummary
 import kotlinx.coroutines.Dispatchers
@@ -163,6 +165,7 @@ fun CommitDiffView(
     onOpenFile: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     // 初期展開: 少ファイルは全展開して先読み、多ければ全折りたたみ（構築時に確定＝初回フレームから正しい状態）。
     val initiallyExpanded = files.size <= EXPAND_ALL_THRESHOLD
     val collapsed = remember(files) {
@@ -175,7 +178,7 @@ fun CommitDiffView(
         if (rowsMap.containsKey(i)) return
         rowsMap[i] = null
         scope.launch {
-            val text = runCatching { loadFileDiff(files[i]) }.getOrElse { "取得失敗: ${it.message}" }
+            val text = runCatching { loadFileDiff(files[i]) }.getOrElse { context.getString(R.string.diff_load_failed, it.message ?: "") }
             val rows = withContext(Dispatchers.Default) { parseDiffRows(text) }
             rowsMap[i] = rows
         }
@@ -258,14 +261,14 @@ private fun DiffLazyContent(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text(if (allCollapsed) "すべて展開" else "すべて折りたたむ")
+                    Text(if (allCollapsed) stringResource(R.string.diff_expand_all) else stringResource(R.string.diff_collapse_all))
                 }
             }
             Spacer(Modifier.weight(1f))
             TextButton(
                 onClick = { wrap = !wrap; settingsStore.setDiffWrap(wrap) },
                 modifier = Modifier.padding(end = 8.dp),
-            ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
+            ) { Text(if (wrap) stringResource(R.string.viewer_wrap_on) else stringResource(R.string.viewer_wrap_off)) }
         }
     }
 }
@@ -290,7 +293,7 @@ private fun DiffFileHeaderRow(
     ) {
         Icon(
             if (collapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
-            contentDescription = if (collapsed) "展開" else "折りたたむ",
+            contentDescription = if (collapsed) stringResource(R.string.diff_expand_cd) else stringResource(R.string.diff_collapse_cd),
             tint = p.headerFg,
             modifier = Modifier.size(18.dp),
         )
@@ -311,7 +314,7 @@ private fun DiffFileHeaderRow(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "ファイルを開く",
+                contentDescription = stringResource(R.string.diff_open_file_cd),
                 tint = p.headerFg,
                 modifier = Modifier.size(18.dp),
             )
