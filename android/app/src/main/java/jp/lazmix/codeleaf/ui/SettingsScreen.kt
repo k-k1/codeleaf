@@ -1,7 +1,6 @@
 package jp.lazmix.codeleaf.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -11,15 +10,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -229,20 +228,28 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                     // 選択中ロケールは AppCompatDelegate から都度読む(切替時に Activity 再生成→再 compose で反映)。
-                    // 言語が増えるとセグメントは横に収まらないため、ドロップダウンで選ばせる。
+                    // 言語が増えるとセグメントは横に収まらないため、標準のドロップダウンフィールドで選ばせる。
+                    // ExposedDropdownMenu はアンカー(フィールド)幅にメニューが揃うので、左寄せの細い一覧にならない。
                     val current = currentUiLanguage()
                     val systemLabel = stringResource(R.string.language_system)
                     var langMenu by remember { mutableStateOf(false) }
-                    Box {
-                        OutlinedButton(onClick = { langMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(current.endonym ?: systemLabel, modifier = Modifier.weight(1f))
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                        }
-                        DropdownMenu(expanded = langMenu, onDismissRequest = { langMenu = false }) {
+                    ExposedDropdownMenuBox(expanded = langMenu, onExpandedChange = { langMenu = it }) {
+                        OutlinedTextField(
+                            value = current.endonym ?: systemLabel,
+                            onValueChange = {},
+                            readOnly = true,
+                            singleLine = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = langMenu) },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                                .fillMaxWidth(),
+                        )
+                        ExposedDropdownMenu(expanded = langMenu, onDismissRequest = { langMenu = false }) {
                             UiLanguage.entries.forEach { lang ->
                                 DropdownMenuItem(
                                     text = { Text(lang.endonym ?: systemLabel) },
                                     onClick = { langMenu = false; applyUiLanguage(lang) },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                                 )
                             }
                         }
