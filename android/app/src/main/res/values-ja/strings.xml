@@ -278,4 +278,18 @@
     <string name="memodetail_clear_confirm">「%1$s」のエントリ%2$d件をすべて削除します(メモ帳は残ります)。元に戻せません。</string>
     <string name="entry_delete_title">エントリを削除</string>
     <string name="entry_delete_confirm">このエントリを削除します。</string>
+
+    <!-- ファイルブラウザ -->
+    <string name="cd_repo_list">リポ一覧</string>
+    <string name="cd_search">検索</string>
+    <string name="cd_up">ひとつ上へ</string>
+    <string name="browser_switch_branch">ブランチを切り替え（%1$s）</string>
+    <string name="browser_root">ルート</string>
+    <string name="browser_empty_dir">（空のディレクトリ）</string>
+    <string name="browser_lfs">Git LFS ファイルです（実体は未取得のため表示できません）</string>
+    <string name="browser_unfetched">未取得</string>
+    <string name="browser_favorite">お気に入りに追加</string>
+    <string name="browser_unfavorite">お気に入りから解除</string>
+    <string name="browser_copy_filename">ファイル名をコピー</string>
+    <string name="browser_copy_filepath">ファイルのパスをコピー</string>
 </resources>

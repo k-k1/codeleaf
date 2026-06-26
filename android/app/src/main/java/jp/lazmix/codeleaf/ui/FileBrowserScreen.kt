@@ -66,6 +66,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -195,22 +196,22 @@ fun FileBrowserScreen(
                     // 1/2ペイン=≡(リポ一覧ドロワー)、それ以外で onBack があれば ←。階層の上りは下部▲/パンくず。
                     when {
                         onMenu != null -> IconButton(onClick = onMenu) {
-                            Icon(Icons.Default.Menu, contentDescription = "リポ一覧")
+                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.cd_repo_list))
                         }
                         onBack != null -> BackButton(onBack)
                     }
                 },
                 actions = {
                     IconButton(onClick = onSearch) {
-                        Icon(Icons.Default.Search, contentDescription = "検索")
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
                     }
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         // タイトルの小さな「branch ▾」が分かりづらいので、切替導線をここにも置く。
                         DropdownMenuItem(
-                            text = { Text("ブランチを切り替え（${repo.branch}）") },
+                            text = { Text(stringResource(R.string.browser_switch_branch, repo.branch)) },
                             enabled = !locked,
                             onClick = { menuExpanded = false; showBranchSheet = true },
                         )
@@ -219,30 +220,30 @@ fun FileBrowserScreen(
                         // 3ペインは従来どおり ⋮ 内に置く(左レールにもボタンがある)。
                         if (!showRepoActions) {
                             DropdownMenuItem(
-                                text = { Text("コミットグラフ") },
+                                text = { Text(stringResource(R.string.cd_commit_graph)) },
                                 onClick = { menuExpanded = false; onGraph() },
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("メモ") },
+                            text = { Text(stringResource(R.string.viewer_menu_memo)) },
                             onClick = { menuExpanded = false; onMemos() },
                         )
                         if (!showRepoActions) {
                             DropdownMenuItem(
-                                text = { Text("お気に入り") },
+                                text = { Text(stringResource(R.string.cd_favorites)) },
                                 onClick = { menuExpanded = false; onFavorites() },
                             )
                         }
                         HorizontalDivider()
                         Text(
-                            "テーマ",
+                            stringResource(R.string.addrepo_theme),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                         val themeLabels = listOf(
-                            ThemeMode.SYSTEM to "システム",
-                            ThemeMode.LIGHT to "ライト",
-                            ThemeMode.DARK to "ダーク",
+                            ThemeMode.SYSTEM to stringResource(R.string.theme_system),
+                            ThemeMode.LIGHT to stringResource(R.string.theme_light),
+                            ThemeMode.DARK to stringResource(R.string.theme_dark),
                         )
                         themeLabels.forEach { (mode, label) ->
                             DropdownMenuItem(
@@ -272,11 +273,11 @@ fun FileBrowserScreen(
             SlimBottomBar {
                 // 片手操作用にひとつ上へ。階層飛ばしは上部パンくずから。ルートでは無効。
                 IconButton(onClick = onUp, enabled = path.isNotEmpty()) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "ひとつ上へ")
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.cd_up))
                 }
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = if (path.isEmpty()) "ルート" else path.substringAfterLast('/'),
+                    text = if (path.isEmpty()) stringResource(R.string.browser_root) else path.substringAfterLast('/'),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -304,8 +305,8 @@ fun FileBrowserScreen(
             ) {
                 when {
                     entries == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                    error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
-                    entries!!.isEmpty() -> Text("（空のディレクトリ）", Modifier.padding(16.dp))
+                    error != null -> Text(stringResource(R.string.viewer_load_failed, error ?: ""), Modifier.padding(16.dp))
+                    entries!!.isEmpty() -> Text(stringResource(R.string.browser_empty_dir), Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.fillMaxSize().testTag("browserFileList")) {
                         items(entries!!, key = { it.relPath }) { e ->
                             EntryRow(
@@ -321,7 +322,7 @@ fun FileBrowserScreen(
                                         when {
                                             // LFS は実体未取得のため Viewer では開かず、その旨を通知する
                                             e.isLfs -> scope.launch {
-                                                snackbar.showSnackbar("Git LFS ファイルです（実体は未取得のため表示できません）")
+                                                snackbar.showSnackbar(context.getString(R.string.browser_lfs))
                                             }
                                             e.isDir -> onOpenDir(e.relPath)
                                             else -> onOpenFile(e.relPath)
@@ -390,12 +391,12 @@ private fun BrowserActionRow(
             IconButton(onClick = onGraph, modifier = Modifier.size(40.dp)) {
                 Icon(
                     painterResource(R.drawable.ic_graph),
-                    contentDescription = "コミットグラフ",
+                    contentDescription = stringResource(R.string.cd_commit_graph),
                     modifier = Modifier.size(22.dp),
                 )
             }
             IconButton(onClick = onFavorites, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.Star, contentDescription = "お気に入り", modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.Star, contentDescription = stringResource(R.string.cd_favorites), modifier = Modifier.size(22.dp))
             }
         }
     }
@@ -420,7 +421,7 @@ private fun PathBreadcrumb(path: String, onNavigate: (String) -> Unit) {
             ) {
                 Icon(
                     Icons.Default.Home,
-                    contentDescription = "ルート",
+                    contentDescription = stringResource(R.string.browser_root),
                     tint = if (parts.isEmpty()) cs.onSurface else cs.primary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
@@ -529,7 +530,7 @@ private fun EntryRow(
                         if (isFavorite) {
                             Icon(
                                 Icons.Default.Star,
-                                contentDescription = "お気に入り",
+                                contentDescription = stringResource(R.string.cd_favorites),
                                 tint = cs.primary,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -537,7 +538,7 @@ private fun EntryRow(
                         // submodule はファイル名でなくフラグで分かるので、AI 等と同様にバッジで明示する。
                         // 未取得(取得失敗で空)は赤の「未取得」にして再同期を促す。
                         if (entry.isSubmodule) {
-                            if (entry.submoduleUnfetched) MarkChip("未取得", cs.error)
+                            if (entry.submoduleUnfetched) MarkChip(stringResource(R.string.browser_unfetched), cs.error)
                             else MarkChip("SUB", cs.primary)
                         }
                         chip?.let { (label, color) -> MarkChip(label, color) }
@@ -560,23 +561,23 @@ private fun EntryRow(
         DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
             onHistory?.let { history ->
                 DropdownMenuItem(
-                    text = { Text("履歴") },
+                    text = { Text(stringResource(R.string.viewer_menu_history)) },
                     onClick = { rowMenu = false; history() },
                 )
                 HorizontalDivider()
             }
             DropdownMenuItem(
-                text = { Text(if (isFavorite) "お気に入りから解除" else "お気に入りに追加") },
+                text = { Text(stringResource(if (isFavorite) R.string.browser_unfavorite else R.string.browser_favorite)) },
                 onClick = { rowMenu = false; onToggleFavorite() },
             )
             HorizontalDivider()
             // 名前は実体名(entry.name)、パスはリポルートからの相対(entry.relPath。畳んだ連鎖は最深)。
             DropdownMenuItem(
-                text = { Text("ファイル名をコピー") },
+                text = { Text(stringResource(R.string.browser_copy_filename)) },
                 onClick = { rowMenu = false; clipboard.setText(AnnotatedString(entry.name)) },
             )
             DropdownMenuItem(
-                text = { Text("ファイルのパスをコピー") },
+                text = { Text(stringResource(R.string.browser_copy_filepath)) },
                 onClick = { rowMenu = false; clipboard.setText(AnnotatedString(entry.relPath)) },
             )
         }

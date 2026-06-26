@@ -278,4 +278,18 @@
     <string name="memodetail_clear_confirm">Delete all %2$d entries in \"%1$s\" (the notebook is kept). This cannot be undone.</string>
     <string name="entry_delete_title">Delete entry</string>
     <string name="entry_delete_confirm">Delete this entry.</string>
+
+    <!-- ファイルブラウザ -->
+    <string name="cd_repo_list">Repositories</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_up">Up one level</string>
+    <string name="browser_switch_branch">Switch branch (%1$s)</string>
+    <string name="browser_root">Root</string>
+    <string name="browser_empty_dir">(empty directory)</string>
+    <string name="browser_lfs">This is a Git LFS file (its contents are not fetched, so it cannot be displayed).</string>
+    <string name="browser_unfetched">Not fetched</string>
+    <string name="browser_favorite">Add to favorites</string>
+    <string name="browser_unfavorite">Remove from favorites</string>
+    <string name="browser_copy_filename">Copy file name</string>
+    <string name="browser_copy_filepath">Copy file path</string>
 </resources>
