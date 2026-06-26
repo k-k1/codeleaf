@@ -178,7 +178,7 @@ fun CommitDiffView(
         if (rowsMap.containsKey(i)) return
         rowsMap[i] = null
         scope.launch {
-            val text = runCatching { loadFileDiff(files[i]) }.getOrElse { context.getString(R.string.diff_load_failed, it.message ?: "") }
+            val text = runCatching { loadFileDiff(files[i]) }.getOrElse { context.getString(R.string.fetch_failed, it.message ?: "") }
             val rows = withContext(Dispatchers.Default) { parseDiffRows(text) }
             rowsMap[i] = rows
         }
