@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.GraphCommit
@@ -115,7 +116,7 @@ fun CommitGraphScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 painterResource(R.drawable.ic_graph),
-                                contentDescription = "コミットグラフ",
+                                contentDescription = stringResource(R.string.cd_commit_graph),
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(Modifier.width(8.dp))
@@ -162,8 +163,8 @@ fun CommitGraphScreen(
                     val laneW = minOf(LANE_WIDTH, (maxWidth * GRAPH_MAX_FRACTION) / laneCount.coerceAtLeast(1))
                     when {
                         commits == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                        error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
-                        rows.isEmpty() -> Text("コミットがありません", Modifier.padding(16.dp))
+                        error != null -> Text(stringResource(R.string.viewer_load_failed, error.orEmpty()), Modifier.padding(16.dp))
+                        rows.isEmpty() -> Text(stringResource(R.string.graph_empty), Modifier.padding(16.dp))
                         else -> LazyColumn(Modifier.fillMaxSize()) {
                             items(rows, key = { it.commit.sha }) { row ->
                                 GraphCommitRow(
@@ -245,7 +246,7 @@ private fun GraphCommitRow(
         // ブランチ毎に1項目(複数ブランチが同一コミットを指す場合は並べる)。
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             Text(
-                "ブランチを切り替え",
+                stringResource(R.string.graph_switch_branch),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -253,7 +254,7 @@ private fun GraphCommitRow(
             branches.forEach { b ->
                 val isCurrent = b == currentBranch
                 DropdownMenuItem(
-                    text = { Text(if (isCurrent) "$b（現在のブランチ）" else b) },
+                    text = { Text(if (isCurrent) stringResource(R.string.graph_current_branch, b) else b) },
                     enabled = !isCurrent,
                     leadingIcon = {
                         Icon(
