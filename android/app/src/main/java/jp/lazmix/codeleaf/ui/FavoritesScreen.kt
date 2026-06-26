@@ -40,10 +40,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.FileEntry
 import jp.lazmix.codeleaf.data.IconSet
 import jp.lazmix.codeleaf.data.db.Favorite
@@ -92,7 +94,7 @@ fun FavoritesScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("お気に入り", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.cd_favorites), style = MaterialTheme.typography.titleMedium)
                         Text(
                             repoName,
                             style = MaterialTheme.typography.labelSmall,
@@ -109,7 +111,7 @@ fun FavoritesScreen(
         if (favorites.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    "お気に入りはまだありません。ファイル一覧で項目を長押しして追加します。",
+                    stringResource(R.string.favorites_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(32.dp),
                 )
@@ -202,7 +204,7 @@ private fun FavoriteRow(
                 Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
                     // 同名ファイル混同を避けるため、名前の上に親パスを小さく出す。
                     Text(
-                        text = if (parent.isEmpty()) "（ルート直下）" else parent,
+                        text = if (parent.isEmpty()) stringResource(R.string.favorites_root) else parent,
                         style = MaterialTheme.typography.labelSmall,
                         color = cs.onSurfaceVariant.copy(alpha = contentAlpha),
                         maxLines = 1,
@@ -220,7 +222,7 @@ private fun FavoriteRow(
                         )
                         if (!exists) {
                             Text(
-                                text = "  （削除済み）",
+                                text = "  " + stringResource(R.string.favorites_deleted),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = cs.onSurfaceVariant,
                             )
@@ -229,14 +231,14 @@ private fun FavoriteRow(
                 }
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Close, contentDescription = "お気に入りから削除", tint = cs.onSurfaceVariant)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.favorites_remove_cd), tint = cs.onSurfaceVariant)
             }
             // 掴んで上下ドラッグで並べ替えるハンドル。
             Box(
                 Modifier.fillMaxHeight().width(48.dp).then(dragModifier),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Default.Menu, contentDescription = "並べ替え", tint = cs.onSurfaceVariant)
+                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.favorites_reorder_cd), tint = cs.onSurfaceVariant)
             }
         }
         HorizontalDivider(Modifier.align(Alignment.BottomCenter))
