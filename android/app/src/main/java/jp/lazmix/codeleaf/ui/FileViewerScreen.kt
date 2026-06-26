@@ -97,6 +97,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
@@ -110,6 +111,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.FileInfo
 import jp.lazmix.codeleaf.data.FileKind
 import jp.lazmix.codeleaf.data.LinkOpenMode
@@ -304,7 +306,7 @@ fun FileViewerScreen(
                             .testTag("viewerTitle")
                             .then(
                                 if (onTitleClick != null) {
-                                    Modifier.clickable(onClickLabel = "ブラウザへ戻る", onClick = onTitleClick)
+                                    Modifier.clickable(onClickLabel = stringResource(R.string.viewer_back_to_browser), onClick = onTitleClick)
                                 } else {
                                     Modifier
                                 }
@@ -333,26 +335,26 @@ fun FileViewerScreen(
                 },
                 actions = {
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         if (isMarkdown && isTextFile) {
                             DropdownMenuItem(
-                                text = { Text(if (raw) "整形で表示" else "Raw で表示") },
+                                text = { Text(stringResource(if (raw) R.string.viewer_menu_rendered else R.string.viewer_menu_raw)) },
                                 onClick = { menuExpanded = false; raw = !raw },
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("履歴") },
+                            text = { Text(stringResource(R.string.viewer_menu_history)) },
                             onClick = { menuExpanded = false; onHistory() },
                         )
                         if (isTextFile) {
                             DropdownMenuItem(
-                                text = { Text("メモ") },
+                                text = { Text(stringResource(R.string.viewer_menu_memo)) },
                                 onClick = { menuExpanded = false; onMemos() },
                             )
                             DropdownMenuItem(
-                                text = { Text(if (selectionMode) "選択を終了" else "テキストを選択") },
+                                text = { Text(stringResource(if (selectionMode) R.string.viewer_menu_select_end else R.string.viewer_menu_select_start)) },
                                 onClick = {
                                     menuExpanded = false
                                     selectionMode = !selectionMode
@@ -372,22 +374,22 @@ fun FileViewerScreen(
                     TextButton(
                         onClick = { showToc = true },
                         modifier = Modifier.padding(start = 4.dp),
-                    ) { Text("☰ 目次") }
+                    ) { Text(stringResource(R.string.viewer_toc)) }
                 }
                 if (isTextFile && text != null && (!isMarkdown || raw)) {
                     TextButton(
                         onClick = { wrap = !wrap; onToggleWrap(wrap) },
                         modifier = Modifier.padding(start = 4.dp),
-                    ) { Text(if (wrap) "折り返しON" else "折り返しOFF") }
+                    ) { Text(stringResource(if (wrap) R.string.viewer_wrap_on else R.string.viewer_wrap_off)) }
                 }
                 Spacer(Modifier.weight(1f))
                 // 右: 同一フォルダ内の前/次ファイルを開く(端では無効化)。
                 if (siblings.size > 1 && siblingIndex >= 0) {
                     IconButton(onClick = { prevFile?.let(onOpenSibling) }, enabled = prevFile != null) {
-                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "前のファイル")
+                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.cd_prev_file))
                     }
                     IconButton(onClick = { nextFile?.let(onOpenSibling) }, enabled = nextFile != null) {
-                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = "次のファイル")
+                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.cd_next_file))
                     }
                 }
             }
@@ -403,10 +405,10 @@ fun FileViewerScreen(
             metaText?.let { FileMetaBar(it) }
             // 上限で先頭のみ読んだときの注意バー。
             if (truncated && body != null) {
-                FileMetaBar("先頭のみ表示中(全体 ${humanSize(info?.size ?: 0)})")
+                FileMetaBar(stringResource(R.string.viewer_truncated, humanSize(info?.size ?: 0)))
             }
             when {
-                error != null -> Text("読み込み失敗: $error", Modifier.padding(16.dp))
+                error != null -> Text(stringResource(R.string.viewer_load_failed, error ?: ""), Modifier.padding(16.dp))
                 kind == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 awaitingLargeConfirm -> LargeFileGuard(
                     size = info!!.size,
@@ -570,7 +572,7 @@ fun FileViewerScreen(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
             ) {
                 Text(
-                    "目次",
+                    stringResource(R.string.viewer_toc_title),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp),
                 )
@@ -847,13 +849,13 @@ private fun BinaryInfoView(typeLabel: String, size: Long, head: ByteArray, modif
         )
         Text(typeLabel, style = MaterialTheme.typography.titleLarge)
         Text(
-            "${humanSize(size)} ・ テキストとして表示できません",
+            stringResource(R.string.viewer_binary_cannot_display, humanSize(size)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (head.isNotEmpty()) {
             Text(
-                "先頭バイト",
+                stringResource(R.string.viewer_binary_head),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -887,13 +889,13 @@ private fun LargeFileGuard(size: Long, onShow: () -> Unit, modifier: Modifier = 
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(40.dp),
         )
-        Text("大きいファイル", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.viewer_large_title), style = MaterialTheme.typography.titleLarge)
         Text(
-            "${humanSize(size)} ・ 表示すると重くなる場合があります",
+            stringResource(R.string.viewer_large_desc, humanSize(size)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(onClick = onShow) { Text("表示する") }
+        Button(onClick = onShow) { Text(stringResource(R.string.viewer_large_show)) }
     }
 }
 
@@ -961,10 +963,10 @@ private fun AddMemoSheet(
         ) {
             // 行範囲: 行 X〜Y / 全 N 行 をタイトル行に同居(専用の見出し行を持たず高さを節約)。
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("メモを追加", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.memo_add_title), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "行 $start1 〜 $end1 / 全 $total 行",
+                    stringResource(R.string.memo_line_range, start1, end1, total),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -988,14 +990,14 @@ private fun AddMemoSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 LineField(
-                    label = "開始",
+                    label = stringResource(R.string.memo_line_start),
                     value = start1,
                     min = 1,
                     max = end1,
                     onChange = { start1 = it.coerceIn(1, end1) },
                 )
                 LineField(
-                    label = "終了",
+                    label = stringResource(R.string.memo_line_end),
                     value = end1,
                     min = start1,
                     max = total,
@@ -1020,21 +1022,22 @@ private fun AddMemoSheet(
             OutlinedTextField(
                 value = comment,
                 onValueChange = { comment = it },
-                label = { Text("コメント") },
+                label = { Text(stringResource(R.string.memo_comment)) },
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             // 追加先メモ帳: 既存から選ぶ or 新規作成。枠＋▾ で「選べる」ことを明示する。
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("保存先", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.memo_save_to), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.width(12.dp))
                 Box(Modifier.weight(1f)) {
                     OutlinedButton(onClick = { pickerOpen = true }, modifier = Modifier.fillMaxWidth()) {
                         val label = if (creatingNew) {
-                            "新しいメモ帳"
+                            stringResource(R.string.memo_new_notebook)
                         } else {
-                            memos.firstOrNull { it.memo.id == selectedMemoId }?.memo?.title ?: "メモ帳"
+                            memos.firstOrNull { it.memo.id == selectedMemoId }?.memo?.title
+                                ?: stringResource(R.string.memo_notebook)
                         }
                         Text(
                             label,
@@ -1042,18 +1045,18 @@ private fun AddMemoSheet(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "保存先を選択")
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_pick_save_to))
                     }
                     DropdownMenu(expanded = pickerOpen, onDismissRequest = { pickerOpen = false }) {
                         memos.forEach { m ->
                             DropdownMenuItem(
-                                text = { Text(m.memo.title.ifBlank { "(無題)" }) },
+                                text = { Text(m.memo.title.ifBlank { stringResource(R.string.memo_untitled) }) },
                                 onClick = { selectedMemoId = m.memo.id; pickerOpen = false },
                             )
                         }
                         if (memos.isNotEmpty()) HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text("＋ 新しいメモ帳") },
+                            text = { Text(stringResource(R.string.memo_new_notebook_plus)) },
                             onClick = { selectedMemoId = null; pickerOpen = false },
                         )
                     }
@@ -1063,7 +1066,7 @@ private fun AddMemoSheet(
                 OutlinedTextField(
                     value = newTitle,
                     onValueChange = { newTitle = it },
-                    label = { Text("新しいメモ帳のタイトル") },
+                    label = { Text(stringResource(R.string.memo_new_notebook_title)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1077,7 +1080,7 @@ private fun AddMemoSheet(
             val actionPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "キャンセル")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
                 }
                 Spacer(Modifier.weight(1f))
                 TextButton(
@@ -1087,7 +1090,7 @@ private fun AddMemoSheet(
                 ) {
                     Icon(ContentCopyIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("コピー")
+                    Text(stringResource(R.string.action_copy))
                 }
                 TextButton(
                     enabled = canSave,
@@ -1096,7 +1099,7 @@ private fun AddMemoSheet(
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("共有")
+                    Text(stringResource(R.string.action_share))
                 }
                 Spacer(Modifier.width(4.dp))
                 Button(
@@ -1106,7 +1109,7 @@ private fun AddMemoSheet(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("保存")
+                    Text(stringResource(R.string.action_save))
                 }
             }
         }

@@ -90,4 +90,46 @@
     <string name="settings_version_title">バージョン</string>
     <string name="settings_build_line">ビルド: %1$s · %2$s · %3$s</string>
     <string name="settings_licenses">オープンソースライセンス</string>
+
+    <!-- 共通の操作/アイコン説明(複数画面で共有) -->
+    <string name="action_copy">コピー</string>
+    <string name="action_share">共有</string>
+    <string name="action_save">保存</string>
+    <string name="cd_menu">メニュー</string>
+
+    <!-- ファイルビューア -->
+    <string name="viewer_back_to_browser">ブラウザへ戻る</string>
+    <string name="viewer_menu_rendered">整形で表示</string>
+    <string name="viewer_menu_raw">Raw で表示</string>
+    <string name="viewer_menu_history">履歴</string>
+    <string name="viewer_menu_memo">メモ</string>
+    <string name="viewer_menu_select_start">テキストを選択</string>
+    <string name="viewer_menu_select_end">選択を終了</string>
+    <string name="viewer_toc">☰ 目次</string>
+    <string name="viewer_wrap_on">折り返しON</string>
+    <string name="viewer_wrap_off">折り返しOFF</string>
+    <string name="cd_prev_file">前のファイル</string>
+    <string name="cd_next_file">次のファイル</string>
+    <string name="viewer_truncated">先頭のみ表示中(全体 %1$s)</string>
+    <string name="viewer_load_failed">読み込み失敗: %1$s</string>
+    <string name="viewer_toc_title">目次</string>
+    <string name="viewer_binary_cannot_display">%1$s ・ テキストとして表示できません</string>
+    <string name="viewer_binary_head">先頭バイト</string>
+    <string name="viewer_large_title">大きいファイル</string>
+    <string name="viewer_large_desc">%1$s ・ 表示すると重くなる場合があります</string>
+    <string name="viewer_large_show">表示する</string>
+
+    <!-- メモ追加シート(ビューア/メモ画面で共有) -->
+    <string name="memo_add_title">メモを追加</string>
+    <string name="memo_line_range">行 %1$d 〜 %2$d / 全 %3$d 行</string>
+    <string name="memo_line_start">開始</string>
+    <string name="memo_line_end">終了</string>
+    <string name="memo_comment">コメント</string>
+    <string name="memo_save_to">保存先</string>
+    <string name="memo_new_notebook">新しいメモ帳</string>
+    <string name="memo_notebook">メモ帳</string>
+    <string name="cd_pick_save_to">保存先を選択</string>
+    <string name="memo_untitled">(無題)</string>
+    <string name="memo_new_notebook_plus">＋ 新しいメモ帳</string>
+    <string name="memo_new_notebook_title">新しいメモ帳のタイトル</string>
 </resources>

@@ -90,4 +90,46 @@
     <string name="settings_version_title">Version</string>
     <string name="settings_build_line">Build: %1$s · %2$s · %3$s</string>
     <string name="settings_licenses">Open-source licenses</string>
+
+    <!-- 共通の操作/アイコン説明(複数画面で共有) -->
+    <string name="action_copy">Copy</string>
+    <string name="action_share">Share</string>
+    <string name="action_save">Save</string>
+    <string name="cd_menu">Menu</string>
+
+    <!-- ファイルビューア -->
+    <string name="viewer_back_to_browser">Back to browser</string>
+    <string name="viewer_menu_rendered">Show rendered</string>
+    <string name="viewer_menu_raw">Show raw</string>
+    <string name="viewer_menu_history">History</string>
+    <string name="viewer_menu_memo">Memo</string>
+    <string name="viewer_menu_select_start">Select text</string>
+    <string name="viewer_menu_select_end">Exit selection</string>
+    <string name="viewer_toc">☰ Contents</string>
+    <string name="viewer_wrap_on">Wrap: on</string>
+    <string name="viewer_wrap_off">Wrap: off</string>
+    <string name="cd_prev_file">Previous file</string>
+    <string name="cd_next_file">Next file</string>
+    <string name="viewer_truncated">Showing the beginning only (total %1$s)</string>
+    <string name="viewer_load_failed">Failed to load: %1$s</string>
+    <string name="viewer_toc_title">Contents</string>
+    <string name="viewer_binary_cannot_display">%1$s · Cannot display as text</string>
+    <string name="viewer_binary_head">First bytes</string>
+    <string name="viewer_large_title">Large file</string>
+    <string name="viewer_large_desc">%1$s · Displaying may be slow</string>
+    <string name="viewer_large_show">Show</string>
+
+    <!-- メモ追加シート(ビューア/メモ画面で共有) -->
+    <string name="memo_add_title">Add memo</string>
+    <string name="memo_line_range">Lines %1$d–%2$d of %3$d</string>
+    <string name="memo_line_start">Start</string>
+    <string name="memo_line_end">End</string>
+    <string name="memo_comment">Comment</string>
+    <string name="memo_save_to">Save to</string>
+    <string name="memo_new_notebook">New notebook</string>
+    <string name="memo_notebook">Notebook</string>
+    <string name="cd_pick_save_to">Select destination</string>
+    <string name="memo_untitled">(untitled)</string>
+    <string name="memo_new_notebook_plus">＋ New notebook</string>
+    <string name="memo_new_notebook_title">New notebook title</string>
 </resources>
