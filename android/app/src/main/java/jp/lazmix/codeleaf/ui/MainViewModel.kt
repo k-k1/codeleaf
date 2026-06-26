@@ -87,12 +87,13 @@ class MainViewModel(
     /** GitHub: device/code を要求（UI は user_code 表示＋verification_uri を開く）。未設定なら失敗。 */
     suspend fun requestGitHubDeviceCode(): Result<GitHubDeviceCode> =
         githubOAuthService?.requestDeviceCode()
-            ?: Result.failure(IllegalStateException("GitHub ログインは未設定です"))
+            // メッセージは持たせず、表示文言は呼び出し側(UI)がロケール解決した文言にフォールバックさせる。
+            ?: Result.failure(IllegalStateException())
 
     /** GitHub: ユーザ承認をポーリングし、成功で OAuthAccount を返す。 */
     suspend fun pollGitHubToken(code: GitHubDeviceCode): Result<OAuthAccount> =
         githubOAuthService?.pollForToken(code)
-            ?: Result.failure(IllegalStateException("GitHub ログインは未設定です"))
+            ?: Result.failure(IllegalStateException())
 
     /** 成功したログインを記憶（次回のリポ追加で再ログイン不要にする）。 */
     fun rememberOAuthLogin(account: OAuthAccount) {
