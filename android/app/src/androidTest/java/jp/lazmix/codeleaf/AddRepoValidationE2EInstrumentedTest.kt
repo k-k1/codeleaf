@@ -29,6 +29,7 @@ class AddRepoValidationE2EInstrumentedTest {
 
     @Before
     fun setUp() {
+        resetAppLocaleToSystem() // ja 前提の文字列 assert が残留ロケール上書きで壊れないように
         app.cleanRepos()
     }
 

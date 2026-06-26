@@ -46,11 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.NewRepo
 import jp.lazmix.codeleaf.data.db.AuthType
 import jp.lazmix.codeleaf.data.db.GitHost
@@ -65,6 +67,16 @@ import kotlinx.coroutines.launch
 
 /** 認証方法（アコーディオンの選択肢）。 */
 private enum class AuthMethod { OAUTH, TOKEN }
+
+/** URL 検証エラー種別を表示文言へ解決する(純粋関数 repoUrlError の結果を翻訳)。 */
+@Composable
+private fun repoUrlErrorText(e: RepoUrlError?): String? = when (e) {
+    null -> null
+    RepoUrlError.WHITESPACE -> stringResource(R.string.repo_url_err_whitespace)
+    RepoUrlError.FILE_NOT_ABSOLUTE -> stringResource(R.string.repo_url_err_file_abs)
+    RepoUrlError.MISSING_OWNER_REPO -> stringResource(R.string.repo_url_err_owner_repo)
+    RepoUrlError.BAD_FORMAT -> stringResource(R.string.repo_url_err_format)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,12 +119,17 @@ fun AddRepoScreen(
     var repoLoadError by remember { mutableStateOf<String?>(null) }
     var selectedRepo by remember { mutableStateOf<RemoteRepo?>(null) }
 
+    // コルーチン(LaunchedEffect/scope.launch)内では stringResource を呼べないため先に解決して捕捉する。
+    val loginFailedMsg = stringResource(R.string.addrepo_login_failed)
+    val reposLoadFailedMsg = stringResource(R.string.addrepo_repos_load_failed)
+    val loginStartFailedMsg = stringResource(R.string.addrepo_login_start_failed)
+
     // redirect Activity が交換した OAuth 結果を受け取る（Bitbucket）。
     LaunchedEffect(Unit) {
         oauthResult.collect { result ->
             result.fold(
                 onSuccess = { oauth = it; oauthError = null; onOAuthLogin(it) },
-                onFailure = { oauthError = it.message ?: "ログインに失敗しました" },
+                onFailure = { oauthError = it.message ?: loginFailedMsg },
             )
         }
     }
@@ -123,7 +140,7 @@ fun AddRepoScreen(
         reposLoading = true; repoLoadError = null; selectedRepo = null; repoOptions = emptyList()
         loadOAuthRepos(account).fold(
             onSuccess = { repoOptions = it },
-            onFailure = { repoLoadError = it.message ?: "リポジトリ一覧の取得に失敗しました" },
+            onFailure = { repoLoadError = it.message ?: reposLoadFailedMsg },
         )
         reposLoading = false
     }
@@ -138,10 +155,10 @@ fun AddRepoScreen(
                     deviceCode = code
                     pollGitHubToken(code).fold(
                         onSuccess = { oauth = it; onOAuthLogin(it) },
-                        onFailure = { oauthError = it.message ?: "ログインに失敗しました" },
+                        onFailure = { oauthError = it.message ?: loginFailedMsg },
                     )
                 },
-                onFailure = { oauthError = it.message ?: "ログインの開始に失敗しました" },
+                onFailure = { oauthError = it.message ?: loginStartFailedMsg },
             )
             deviceCode = null; githubLoggingIn = false
         }
@@ -164,7 +181,7 @@ fun AddRepoScreen(
     val effectiveMethod = if (showAccordion) authMethod else AuthMethod.TOKEN
     val usernameRequired = host == GitHost.BITBUCKET && effectiveMethod == AuthMethod.TOKEN
     // TOKEN 手入力のときだけ URL 形式を検査する(OAuth は選択リポの URL を使う)。
-    val urlError = if (effectiveMethod == AuthMethod.TOKEN) repoUrlError(url) else null
+    val urlError = repoUrlErrorText(if (effectiveMethod == AuthMethod.TOKEN) repoUrlError(url) else null)
     val canSubmit = !status.busy && when (effectiveMethod) {
         // OAuth はプルダウンで選んだリポを clone（URL 手入力不要）。
         AuthMethod.OAUTH -> oauth != null && selectedRepo != null
@@ -177,7 +194,7 @@ fun AddRepoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("リポジトリを追加") },
+                title = { Text(stringResource(R.string.addrepo_title)) },
                 navigationIcon = {
                     BackButton(onBack)
                 },
@@ -190,7 +207,7 @@ fun AddRepoScreen(
         ) {
             if (status.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
 
-            Text("ホスト")
+            Text(stringResource(R.string.addrepo_host))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 GitHost.entries.forEachIndexed { i, h ->
                     SegmentedButton(
@@ -214,19 +231,22 @@ fun AddRepoScreen(
 
             // 認証方法（ホストのタブ直下・上部に配置）。OAuth 設定済みホストのときだけ
             // アコーディオンで OAuth / トークンを選ばせる。それ以外はトークン入力のみ。
-            Text("認証方法")
+            Text(stringResource(R.string.addrepo_auth_method))
             if (showAccordion) {
                 AuthMethodAccordion(
                     method = authMethod,
                     onSelect = { authMethod = it },
-                    oauthTitle = "${host.name.lowercase().replaceFirstChar { it.uppercase() }} でログイン（OAuth）",
+                    oauthTitle = stringResource(
+                        R.string.addrepo_oauth_title,
+                        host.name.lowercase().replaceFirstChar { it.uppercase() },
+                    ),
                     oauthContent = {
                         if (oauth == null) {
                             // 未ログイン：Bitbucket は Custom Tabs リダイレクト、GitHub は Device Flow。
                             when (host) {
                                 GitHost.BITBUCKET ->
                                     OutlinedButton(onClick = onStartBitbucketOAuth, modifier = Modifier.fillMaxWidth()) {
-                                        Text("Bitbucket でログイン")
+                                        Text(stringResource(R.string.addrepo_login_bitbucket))
                                     }
                                 GitHost.GITHUB -> GitHubLoginPanel(
                                     deviceCode = deviceCode,
@@ -241,7 +261,7 @@ fun AddRepoScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("✓ ログイン済み", color = MaterialTheme.colorScheme.primary)
+                                Text(stringResource(R.string.addrepo_logged_in), color = MaterialTheme.colorScheme.primary)
                                 TextButton(
                                     onClick = {
                                         oauth = null; selectedRepo = null; repoOptions = emptyList()
@@ -250,7 +270,7 @@ fun AddRepoScreen(
                                             GitHost.GITHUB -> startGitHubLogin()
                                         }
                                     },
-                                ) { Text("別のアカウント") }
+                                ) { Text(stringResource(R.string.addrepo_other_account)) }
                             }
                             RepoDropdown(
                                 options = repoOptions,
@@ -280,7 +300,7 @@ fun AddRepoScreen(
             } else {
                 if (host == GitHost.BITBUCKET && !bitbucketOAuthAvailable) {
                     Text(
-                        "OAuth ログインは未設定です（local.properties に client_id/secret を設定すると有効）。",
+                        stringResource(R.string.addrepo_oauth_unconfigured),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -297,10 +317,10 @@ fun AddRepoScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it; nameEdited = true },
-                label = { Text("表示名 (任意・自動入力)") },
+                label = { Text(stringResource(R.string.addrepo_display_name)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
-            Text("テーマ")
+            Text(stringResource(R.string.addrepo_theme))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 ThemeMode.entries.forEachIndexed { i, t ->
                     SegmentedButton(
@@ -356,7 +376,7 @@ fun AddRepoScreen(
                 },
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (status.busy) "clone 中..." else "保存・clone") }
+            ) { Text(stringResource(if (status.busy) R.string.addrepo_cloning else R.string.addrepo_save_clone)) }
         }
     }
 }
@@ -383,7 +403,7 @@ private fun AuthMethodAccordion(
         )
         HorizontalDivider()
         AccordionItem(
-            title = "トークンを入力",
+            title = stringResource(R.string.addrepo_token_method),
             selected = method == AuthMethod.TOKEN,
             onClick = { onSelect(AuthMethod.TOKEN) },
             content = tokenContent,
@@ -431,11 +451,11 @@ private fun RepoDropdown(
     when {
         loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text("リポジトリを取得中...", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.addrepo_repos_loading), style = MaterialTheme.typography.bodySmall)
         }
         error != null -> Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         options.isEmpty() -> Text(
-            "clone できるリポジトリがありません（すべて登録済みか、アクセス可能なリポがありません）。",
+            stringResource(R.string.addrepo_no_repos),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -444,7 +464,7 @@ private fun RepoDropdown(
             Box(Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        selected?.fullName ?: "リポジトリを選択",
+                        selected?.fullName ?: stringResource(R.string.addrepo_select_repo),
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                     )
@@ -478,7 +498,7 @@ private fun GitHubLoginPanel(
     when {
         deviceCode != null -> {
             Text(
-                "ブラウザで下のコードを入力してログインを承認してください。",
+                stringResource(R.string.addrepo_gh_enter_code),
                 style = MaterialTheme.typography.bodySmall,
             )
             Box(
@@ -496,24 +516,24 @@ private fun GitHubLoginPanel(
                 )
             }
             Text(
-                "タップでコピー / 入力先: ${deviceCode.verificationUri}",
+                stringResource(R.string.addrepo_gh_copy_hint, deviceCode.verificationUri),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = { onOpenUrl(deviceCode.verificationUri) }, modifier = Modifier.fillMaxWidth()) {
-                Text("ブラウザを開く")
+                Text(stringResource(R.string.addrepo_open_browser))
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Text("承認を待っています...", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.addrepo_gh_waiting), style = MaterialTheme.typography.bodySmall)
             }
         }
         loggingIn -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text("コードを取得中...", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.addrepo_gh_getting_code), style = MaterialTheme.typography.bodySmall)
         }
         else -> OutlinedButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
-            Text("GitHub でログイン")
+            Text(stringResource(R.string.addrepo_login_github))
         }
     }
 }
@@ -532,19 +552,19 @@ private fun ManualAuthFields(
 ) {
     OutlinedTextField(
         value = url, onValueChange = onUrl,
-        label = { Text("URL (https://...)") },
+        label = { Text(stringResource(R.string.addrepo_url_label)) },
         isError = urlError != null,
         supportingText = urlError?.let { { Text(it) } },
         singleLine = true, modifier = Modifier.fillMaxWidth(),
     )
     OutlinedTextField(
         value = username, onValueChange = onUsername,
-        label = { Text(if (usernameRequired) "ユーザー名 (Bitbucket: Atlassianメール・必須)" else "ユーザー名 (任意)") },
+        label = { Text(stringResource(if (usernameRequired) R.string.addrepo_username_required else R.string.addrepo_username_optional)) },
         singleLine = true, modifier = Modifier.fillMaxWidth(),
     )
     OutlinedTextField(
         value = token, onValueChange = onToken,
-        label = { Text("トークン (PAT / API token)") },
+        label = { Text(stringResource(R.string.addrepo_token_label)) },
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),

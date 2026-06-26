@@ -166,4 +166,41 @@
     <string name="bin_mp4">MP4/video</string>
     <string name="bin_font">Font</string>
     <string name="bin_unknown">Binary</string>
+
+    <!-- リポジトリ追加画面 -->
+    <string name="addrepo_title">Add repository</string>
+    <string name="addrepo_host">Host</string>
+    <string name="addrepo_auth_method">Authentication</string>
+    <string name="addrepo_oauth_title">Log in with %1$s (OAuth)</string>
+    <string name="addrepo_login_bitbucket">Log in with Bitbucket</string>
+    <string name="addrepo_logged_in">✓ Logged in</string>
+    <string name="addrepo_other_account">Other account</string>
+    <string name="addrepo_oauth_unconfigured">OAuth login is not configured (set client_id/secret in local.properties to enable).</string>
+    <string name="addrepo_display_name">Display name (optional, auto-filled)</string>
+    <string name="addrepo_theme">Theme</string>
+    <string name="addrepo_cloning">Cloning…</string>
+    <string name="addrepo_save_clone">Save &amp; clone</string>
+    <string name="addrepo_token_method">Enter a token</string>
+    <string name="addrepo_repos_loading">Loading repositories…</string>
+    <string name="addrepo_no_repos">No repositories available to clone (all are registered, or none are accessible).</string>
+    <string name="addrepo_select_repo">Select a repository</string>
+    <string name="addrepo_gh_enter_code">Enter the code below in your browser to approve the login.</string>
+    <string name="addrepo_gh_copy_hint">Tap to copy / enter at: %1$s</string>
+    <string name="addrepo_open_browser">Open browser</string>
+    <string name="addrepo_gh_waiting">Waiting for approval…</string>
+    <string name="addrepo_gh_getting_code">Getting code…</string>
+    <string name="addrepo_login_github">Log in with GitHub</string>
+    <string name="addrepo_url_label">URL (https://...)</string>
+    <string name="addrepo_username_required">Username (Bitbucket: Atlassian email, required)</string>
+    <string name="addrepo_username_optional">Username (optional)</string>
+    <string name="addrepo_token_label">Token (PAT / API token)</string>
+    <string name="addrepo_login_failed">Login failed</string>
+    <string name="addrepo_repos_load_failed">Failed to load repository list</string>
+    <string name="addrepo_login_start_failed">Failed to start login</string>
+
+    <!-- URL 検証エラー(repoUrlError) -->
+    <string name="repo_url_err_whitespace">The URL contains whitespace</string>
+    <string name="repo_url_err_file_abs">After file:// use an absolute path (e.g. file:///path/to/repo)</string>
+    <string name="repo_url_err_owner_repo">The URL has no owner/repo (e.g. https://github.com/owner/repo.git)</string>
+    <string name="repo_url_err_format">The URL format is invalid (e.g. https://github.com/owner/repo.git)</string>
 </resources>

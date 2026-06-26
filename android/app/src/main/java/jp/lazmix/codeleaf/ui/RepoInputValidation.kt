@@ -13,21 +13,23 @@ internal fun repoNameFromUrl(url: String): String {
     return cleaned.substringAfterLast('/').removeSuffix(".git")
 }
 
+/** URL バリデーションのエラー種別(表示文言は UI 層で stringResource に解決)。 */
+enum class RepoUrlError { WHITESPACE, FILE_NOT_ABSOLUTE, MISSING_OWNER_REPO, BAD_FORMAT }
+
 /**
- * clone URL の簡易バリデーション。問題なければ null、あれば表示用メッセージを返す。
+ * clone URL の簡易バリデーション。問題なければ null、あれば [RepoUrlError] を返す(純粋・テスト可能)。
  * 空文字は「未入力」として呼び出し側の必須チェック(ボタン無効)に委ねるため null。
  * 厳密な到達性は確認せず、明らかに形式が違うものだけ弾く(誤検知で正規 URL を拒まない)。
  */
-internal fun repoUrlError(url: String): String? {
+internal fun repoUrlError(url: String): RepoUrlError? {
     val u = url.trim()
     if (u.isEmpty()) return null
-    if (u.any { it.isWhitespace() }) return "URL に空白が含まれています"
+    if (u.any { it.isWhitespace() }) return RepoUrlError.WHITESPACE
     val lower = u.lowercase()
     // ローカル clone ソース(端末上の git リポ)を許可: file:// URL とベタの絶対パス。
     // JGit はどちらも clone 可能。到達性は確認せず、明らかな形式違いだけ弾く方針に合わせる。
     if (lower.startsWith("file://")) {
-        return if (u.substringAfter("://").startsWith("/")) null
-        else "file:// の後ろは絶対パスにしてください（例: file:///path/to/repo）"
+        return if (u.substringAfter("://").startsWith("/")) null else RepoUrlError.FILE_NOT_ABSOLUTE
     }
     if (u.startsWith("/")) return null
     val hasScheme = lower.startsWith("https://") || lower.startsWith("http://") ||
@@ -36,13 +38,13 @@ internal fun repoUrlError(url: String): String? {
         val rest = u.substringAfter("://")
         // host と owner/repo のパスが要る。
         if (!rest.contains('/') || rest.substringAfter('/').isBlank()) {
-            return "URL に owner/repo が含まれていません（例: https://github.com/owner/repo.git）"
+            return RepoUrlError.MISSING_OWNER_REPO
         }
         return null
     }
     // scp 形式 git@host:owner/repo(.git) も許可。
     if (Regex("""^[^@\s/]+@[^@\s/:]+:.+""").matches(u)) return null
-    return "URL の形式が正しくありません（例: https://github.com/owner/repo.git）"
+    return RepoUrlError.BAD_FORMAT
 }
 
 /**

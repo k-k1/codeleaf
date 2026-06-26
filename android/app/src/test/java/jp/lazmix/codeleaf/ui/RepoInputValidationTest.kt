@@ -33,7 +33,7 @@ class RepoInputValidationTest {
     }
 
     @Test fun whitespace_isError() {
-        assertTrue(repoUrlError("https://github.com/own er/repo")!!.contains("空白"))
+        assertEquals(RepoUrlError.WHITESPACE, repoUrlError("https://github.com/own er/repo"))
     }
 
     @Test fun scpForm_ok() {

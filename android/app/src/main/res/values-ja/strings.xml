@@ -166,4 +166,41 @@
     <string name="bin_mp4">MP4/動画</string>
     <string name="bin_font">フォント</string>
     <string name="bin_unknown">バイナリ</string>
+
+    <!-- リポジトリ追加画面 -->
+    <string name="addrepo_title">リポジトリを追加</string>
+    <string name="addrepo_host">ホスト</string>
+    <string name="addrepo_auth_method">認証方法</string>
+    <string name="addrepo_oauth_title">%1$s でログイン（OAuth）</string>
+    <string name="addrepo_login_bitbucket">Bitbucket でログイン</string>
+    <string name="addrepo_logged_in">✓ ログイン済み</string>
+    <string name="addrepo_other_account">別のアカウント</string>
+    <string name="addrepo_oauth_unconfigured">OAuth ログインは未設定です（local.properties に client_id/secret を設定すると有効）。</string>
+    <string name="addrepo_display_name">表示名 (任意・自動入力)</string>
+    <string name="addrepo_theme">テーマ</string>
+    <string name="addrepo_cloning">clone 中...</string>
+    <string name="addrepo_save_clone">保存・clone</string>
+    <string name="addrepo_token_method">トークンを入力</string>
+    <string name="addrepo_repos_loading">リポジトリを取得中...</string>
+    <string name="addrepo_no_repos">clone できるリポジトリがありません（すべて登録済みか、アクセス可能なリポがありません）。</string>
+    <string name="addrepo_select_repo">リポジトリを選択</string>
+    <string name="addrepo_gh_enter_code">ブラウザで下のコードを入力してログインを承認してください。</string>
+    <string name="addrepo_gh_copy_hint">タップでコピー / 入力先: %1$s</string>
+    <string name="addrepo_open_browser">ブラウザを開く</string>
+    <string name="addrepo_gh_waiting">承認を待っています...</string>
+    <string name="addrepo_gh_getting_code">コードを取得中...</string>
+    <string name="addrepo_login_github">GitHub でログイン</string>
+    <string name="addrepo_url_label">URL (https://...)</string>
+    <string name="addrepo_username_required">ユーザー名 (Bitbucket: Atlassianメール・必須)</string>
+    <string name="addrepo_username_optional">ユーザー名 (任意)</string>
+    <string name="addrepo_token_label">トークン (PAT / API token)</string>
+    <string name="addrepo_login_failed">ログインに失敗しました</string>
+    <string name="addrepo_repos_load_failed">リポジトリ一覧の取得に失敗しました</string>
+    <string name="addrepo_login_start_failed">ログインの開始に失敗しました</string>
+
+    <!-- URL 検証エラー(repoUrlError) -->
+    <string name="repo_url_err_whitespace">URL に空白が含まれています</string>
+    <string name="repo_url_err_file_abs">file:// の後ろは絶対パスにしてください（例: file:///path/to/repo）</string>
+    <string name="repo_url_err_owner_repo">URL に owner/repo が含まれていません（例: https://github.com/owner/repo.git）</string>
+    <string name="repo_url_err_format">URL の形式が正しくありません（例: https://github.com/owner/repo.git）</string>
 </resources>

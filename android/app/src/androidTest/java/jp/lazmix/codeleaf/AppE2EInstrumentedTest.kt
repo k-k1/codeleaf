@@ -41,6 +41,7 @@ class AppE2EInstrumentedTest {
 
     @Before
     fun setUp() {
+        resetAppLocaleToSystem() // ja 前提の文字列 assert が残留ロケール上書きで壊れないように
         // 既存リポを一掃して決定論化(前回の失敗実行の残骸対策)。clone 元は README.md + docs/guide.md。
         app.cleanRepos()
         srcRepo = app.createSrcRepo(
