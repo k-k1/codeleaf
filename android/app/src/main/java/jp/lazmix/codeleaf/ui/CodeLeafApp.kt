@@ -63,11 +63,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.os.Parcelable
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.NavPosition
 import jp.lazmix.codeleaf.data.OpenFile
 import jp.lazmix.codeleaf.data.db.Repo
@@ -423,7 +425,7 @@ fun CodeLeafApp() {
                     // ≡ は TopAppBar(64dp)中央に合わせ、展開時の「畳む<」と縦位置を揃える。
                     Box(Modifier.height(64.dp), contentAlignment = Alignment.Center) {
                         IconButton(onClick = { railCollapsed = false }) {
-                            Icon(Icons.Default.Menu, contentDescription = "リポ一覧を表示")
+                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.cd_show_repos))
                         }
                     }
                     Column(
@@ -446,15 +448,15 @@ fun CodeLeafApp() {
                     ) {
                         if (repos.isEmpty()) {
                             IconButton(onClick = { navigate(Screen.Add) }) {
-                                Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repo))
                             }
                         } else {
                             IconButton(onClick = { navigate(Screen.RepoEdit) }) {
-                                Icon(Icons.Default.Create, contentDescription = "リポジトリを編集")
+                                Icon(Icons.Default.Create, contentDescription = stringResource(R.string.cd_edit_repo))
                             }
                         }
                         IconButton(onClick = { navigate(Screen.Settings) }) {
-                            Icon(Icons.Default.Settings, contentDescription = "設定")
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings))
                         }
                     }
                 }
@@ -516,7 +518,7 @@ fun CodeLeafApp() {
                 Row(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(0.25f)) { RailPane(selectedRepoId = null, compact = true) }
                     VerticalDivider()
-                    Box(Modifier.weight(0.75f)) { SelectPlaceholder("リポジトリを選択") }
+                    Box(Modifier.weight(0.75f)) { SelectPlaceholder(stringResource(R.string.placeholder_select_repo)) }
                 }
             } else {
                 RailPane(selectedRepoId = null)
@@ -660,7 +662,7 @@ fun CodeLeafApp() {
                     // sha != null = そのコミット時点の版を blob から表示する履歴モード(読み取り専用)。
                     val histSha = file.sha
                     val historical = histSha != null
-                    val notFound = "この時点のファイルは見つかりません"
+                    val notFound = stringResource(R.string.file_not_found_at_revision)
                     FileViewerScreen(
                         repo = file.repo,
                         filePath = file.filePath,
@@ -675,7 +677,7 @@ fun CodeLeafApp() {
                         } else {
                             { vm.probeFile(file.repo, file.filePath) }
                         },
-                        revisionLabel = if (historical) "コミット ${shortSha(histSha!!)} 時点" else null,
+                        revisionLabel = if (historical) stringResource(R.string.revision_at, shortSha(histSha!!)) else null,
                         fontScale = settings.fontScale.scale,
                         defaultWrap = settings.wrapByDefault,
                         onToggleWrap = vm::setWrapByDefault,
@@ -739,8 +741,8 @@ fun CodeLeafApp() {
                 PaneToggleHandle(
                     collapsed = focusMode,
                     onToggle = { focusMode = !focusMode },
-                    expandLabel = "一覧とレールを表示",
-                    collapseLabel = "集中モード(全幅)",
+                    expandLabel = stringResource(R.string.focus_expand),
+                    collapseLabel = stringResource(R.string.focus_collapse),
                     // 下部バー(目次/送り)と重ならないよう少し上に。
                     modifier = Modifier.align(Alignment.BottomStart)
                         .padding(bottom = 96.dp)
@@ -753,7 +755,7 @@ fun CodeLeafApp() {
             fun ViewerArea(file: Screen.View?, showBack: Boolean) {
                 Box(Modifier.fillMaxSize()) {
                     if (file != null) ViewerPane(file, showBack = showBack)
-                    else SelectPlaceholder("ファイルを選択")
+                    else SelectPlaceholder(stringResource(R.string.placeholder_select_file))
                     if (file != null) FocusHandle()
                 }
             }
@@ -897,7 +899,7 @@ fun CodeLeafApp() {
                     )
                 }
                                 } else {
-                                    SelectPlaceholder("コミットを選択")
+                                    SelectPlaceholder(stringResource(R.string.placeholder_select_commit))
                                 }
                                 // 区切り線下部の開閉ハンドル(片手でコミット一覧を畳む/戻す)。選択中のみ。
                                 if (sel != null) {
@@ -970,7 +972,7 @@ fun CodeLeafApp() {
                     )
                 }
                                 } else {
-                                    SelectPlaceholder("コミットを選択")
+                                    SelectPlaceholder(stringResource(R.string.placeholder_select_commit))
                                 }
                                 // 区切り線下部の開閉ハンドル(片手でコミット一覧を畳む/戻す)。選択中のみ。
                                 if (sel != null) {
@@ -1079,8 +1081,8 @@ private fun PaneToggleHandle(
     collapsed: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    expandLabel: String = "一覧を表示",
-    collapseLabel: String = "一覧を隠す",
+    expandLabel: String = stringResource(R.string.pane_expand),
+    collapseLabel: String = stringResource(R.string.pane_collapse),
 ) {
     // 本文に被さるので半透明にして主張を抑える(タップは効く)。
     FilledTonalIconButton(onClick = onToggle, modifier = modifier.size(40.dp).alpha(0.6f)) {

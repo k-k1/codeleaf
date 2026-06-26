@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -131,7 +132,7 @@ fun RepoListScreen(
                         }
                         DropdownMenu(expanded = groupMenu, onDismissRequest = { groupMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text((if (selectedGroup.isEmpty()) "● " else "○ ") + "すべて") },
+                                text = { Text((if (selectedGroup.isEmpty()) "● " else "○ ") + stringResource(R.string.group_all)) },
                                 onClick = { groupMenu = false; onSelectGroup("") },
                             )
                             groups.forEach { g ->
@@ -147,7 +148,7 @@ fun RepoListScreen(
                     // 3ペインのレールのときだけ「畳む」アイコンを出す。
                     if (onCollapse != null) {
                         IconButton(onClick = onCollapse) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "リポ一覧を畳む")
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.cd_collapse_repos))
                         }
                     }
                 },
@@ -155,15 +156,15 @@ fun RepoListScreen(
                     // リポが1つも無いときは編集の代わりに＋。1つ以上あれば編集(＋は編集画面の中)。
                     if (repos.isEmpty()) {
                         IconButton(onClick = onAddClick) {
-                            Icon(Icons.Default.Add, contentDescription = "リポジトリを追加")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repo))
                         }
                     } else {
                         IconButton(onClick = onEdit) {
-                            Icon(Icons.Default.Create, contentDescription = "リポジトリを編集")
+                            Icon(Icons.Default.Create, contentDescription = stringResource(R.string.cd_edit_repo))
                         }
                     }
                     IconButton(onClick = onSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "設定")
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings))
                     }
                 },
             )
@@ -190,9 +191,9 @@ fun RepoListScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("リポジトリが未登録です", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.repolist_empty_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "右上の + から GitHub / Bitbucket のリポジトリを追加してください",
+                            stringResource(R.string.repolist_empty_desc),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -260,13 +261,17 @@ private fun RepoCard(
             style = MaterialTheme.typography.bodySmall,
         )
         when {
-            cloning -> Text("clone 中…", style = MaterialTheme.typography.bodySmall)
+            cloning -> Text(stringResource(R.string.repo_state_cloning), style = MaterialTheme.typography.bodySmall)
             failed -> Text(
-                "clone 失敗 — 再試行してください",
+                stringResource(R.string.repo_state_failed),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
-            else -> Text("同期: ${formatSyncTime(repo.lastSyncedAt)}", style = MaterialTheme.typography.bodySmall)
+            else -> {
+                val synced = repo.lastSyncedAt?.let { formatSyncTime(it) }
+                    ?: stringResource(R.string.repo_never_synced)
+                Text(stringResource(R.string.repo_synced_at, synced), style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
     // 末尾アクション(clone中=進捗 / 失敗=再試行・削除 / 通常=★・グラフ・同期)。compact では2行目に右寄せ。
@@ -278,20 +283,20 @@ private fun RepoCard(
             )
             failed -> {
                 IconButton(onClick = onRetry) {
-                    Icon(Icons.Default.Refresh, contentDescription = "再試行")
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_retry))
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "削除")
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                 }
             }
             else -> {
                 IconButton(onClick = onOpenFavorites) {
-                    Icon(Icons.Default.Star, contentDescription = "お気に入り")
+                    Icon(Icons.Default.Star, contentDescription = stringResource(R.string.cd_favorites))
                 }
                 IconButton(onClick = onOpenGraph) {
-                    Icon(painterResource(R.drawable.ic_graph), contentDescription = "コミットグラフ")
+                    Icon(painterResource(R.drawable.ic_graph), contentDescription = stringResource(R.string.cd_commit_graph))
                 }
-                IconButton(onClick = onSync) { Icon(Icons.Default.Refresh, contentDescription = "同期") }
+                IconButton(onClick = onSync) { Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_sync)) }
             }
         }
     }
@@ -329,8 +334,7 @@ private fun RepoCard(
     }
 }
 
-private fun formatSyncTime(epochMillis: Long?): String {
-    if (epochMillis == null) return "未同期"
+private fun formatSyncTime(epochMillis: Long): String {
     val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return fmt.format(Date(epochMillis))
 }

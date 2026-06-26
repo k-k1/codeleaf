@@ -37,6 +37,7 @@ class CommitGraphE2EInstrumentedTest {
 
     @Before
     fun setUp() {
+        resetAppLocaleToSystem() // ja 前提の文字列 assert が残留ロケール上書きで壊れないように
         app.cleanRepos()
         srcRepo = app.gitRepo("graph-src") { git, dir ->
             File(dir, "a.txt").writeText("a\n"); git.commitAll("commitA")

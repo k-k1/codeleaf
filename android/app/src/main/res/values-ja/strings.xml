@@ -224,4 +224,36 @@
     <string name="repo_url_err_file_abs">file:// の後ろは絶対パスにしてください（例: file:///path/to/repo）</string>
     <string name="repo_url_err_owner_repo">URL に owner/repo が含まれていません（例: https://github.com/owner/repo.git）</string>
     <string name="repo_url_err_format">URL の形式が正しくありません（例: https://github.com/owner/repo.git）</string>
+
+    <!-- 共有アイコン説明(ナビ/リスト・複数画面で共有) -->
+    <string name="cd_back">戻る</string>
+    <string name="cd_settings">設定</string>
+    <string name="cd_add_repo">リポジトリを追加</string>
+    <string name="cd_edit_repo">リポジトリを編集</string>
+    <string name="cd_collapse_repos">リポ一覧を畳む</string>
+    <string name="cd_show_repos">リポ一覧を表示</string>
+    <string name="cd_retry">再試行</string>
+    <string name="cd_favorites">お気に入り</string>
+    <string name="cd_commit_graph">コミットグラフ</string>
+    <string name="cd_sync">同期</string>
+
+    <!-- リポジトリ一覧 -->
+    <string name="group_all">すべて</string>
+    <string name="repolist_empty_title">リポジトリが未登録です</string>
+    <string name="repolist_empty_desc">右上の + から GitHub / Bitbucket のリポジトリを追加してください</string>
+    <string name="repo_state_cloning">clone 中…</string>
+    <string name="repo_state_failed">clone 失敗 — 再試行してください</string>
+    <string name="repo_synced_at">同期: %1$s</string>
+    <string name="repo_never_synced">未同期</string>
+
+    <!-- 多ペイン/ビューアのナビ補助(CodeLeafApp) -->
+    <string name="placeholder_select_repo">リポジトリを選択</string>
+    <string name="placeholder_select_file">ファイルを選択</string>
+    <string name="placeholder_select_commit">コミットを選択</string>
+    <string name="file_not_found_at_revision">この時点のファイルは見つかりません</string>
+    <string name="revision_at">コミット %1$s 時点</string>
+    <string name="focus_expand">一覧とレールを表示</string>
+    <string name="focus_collapse">集中モード(全幅)</string>
+    <string name="pane_expand">一覧を表示</string>
+    <string name="pane_collapse">一覧を隠す</string>
 </resources>
