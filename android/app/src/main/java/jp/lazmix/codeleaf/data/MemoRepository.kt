@@ -55,6 +55,12 @@ class MemoRepository(
         return id
     }
 
+    /** エントリのコメントを書き換え、親メモ帳の updatedAt を更新する。 */
+    suspend fun editEntryComment(entryId: Long, memoId: Long, comment: String) {
+        dao.updateEntryComment(entryId, comment.trim())
+        dao.touchMemo(memoId, now())
+    }
+
     suspend fun deleteEntry(id: Long) = dao.deleteEntry(id)
 
     /** メモ帳を残したままエントリを全削除し、updatedAt を更新する。 */

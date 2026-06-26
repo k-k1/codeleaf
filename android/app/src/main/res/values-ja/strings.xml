@@ -278,6 +278,8 @@
     <string name="memodetail_clear_confirm">「%1$s」のエントリ%2$d件をすべて削除します(メモ帳は残ります)。元に戻せません。</string>
     <string name="entry_delete_title">エントリを削除</string>
     <string name="entry_delete_confirm">このエントリを削除します。</string>
+    <string name="entry_edit_comment">コメントを編集</string>
+    <string name="entry_edit_comment_heading">コメントを編集</string>
 
     <!-- ファイルブラウザ -->
     <string name="cd_repo_list">リポ一覧</string>

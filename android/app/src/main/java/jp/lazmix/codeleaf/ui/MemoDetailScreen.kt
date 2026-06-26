@@ -23,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +59,7 @@ fun MemoDetailScreen(
     memoTitle: String,
     entries: List<MemoEntry>,
     onOpenEntry: (MemoEntry) -> Unit,
+    onEditComment: (entry: MemoEntry, comment: String) -> Unit,
     onDeleteEntry: (id: Long) -> Unit,
     onRenameMemo: (title: String) -> Unit,
     onClearEntries: () -> Unit,
@@ -144,6 +146,7 @@ fun MemoDetailScreen(
                     EntryCard(
                         entry = e,
                         onOpen = { onOpenEntry(e) },
+                        onEditComment = { onEditComment(e, it) },
                         onShare = { shareText(context, MemoFormat.entry(repoName, e)) },
                         onCopy = { clipboard.setText(AnnotatedString(MemoFormat.entry(repoName, e))) },
                         onDelete = { onDeleteEntry(e.id) },
@@ -190,12 +193,14 @@ fun MemoDetailScreen(
 private fun EntryCard(
     entry: MemoEntry,
     onOpen: () -> Unit,
+    onEditComment: (String) -> Unit,
     onShare: () -> Unit,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var editComment by remember { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -214,6 +219,7 @@ private fun EntryCard(
                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.entry_edit_comment)) }, onClick = { menu = false; editComment = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_share)) }, onClick = { menu = false; onShare() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_copy)) }, onClick = { menu = false; onCopy() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menu = false; confirmDelete = true })
@@ -243,6 +249,25 @@ private fun EntryCard(
                 )
             }
         }
+    }
+    if (editComment) {
+        var text by remember { mutableStateOf(entry.comment) }
+        AlertDialog(
+            onDismissRequest = { editComment = false },
+            title = { Text(stringResource(R.string.entry_edit_comment_heading)) },
+            text = {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text(stringResource(R.string.memo_comment)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { editComment = false; onEditComment(text.trim()) }) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = { TextButton(onClick = { editComment = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
     if (confirmDelete) {
         AlertDialog(

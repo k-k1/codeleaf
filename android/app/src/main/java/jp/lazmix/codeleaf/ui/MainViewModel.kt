@@ -420,6 +420,10 @@ class MainViewModel(
         viewModelScope.launch { memos.deleteEntry(id) }
     }
 
+    fun editMemoEntryComment(entryId: Long, memoId: Long, comment: String) {
+        viewModelScope.launch { memos.editEntryComment(entryId, memoId, comment) }
+    }
+
     /** メモ帳は残してエントリだけ全削除。 */
     fun clearMemoEntries(memoId: Long) {
         viewModelScope.launch { memos.clearEntries(memoId) }

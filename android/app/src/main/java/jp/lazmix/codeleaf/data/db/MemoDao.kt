@@ -40,6 +40,9 @@ interface MemoDao {
     @Insert
     suspend fun insertEntry(entry: MemoEntry): Long
 
+    @Query("UPDATE memo_entries SET comment = :comment WHERE id = :id")
+    suspend fun updateEntryComment(id: Long, comment: String)
+
     @Query("DELETE FROM memo_entries WHERE id = :id")
     suspend fun deleteEntry(id: Long)
 

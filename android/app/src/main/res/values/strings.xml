@@ -278,6 +278,8 @@
     <string name="memodetail_clear_confirm">Delete all %2$d entries in \"%1$s\" (the notebook is kept). This cannot be undone.</string>
     <string name="entry_delete_title">Delete entry</string>
     <string name="entry_delete_confirm">Delete this entry.</string>
+    <string name="entry_edit_comment">Edit comment</string>
+    <string name="entry_edit_comment_heading">Edit comment</string>
 
     <!-- ファイルブラウザ -->
     <string name="cd_repo_list">Repositories</string>
