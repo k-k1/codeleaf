@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tiếng Việt. Thuật ngữ dev (commit/diff/branch/clone/fetch/submodule …) giữ nguyên tiếng Anh. -->
+<resources>
+    <!-- Thao tác chung -->
+    <string name="action_delete">Xóa</string>
+    <string name="action_cancel">Hủy</string>
+
+    <!-- Cài đặt: chung -->
+    <string name="settings_title">Cài đặt</string>
+    <string name="settings_section_display">Hiển thị &amp; giao diện</string>
+    <string name="settings_section_filelist">Danh sách tệp</string>
+    <string name="settings_section_repo">Kho lưu trữ</string>
+    <string name="settings_section_viewer">Trình xem</string>
+    <string name="settings_section_links">Liên kết</string>
+    <string name="settings_section_data">Dữ liệu</string>
+    <string name="settings_section_about">Giới thiệu</string>
+
+    <!-- Cài đặt: ngôn ngữ -->
+    <string name="settings_language_title">Ngôn ngữ</string>
+    <string name="settings_language_desc">Đặt ngôn ngữ giao diện ứng dụng. \"Hệ thống\" theo ngôn ngữ thiết bị; ngôn ngữ không được hỗ trợ sẽ quay về tiếng Anh.</string>
+    <string name="language_system">Hệ thống</string>
+
+    <!-- Cài đặt: giao diện -->
+    <string name="settings_theme_title">Giao diện mặc định</string>
+    <string name="settings_theme_desc">Dùng cho màu của màn hình danh sách và cài đặt, và làm giao diện ban đầu khi thêm kho lưu trữ.</string>
+    <string name="theme_system">Hệ thống</string>
+    <string name="theme_light">Sáng</string>
+    <string name="theme_dark">Tối</string>
+
+    <!-- Cài đặt: cỡ chữ -->
+    <string name="settings_font_title">Cỡ chữ</string>
+    <string name="settings_font_desc">Áp dụng cho cỡ chữ nội dung của Markdown đã kết xuất và chế độ xem mã.</string>
+    <string name="font_small">Nhỏ</string>
+    <string name="font_medium">Vừa</string>
+    <string name="font_large">Lớn</string>
+
+    <!-- Cài đặt: biểu tượng tệp -->
+    <string name="settings_iconset_title">Biểu tượng tệp</string>
+    <string name="settings_iconset_desc">Giao diện của biểu tượng theo phần mở rộng trong danh sách. Material/VS Code đầy đủ màu; Seti là ký hiệu đơn sắc.</string>
+
+    <!-- Cài đặt: hiển thị tên tệp -->
+    <string name="settings_filename_title">Hiển thị tên tệp</string>
+    <string name="settings_filename_desc">Cách xử lý tên dài. Ngắt dòng = hiển thị toàn bộ trên nhiều dòng. Lược giữa = giữ đầu và cuối. Lược cuối = cắt phần cuối bằng ….</string>
+    <string name="filename_wrap">Ngắt dòng</string>
+    <string name="filename_middle">Lược giữa</string>
+    <string name="filename_end">Lược cuối</string>
+
+    <!-- Cài đặt: công tắc danh sách tệp -->
+    <string name="settings_collapse_title">Thu gọn thư mục đơn</string>
+    <string name="settings_collapse_desc">Gộp chuỗi chỉ có một thư mục con thành một mục như src/main/java, giảm số lần chạm.</string>
+    <string name="settings_commitinfo_title">Hiển thị thông tin commit</string>
+    <string name="settings_commitinfo_desc">Hiển thị bản cập nhật cuối của mỗi tệp/thư mục (tác giả và thời điểm) dưới tên trong danh sách. Phải duyệt lịch sử nên có thể hơi chậm với kho lớn.</string>
+
+    <!-- Cài đặt: kho lưu trữ -->
+    <string name="settings_restore_title">Khôi phục vị trí lần trước</string>
+    <string name="settings_restore_desc">Khi mở kho lưu trữ, khôi phục thư mục bạn đang ở và tệp đang mở. Khi tắt, luôn mở ở trên cùng và không mở tệp nào.</string>
+
+    <!-- Cài đặt: trình xem -->
+    <string name="settings_wrap_title">Ngắt dòng mã (mặc định)</string>
+    <string name="settings_wrap_desc">Trạng thái ban đầu khi mở chế độ xem mã/raw. Khi tắt sẽ cuộn ngang.</string>
+    <string name="settings_diffwrap_title">Ngắt dòng diff (mặc định)</string>
+    <string name="settings_diffwrap_desc">Trạng thái ban đầu khi mở chế độ xem diff cho thay đổi, commit và lịch sử. Khi tắt sẽ cuộn ngang.</string>
+    <string name="settings_linenum_title">Hiển thị số dòng</string>
+    <string name="settings_linenum_desc">Thêm số dòng vào mỗi dòng trong chế độ xem mã/văn bản/raw.</string>
+    <string name="settings_selecttext_title">Bật chọn văn bản theo mặc định</string>
+    <string name="settings_selecttext_desc">Mở trình xem với văn bản nội dung có thể chọn để sao chép. Bạn cũng có thể bật/tắt theo từng trình xem từ ⋮. Khi bật, nhấn giữ để thêm ghi chú sẽ bị tắt.</string>
+    <string name="settings_sticky_title">Ghim tiêu đề lên đầu</string>
+    <string name="settings_sticky_desc">Trong Markdown đã kết xuất, ghim đường dẫn tiêu đề hiện tại (h1 &gt; h2 &gt; h3 …) lên đầu.</string>
+
+    <!-- Cài đặt: bảng Markdown -->
+    <string name="settings_table_title">Hiển thị bảng Markdown</string>
+    <string name="settings_table_desc">Nội tuyến = ngắt dòng và nhúng vào nội dung (mặc định). Cuộn được = bảng có tiêu đề cố định và cuộn ngang.</string>
+    <string name="table_inline">Nội tuyến</string>
+    <string name="table_scrollable">Cuộn được</string>
+
+    <!-- Cài đặt: liên kết -->
+    <string name="settings_link_title">Cách mở liên kết ngoài</string>
+    <string name="settings_link_desc">Mở liên kết http/https trong trình duyệt tích hợp (Custom Tabs) hay trình duyệt ngoài. Liên kết tương đối luôn điều hướng trong ứng dụng.</string>
+    <string name="link_inapp">Trong ứng dụng</string>
+    <string name="link_browser">Trình duyệt ngoài</string>
+
+    <!-- Cài đặt: dữ liệu -->
+    <string name="settings_cache_title">Bộ nhớ đệm</string>
+    <string name="settings_cache_desc">Kho đã đăng ký: %1$d (bao gồm dữ liệu clone và token đã lưu)</string>
+    <string name="settings_clearcache">Xóa toàn bộ bộ nhớ đệm</string>
+    <string name="settings_clearcache_confirm">Thao tác này xóa vĩnh viễn %1$d kho đã đăng ký (dữ liệu clone và token đã lưu). Không thể hoàn tác.</string>
+
+    <!-- Cài đặt: giới thiệu -->
+    <string name="settings_version_title">Phiên bản</string>
+    <string name="settings_build_line">Bản dựng: %1$s · %2$s · %3$s</string>
+    <string name="settings_licenses">Giấy phép nguồn mở</string>
+
+    <!-- Thao tác chung/mô tả biểu tượng -->
+    <string name="action_copy">Sao chép</string>
+    <string name="action_share">Chia sẻ</string>
+    <string name="action_save">Lưu</string>
+    <string name="cd_menu">Menu</string>
+
+    <!-- Trình xem tệp -->
+    <string name="viewer_back_to_browser">Quay lại trình duyệt tệp</string>
+    <string name="viewer_menu_rendered">Hiển thị đã kết xuất</string>
+    <string name="viewer_menu_raw">Hiển thị raw</string>
+    <string name="viewer_menu_history">Lịch sử</string>
+    <string name="viewer_menu_memo">Ghi chú</string>
+    <string name="viewer_menu_select_start">Chọn văn bản</string>
+    <string name="viewer_menu_select_end">Thoát chọn</string>
+    <string name="viewer_toc">☰ Mục lục</string>
+    <string name="viewer_wrap_on">Ngắt dòng: bật</string>
+    <string name="viewer_wrap_off">Ngắt dòng: tắt</string>
+    <string name="cd_prev_file">Tệp trước</string>
+    <string name="cd_next_file">Tệp sau</string>
+    <string name="viewer_truncated">Chỉ hiển thị phần đầu (tổng %1$s)</string>
+    <string name="viewer_load_failed">Tải thất bại: %1$s</string>
+    <string name="viewer_toc_title">Mục lục</string>
+    <string name="viewer_binary_cannot_display">%1$s · Không thể hiển thị dạng văn bản</string>
+    <string name="viewer_binary_head">Byte đầu tiên</string>
+    <string name="viewer_large_title">Tệp lớn</string>
+    <string name="viewer_large_desc">%1$s · Hiển thị có thể chậm</string>
+    <string name="viewer_large_show">Hiển thị</string>
+
+    <!-- Bảng thêm ghi chú -->
+    <string name="memo_add_title">Thêm ghi chú</string>
+    <string name="memo_line_range">Dòng %1$d–%2$d trên %3$d</string>
+    <string name="memo_line_start">Bắt đầu</string>
+    <string name="memo_line_end">Kết thúc</string>
+    <string name="memo_comment">Bình luận</string>
+    <string name="memo_save_to">Lưu vào</string>
+    <string name="memo_new_notebook">Sổ ghi chú mới</string>
+    <string name="memo_notebook">Sổ ghi chú</string>
+    <string name="cd_pick_save_to">Chọn đích</string>
+    <string name="memo_untitled">(không có tiêu đề)</string>
+    <string name="memo_new_notebook_plus">＋ Sổ ghi chú mới</string>
+    <string name="memo_new_notebook_title">Tiêu đề sổ ghi chú mới</string>
+
+    <!-- Thông tin tệp -->
+    <string name="encoding_unknown">Không xác định</string>
+    <string name="encoding_no_bom">Không có BOM</string>
+    <string name="eol_mixed">Hỗn hợp</string>
+    <string name="eol_none">Không có dòng mới</string>
+
+    <!-- Nhãn loại nhị phân -->
+    <string name="bin_zip">Lưu trữ ZIP</string>
+    <string name="bin_jar">Lưu trữ JAR</string>
+    <string name="bin_apk">Gói APK</string>
+    <string name="bin_aar">Thư viện AAR</string>
+    <string name="bin_office">Tài liệu Office</string>
+    <string name="bin_opendocument">OpenDocument</string>
+    <string name="bin_epub">Sách EPUB</string>
+    <string name="bin_gzip">Nén gzip</string>
+    <string name="bin_bzip2">Nén bzip2</string>
+    <string name="bin_xz">Nén xz</string>
+    <string name="bin_7z">Lưu trữ 7z</string>
+    <string name="bin_rar">Lưu trữ RAR</string>
+    <string name="bin_elf">Tệp thực thi ELF</string>
+    <string name="bin_javaclass">Tệp class Java</string>
+    <string name="bin_macho">Nhị phân Mach-O</string>
+    <string name="bin_winpe">Tệp thực thi Windows</string>
+    <string name="bin_wasm">WebAssembly</string>
+    <string name="bin_sqlite">Cơ sở dữ liệu SQLite</string>
+    <string name="bin_mp3">Âm thanh MP3</string>
+    <string name="bin_ogg">Phương tiện Ogg</string>
+    <string name="bin_flac">Âm thanh FLAC</string>
+    <string name="bin_wav">Âm thanh WAV</string>
+    <string name="bin_avi">Video AVI</string>
+    <string name="bin_mp4">MP4/video</string>
+    <string name="bin_font">Phông chữ</string>
+    <string name="bin_unknown">Nhị phân</string>
+
+    <!-- Màn hình thêm kho lưu trữ -->
+    <string name="addrepo_title">Thêm kho lưu trữ</string>
+    <string name="addrepo_host">Máy chủ</string>
+    <string name="addrepo_auth_method">Xác thực</string>
+    <string name="addrepo_oauth_title">Đăng nhập bằng %1$s (OAuth)</string>
+    <string name="addrepo_login_bitbucket">Đăng nhập bằng Bitbucket</string>
+    <string name="addrepo_logged_in">✓ Đã đăng nhập</string>
+    <string name="addrepo_other_account">Tài khoản khác</string>
+    <string name="addrepo_oauth_unconfigured">Đăng nhập OAuth chưa được cấu hình (đặt client_id/secret trong local.properties để bật).</string>
+    <string name="addrepo_display_name">Tên hiển thị (tùy chọn, tự điền)</string>
+    <string name="addrepo_theme">Giao diện</string>
+    <string name="addrepo_cloning">Đang clone…</string>
+    <string name="addrepo_save_clone">Lưu &amp; clone</string>
+    <string name="addrepo_token_method">Nhập token</string>
+    <string name="addrepo_repos_loading">Đang tải kho lưu trữ…</string>
+    <string name="addrepo_no_repos">Không có kho nào để clone (tất cả đã đăng ký, hoặc không thể truy cập).</string>
+    <string name="addrepo_select_repo">Chọn kho lưu trữ</string>
+    <string name="addrepo_gh_enter_code">Nhập mã bên dưới vào trình duyệt để phê duyệt đăng nhập.</string>
+    <string name="addrepo_gh_copy_hint">Chạm để sao chép / nhập tại: %1$s</string>
+    <string name="addrepo_open_browser">Mở trình duyệt</string>
+    <string name="addrepo_gh_waiting">Đang chờ phê duyệt…</string>
+    <string name="addrepo_gh_getting_code">Đang lấy mã…</string>
+    <string name="addrepo_login_github">Đăng nhập bằng GitHub</string>
+    <string name="addrepo_url_label">URL (https://...)</string>
+    <string name="addrepo_username_required">Tên người dùng (Bitbucket: email Atlassian, bắt buộc)</string>
+    <string name="addrepo_username_optional">Tên người dùng (tùy chọn)</string>
+    <string name="addrepo_token_label">Token (PAT / API token)</string>
+    <string name="addrepo_login_failed">Đăng nhập thất bại</string>
+    <string name="addrepo_repos_load_failed">Tải danh sách kho lưu trữ thất bại</string>
+    <string name="addrepo_login_start_failed">Không thể bắt đầu đăng nhập</string>
+
+    <!-- Thông báo trạng thái/snackbar -->
+    <string name="error_unknown">Lỗi không xác định</string>
+    <string name="git_err_auth">Xác thực thất bại. Kiểm tra token và quyền của nó (GitHub PAT cần Contents: Read-only).</string>
+    <string name="git_err_host">Không thể kết nối máy chủ. Kiểm tra URL và kết nối mạng.</string>
+    <string name="git_err_not_found">Không tìm thấy kho lưu trữ. Kiểm tra URL (kho riêng tư cũng cần xác thực).</string>
+    <string name="git_err_timeout">Kết nối đã hết thời gian. Kiểm tra mạng và thử lại.</string>
+    <string name="git_err_network">Đã xảy ra lỗi mạng. Kiểm tra kết nối và thử lại.</string>
+    <string name="git_err_not_repo">Không thể mở như một kho git. Kiểm tra URL.</string>
+    <string name="clone_failed">Clone thất bại: %1$s</string>
+    <string name="sync_done">Đồng bộ hoàn tất</string>
+    <string name="sync_failed">Đồng bộ thất bại: %1$s</string>
+    <string name="switch_failed">Chuyển thất bại: %1$s</string>
+    <string name="repo_added">Đã thêm %1$s</string>
+    <string name="repo_recloned">Đã clone lại %1$s</string>
+    <string name="repo_syncing">Đang đồng bộ %1$s…</string>
+    <string name="branch_switching">Đang chuyển sang %1$s…</string>
+    <string name="cache_deleting">Đang xóa…</string>
+    <string name="cache_delete_failed">Xóa thất bại: %1$s</string>
+    <string name="cache_deleted">Đã xóa bộ nhớ đệm</string>
+    <string name="reclone_action">Clone lại</string>
+
+    <!-- Lỗi kiểm tra URL -->
+    <string name="repo_url_err_whitespace">URL chứa khoảng trắng</string>
+    <string name="repo_url_err_file_abs">Sau file:// hãy dùng đường dẫn tuyệt đối (vd: file:///path/to/repo)</string>
+    <string name="repo_url_err_owner_repo">URL thiếu owner/repo (vd: https://github.com/owner/repo.git)</string>
+    <string name="repo_url_err_format">Định dạng URL không hợp lệ (vd: https://github.com/owner/repo.git)</string>
+
+    <!-- Mô tả biểu tượng dùng chung -->
+    <string name="cd_back">Quay lại</string>
+    <string name="cd_settings">Cài đặt</string>
+    <string name="cd_add_repo">Thêm kho lưu trữ</string>
+    <string name="cd_edit_repo">Chỉnh sửa kho lưu trữ</string>
+    <string name="cd_collapse_repos">Thu gọn danh sách kho</string>
+    <string name="cd_show_repos">Hiện danh sách kho</string>
+    <string name="cd_retry">Thử lại</string>
+    <string name="cd_favorites">Mục yêu thích</string>
+    <string name="cd_commit_graph">Đồ thị commit</string>
+    <string name="cd_sync">Đồng bộ</string>
+
+    <!-- Danh sách kho lưu trữ -->
+    <string name="group_all">Tất cả</string>
+    <string name="repolist_empty_title">Chưa có kho lưu trữ</string>
+    <string name="repolist_empty_desc">Thêm kho GitHub / Bitbucket từ + ở trên cùng bên phải.</string>
+    <string name="repo_state_cloning">Đang clone…</string>
+    <string name="repo_state_failed">Clone thất bại — vui lòng thử lại</string>
+    <string name="repo_synced_at">Đã đồng bộ: %1$s</string>
+    <string name="repo_never_synced">Chưa từng đồng bộ</string>
+
+    <!-- Điều hướng đa khung/trình xem -->
+    <string name="placeholder_select_repo">Chọn kho lưu trữ</string>
+    <string name="placeholder_select_file">Chọn tệp</string>
+    <string name="placeholder_select_commit">Chọn commit</string>
+    <string name="file_not_found_at_revision">Không có tệp ở bản sửa đổi này</string>
+    <string name="revision_at">Tại commit %1$s</string>
+    <string name="focus_expand">Hiện danh sách và thanh bên</string>
+    <string name="focus_collapse">Chế độ tập trung (toàn chiều rộng)</string>
+    <string name="pane_expand">Hiện danh sách</string>
+    <string name="pane_collapse">Ẩn danh sách</string>
+
+    <!-- Thao tác chung (bổ sung) -->
+    <string name="action_create">Tạo</string>
+    <string name="action_change">Thay đổi</string>
+    <string name="action_clear">Xóa hết</string>
+
+    <!-- Danh sách / chi tiết sổ ghi chú -->
+    <string name="memos_title">Ghi chú</string>
+    <string name="memos_empty">Chưa có sổ ghi chú. Tạo bằng + ở trên cùng bên phải, hoặc nhấn giữ một dòng khi đang xem tệp.</string>
+    <string name="memo_entry_count">%1$d mục</string>
+    <string name="memo_title_label">Tiêu đề</string>
+    <string name="memos_share_all">Chia sẻ tất cả</string>
+    <string name="memos_copy_all">Sao chép tất cả</string>
+    <string name="memos_rename">Đổi tên</string>
+    <string name="memos_rename_heading">Đổi tên sổ ghi chú</string>
+    <string name="memos_delete_title">Xóa sổ ghi chú</string>
+    <string name="memos_delete_confirm">Xóa \"%1$s\" và tất cả các mục. Không thể hoàn tác.</string>
+    <string name="memodetail_empty">Chưa có mục nào. Nhấn giữ một dòng khi đang xem tệp để thêm.</string>
+    <string name="memodetail_clear_title">Xóa hết các mục</string>
+    <string name="memodetail_clear_confirm">Xóa tất cả %2$d mục trong \"%1$s\" (vẫn giữ sổ ghi chú). Không thể hoàn tác.</string>
+    <string name="entry_delete_title">Xóa mục</string>
+    <string name="entry_delete_confirm">Xóa mục này.</string>
+    <string name="entry_edit_comment">Sửa bình luận</string>
+    <string name="entry_edit_comment_heading">Sửa bình luận</string>
+
+    <!-- Trình duyệt tệp -->
+    <string name="cd_repo_list">Kho lưu trữ</string>
+    <string name="cd_search">Tìm kiếm</string>
+    <string name="cd_up">Lên một cấp</string>
+    <string name="browser_switch_branch">Chuyển branch (%1$s)</string>
+    <string name="browser_root">Gốc</string>
+    <string name="browser_empty_dir">(thư mục trống)</string>
+    <string name="browser_lfs">Đây là tệp Git LFS (nội dung không được tải nên không thể hiển thị).</string>
+    <string name="browser_unfetched">Chưa tải</string>
+    <string name="browser_favorite">Thêm vào mục yêu thích</string>
+    <string name="browser_unfavorite">Xóa khỏi mục yêu thích</string>
+    <string name="browser_copy_filename">Sao chép tên tệp</string>
+    <string name="browser_copy_filepath">Sao chép đường dẫn tệp</string>
+
+    <!-- Màn hình chỉnh sửa kho lưu trữ -->
+    <string name="repoedit_add_group">Thêm nhóm</string>
+    <string name="repoedit_delete_title">Xóa kho lưu trữ</string>
+    <string name="repoedit_delete_confirm">Xóa \"%1$s\". Dữ liệu clone và token đã lưu của nó cũng bị xóa. Không thể hoàn tác.</string>
+    <string name="repoedit_reclone_confirm">Xóa bản clone cục bộ của \"%1$s\" và tải lại. Cài đặt và token được giữ lại.</string>
+    <string name="repoedit_new_group">Nhóm mới</string>
+    <string name="repoedit_rename_group">Đổi tên nhóm</string>
+    <string name="repoedit_ungrouped">Chưa phân nhóm (chỉ hiện dưới \"Tất cả\")</string>
+    <string name="repoedit_delete_group_cd">Xóa nhóm</string>
+    <string name="repoedit_dropzone">Kéo vào đây để thêm</string>
+    <string name="repoedit_reorder_cd">Sắp xếp lại / di chuyển giữa các nhóm</string>
+    <string name="repoedit_group_name_label">Tên nhóm</string>
+    <string name="repoedit_color_cd">Màu: %1$s</string>
+
+    <!-- Thời gian tương đối -->
+    <string name="time_just_now">Vừa xong</string>
+    <string name="time_min_ago">%1$d phút trước</string>
+    <string name="time_hour_ago">%1$d giờ trước</string>
+    <string name="time_day_ago">%1$d ngày trước</string>
+    <string name="time_month_ago">%1$d tháng trước</string>
+    <string name="time_year_ago">%1$d năm trước</string>
+
+    <!-- diff/lịch sử chung -->
+    <string name="diff_none">Không có thay đổi</string>
+    <string name="diff_load_failed">Tải diff thất bại: %1$s</string>
+    <string name="fetch_failed">Lấy về thất bại: %1$s</string>
+
+    <!-- Màn hình lịch sử -->
+    <string name="history_title">Lịch sử: %1$s</string>
+    <string name="history_submodule_note">Đây là lịch sử di chuyển con trỏ submodule (không phải lịch sử nội dung).</string>
+    <string name="history_load_failed">Tải lịch sử thất bại: %1$s</string>
+    <string name="history_empty">Không có lịch sử</string>
+
+    <!-- Chế độ xem thay đổi submodule -->
+    <string name="submodule_no_diff_commits">Không có commit submodule để so sánh</string>
+    <string name="submodule_more_omitted">Đã lược bớt (hiển thị đến giới hạn)</string>
+    <string name="submodule_n_forward">%1$d commit ↑</string>
+    <string name="submodule_n_backward">Đã hoàn nguyên %1$d ↓</string>
+    <string name="submodule_n_diverged">Phân kỳ %1$d</string>
+    <string name="submodule_add">Đã thêm</string>
+    <string name="submodule_remove">Đã xóa</string>
+    <string name="submodule_new_added">Mới thêm → %1$s</string>
+    <string name="submodule_removed_arrow">%1$s → đã xóa</string>
+    <string name="submodule_boundary">Gốc · %1$s</string>
+
+    <!-- Màn hình mục yêu thích -->
+    <string name="favorites_empty">Chưa có mục yêu thích. Nhấn giữ một mục trong danh sách tệp để thêm.</string>
+    <string name="favorites_root">(ngay dưới gốc)</string>
+    <string name="favorites_deleted">(đã xóa)</string>
+    <string name="favorites_remove_cd">Xóa khỏi mục yêu thích</string>
+    <string name="favorites_reorder_cd">Sắp xếp lại</string>
+
+    <!-- Màn hình tìm kiếm -->
+    <string name="search_title">Tìm kiếm: %1$s</string>
+    <string name="search_regex_hint">Tìm bằng regex (dấu cách = AND)</string>
+    <string name="search_fulltext_hint">Tìm toàn văn trong tệp (dấu cách = AND)</string>
+    <string name="search_filter_hint">Lọc theo đường dẫn/phần mở rộng (tùy chọn, vd: .md / docs/)</string>
+    <string name="search_no_match">Không có kết quả</string>
+    <string name="search_result_count">%1$d kết quả / %2$d tệp</string>
+
+    <!-- Màn hình diff -->
+    <string name="diff_expand_all">Mở rộng tất cả</string>
+    <string name="diff_collapse_all">Thu gọn tất cả</string>
+    <string name="diff_expand_cd">Mở rộng</string>
+    <string name="diff_collapse_cd">Thu gọn</string>
+    <string name="diff_open_file_cd">Mở tệp</string>
+
+    <!-- Đồ thị commit -->
+    <string name="graph_empty">Không có commit</string>
+    <string name="graph_switch_branch">Chuyển branch</string>
+    <string name="graph_current_branch">%1$s (branch hiện tại)</string>
+
+    <!-- Chi tiết commit -->
+    <string name="commit_no_message">(không có thông điệp)</string>
+    <string name="commit_expand">Xem thêm</string>
+    <string name="commit_collapse">Thu gọn</string>
+
+    <!-- Bảng chọn branch / lớp phủ / PDF -->
+    <string name="branchsheet_select">Chọn branch</string>
+    <string name="branchsheet_filter">Lọc</string>
+    <string name="bottombar_switching">Đang chuyển branch…</string>
+    <string name="pdf_cannot_open">Không thể mở PDF</string>
+</resources>
