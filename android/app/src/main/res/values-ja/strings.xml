@@ -90,6 +90,8 @@
     <string name="settings_version_title">バージョン</string>
     <string name="settings_build_line">ビルド: %1$s · %2$s · %3$s</string>
     <string name="settings_licenses">オープンソースライセンス</string>
+    <string name="settings_release_notes">リリースノート</string>
+    <string name="release_notes_unavailable">リリースノートを読み込めませんでした。</string>
 
     <!-- 共通の操作/アイコン説明(複数画面で共有) -->
     <string name="action_copy">コピー</string>

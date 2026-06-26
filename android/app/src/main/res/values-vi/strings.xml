@@ -89,6 +89,8 @@
     <string name="settings_version_title">Phiên bản</string>
     <string name="settings_build_line">Bản dựng: %1$s · %2$s · %3$s</string>
     <string name="settings_licenses">Giấy phép nguồn mở</string>
+    <string name="settings_release_notes">Ghi chú phát hành</string>
+    <string name="release_notes_unavailable">Không thể tải ghi chú phát hành.</string>
 
     <!-- Thao tác chung/mô tả biểu tượng -->
     <string name="action_copy">Sao chép</string>

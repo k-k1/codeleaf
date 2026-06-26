@@ -90,6 +90,8 @@
     <string name="settings_version_title">Version</string>
     <string name="settings_build_line">Build: %1$s · %2$s · %3$s</string>
     <string name="settings_licenses">Open-source licenses</string>
+    <string name="settings_release_notes">Release notes</string>
+    <string name="release_notes_unavailable">Release notes are unavailable.</string>
 
     <!-- 共通の操作/アイコン説明(複数画面で共有) -->
     <string name="action_copy">Copy</string>

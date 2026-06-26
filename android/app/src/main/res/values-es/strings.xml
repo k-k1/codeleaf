@@ -89,6 +89,8 @@
     <string name="settings_version_title">Versión</string>
     <string name="settings_build_line">Compilación: %1$s · %2$s · %3$s</string>
     <string name="settings_licenses">Licencias de código abierto</string>
+    <string name="settings_release_notes">Notas de la versión</string>
+    <string name="release_notes_unavailable">Las notas de la versión no están disponibles.</string>
 
     <!-- 共通の操作/アイコン説明 -->
     <string name="action_copy">Copiar</string>

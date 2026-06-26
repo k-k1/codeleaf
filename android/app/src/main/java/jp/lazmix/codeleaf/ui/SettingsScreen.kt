@@ -164,6 +164,7 @@ fun SettingsScreen(
     onSetRestoreLastPosition: (Boolean) -> Unit,
     onSetSelectByDefault: (Boolean) -> Unit,
     onClearCache: () -> Unit,
+    onReleaseNotes: () -> Unit,
     onLicenses: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -431,6 +432,9 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                OutlinedButton(onClick = onReleaseNotes, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.settings_release_notes))
                 }
                 OutlinedButton(onClick = onLicenses, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.settings_licenses))

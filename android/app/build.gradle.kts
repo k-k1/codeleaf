@@ -115,6 +115,9 @@ android {
         buildConfig = true
     }
 
+    // リリースノート表示用に、リポ直下の CHANGELOG を取り込む生成 assets ディレクトリ(下の copyChangelog が出力)。
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/changelogAssets"))
+
     // JGit の jar が同梱する META-INF を除外（重複・不要分）
     packaging {
         resources {
@@ -145,6 +148,15 @@ android {
         }
     }
 }
+
+// リリースノート: リポ直下の CHANGELOG(.en).md を assets/changelog/ へコピー(単一ソース・オフライン同梱)。
+// 日本語=ja.md / 英語=en.md。アプリは現在ロケールで出し分ける(ja→ja.md, それ以外→en.md)。
+val copyChangelog by tasks.registering(Copy::class) {
+    into(layout.buildDirectory.dir("generated/changelogAssets/changelog"))
+    from(rootProject.file("../CHANGELOG.md")) { rename { "ja.md" } }
+    from(rootProject.file("../CHANGELOG.en.md")) { rename { "en.md" } }
+}
+tasks.named("preBuild") { dependsOn(copyChangelog) }
 
 // prism4j / markwon-syntax-highlight が引き込む旧 annotations-java5 は、Kotlin の
 // org.jetbrains:annotations と同一クラスを含み dex 重複になるため全体から除外する。

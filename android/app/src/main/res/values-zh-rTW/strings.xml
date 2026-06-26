@@ -89,6 +89,8 @@
     <string name="settings_version_title">版本</string>
     <string name="settings_build_line">建置：%1$s · %2$s · %3$s</string>
     <string name="settings_licenses">開放原始碼授權</string>
+    <string name="settings_release_notes">發行說明</string>
+    <string name="release_notes_unavailable">無法載入發行說明。</string>
 
     <!-- 通用操作/圖示說明 -->
     <string name="action_copy">複製</string>

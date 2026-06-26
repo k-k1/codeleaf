@@ -91,6 +91,7 @@ private sealed interface Screen : Parcelable {
     @Parcelize data object Add : Screen
     @Parcelize data object Settings : Screen
     @Parcelize data object Licenses : Screen
+    @Parcelize data object ReleaseNotes : Screen
     @Parcelize data object RepoEdit : Screen
     @Parcelize data class Browse(override val repo: Repo, val path: String) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
@@ -578,11 +579,14 @@ fun CodeLeafApp() {
             onSetRestoreLastPosition = vm::setRestoreLastPosition,
             onSetSelectByDefault = vm::setSelectByDefault,
             onClearCache = { vm.clearCache() },
+            onReleaseNotes = { navigate(Screen.ReleaseNotes) },
             onLicenses = { navigate(Screen.Licenses) },
             onBack = { pop() },
         )
 
         Screen.Licenses -> LicensesScreen(onBack = { pop() })
+
+        Screen.ReleaseNotes -> ReleaseNotesScreen(onBack = { pop() })
 
         is Screen.Browse -> {
             val repo = current.repo
