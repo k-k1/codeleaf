@@ -112,6 +112,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.lazmix.codeleaf.R
+import jp.lazmix.codeleaf.data.Eol
 import jp.lazmix.codeleaf.data.FileInfo
 import jp.lazmix.codeleaf.data.FileKind
 import jp.lazmix.codeleaf.data.LinkOpenMode
@@ -400,8 +401,24 @@ fun FileViewerScreen(
             val kind = info?.kind
             // 上部メタバー: テキストはエンコード/BOM/改行/サイズ、画像はフォーマット/寸法/サイズ。
             // revisionLabel(過去コミット時点 等)があれば行頭に連結する(1行・省略されにくい行頭側)。
-            val metaText = listOfNotNull(revisionLabel, info?.let { fileMetaLine(it) })
-                .joinToString(" ・ ").ifBlank { null }
+            val encodingUnknown = stringResource(R.string.encoding_unknown)
+            val noBom = stringResource(R.string.encoding_no_bom)
+            val eolMixed = stringResource(R.string.eol_mixed)
+            val eolNone = stringResource(R.string.eol_none)
+            val metaText = listOfNotNull(
+                revisionLabel,
+                info?.let {
+                    fileMetaLine(it, encodingUnknown, noBom) { eol ->
+                        when (eol) {
+                            Eol.LF -> "LF"
+                            Eol.CRLF -> "CRLF"
+                            Eol.CR -> "CR"
+                            Eol.MIXED -> eolMixed
+                            Eol.NONE -> eolNone
+                        }
+                    }
+                },
+            ).joinToString(" ・ ").ifBlank { null }
             metaText?.let { FileMetaBar(it) }
             // 上限で先頭のみ読んだときの注意バー。
             if (truncated && body != null) {
@@ -435,7 +452,7 @@ fun FileViewerScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
                 kind is FileKind.Binary -> BinaryInfoView(
-                    typeLabel = kind.typeLabel,
+                    typeLabel = binaryTypeLabel(kind.typeLabel),
                     size = info!!.size,
                     head = info!!.head,
                     modifier = Modifier.fillMaxSize(),
@@ -738,13 +755,19 @@ private fun normalizeForLineMatch(s: String): String =
 /**
  * 上部メタバーの1行を組み立てる(純粋関数)。テキストはエンコード/BOM/改行/サイズ、
  * 画像はフォーマット/寸法/サイズ。バイナリは概要カードに出すので null。
+ * ロケール依存ラベル(不明/BOMなし/改行種別)は呼び出し側(Compose)が解決して渡す。
  */
-internal fun fileMetaLine(info: FileInfo): String? = when (val k = info.kind) {
+internal fun fileMetaLine(
+    info: FileInfo,
+    encodingUnknown: String,
+    noBom: String,
+    eolLabel: (Eol) -> String,
+): String? = when (val k = info.kind) {
     is FileKind.Text -> buildList {
         info.text?.let { m ->
-            add(m.encodingLabel)
-            add(if (m.hasBom) "BOM" else "BOMなし")
-            add(m.eol.label)
+            add(if (m.charsetName == null) encodingUnknown else m.encodingLabel)
+            add(if (m.hasBom) "BOM" else noBom)
+            add(eolLabel(m.eol))
         }
         add(humanSize(info.size))
     }.joinToString(" ・ ")
@@ -828,6 +851,41 @@ private fun ImageViewer(file: File, contentDescription: String, modifier: Modifi
                 },
         )
     }
+}
+
+/**
+ * バイナリ種別トークン([FileKind.Binary.typeLabel])を表示ラベルへ解決する。
+ * 既知トークンは stringResource、未知(PNG/PDF 等のフォーマット名)はそのまま表示。
+ */
+@Composable
+private fun binaryTypeLabel(token: String): String = when (token) {
+    "zip" -> stringResource(R.string.bin_zip)
+    "jar" -> stringResource(R.string.bin_jar)
+    "apk" -> stringResource(R.string.bin_apk)
+    "aar" -> stringResource(R.string.bin_aar)
+    "office" -> stringResource(R.string.bin_office)
+    "opendocument" -> stringResource(R.string.bin_opendocument)
+    "epub" -> stringResource(R.string.bin_epub)
+    "gzip" -> stringResource(R.string.bin_gzip)
+    "bzip2" -> stringResource(R.string.bin_bzip2)
+    "xz" -> stringResource(R.string.bin_xz)
+    "7z" -> stringResource(R.string.bin_7z)
+    "rar" -> stringResource(R.string.bin_rar)
+    "elf" -> stringResource(R.string.bin_elf)
+    "javaclass" -> stringResource(R.string.bin_javaclass)
+    "macho" -> stringResource(R.string.bin_macho)
+    "winpe" -> stringResource(R.string.bin_winpe)
+    "wasm" -> stringResource(R.string.bin_wasm)
+    "sqlite" -> stringResource(R.string.bin_sqlite)
+    "mp3" -> stringResource(R.string.bin_mp3)
+    "ogg" -> stringResource(R.string.bin_ogg)
+    "flac" -> stringResource(R.string.bin_flac)
+    "wav" -> stringResource(R.string.bin_wav)
+    "avi" -> stringResource(R.string.bin_avi)
+    "mp4" -> stringResource(R.string.bin_mp4)
+    "font" -> stringResource(R.string.bin_font)
+    "binary" -> stringResource(R.string.bin_unknown)
+    else -> token
 }
 
 /**

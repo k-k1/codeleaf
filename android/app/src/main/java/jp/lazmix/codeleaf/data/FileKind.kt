@@ -16,21 +16,26 @@ sealed interface FileKind {
     /** PDF。PdfRenderer でページを描画する。 */
     data object Pdf : FileKind
 
-    /** 画像/PDF 以外のバイナリ。[typeLabel] は file(1) 風の種別名(「ELF 実行ファイル」等)。 */
+    /**
+     * 画像/PDF 以外のバイナリ。[typeLabel] は **ロケール非依存トークン**(`elf`/`jar`/`gzip`/`binary` 等)。
+     * UI 側の `binaryTypeLabel` で stringResource に解決する。未知トークン(`PNG`/`PDF` 等の
+     * フォーマット名・[RepoRepository] が画像/PDF を降格させた場合)はそのまま表示される。
+     */
     data class Binary(val typeLabel: String) : FileKind
 }
 
-/** 改行コード。[label] は上部メタバーの表示用。 */
-enum class Eol(val label: String) {
-    LF("LF"), CRLF("CRLF"), CR("CR"), MIXED("混在"), NONE("改行なし")
-}
+/** 改行コード。表示ラベルは UI 層(eol→stringResource)で解決する。 */
+enum class Eol { LF, CRLF, CR, MIXED, NONE }
 
 /** 本文読み込み結果。[truncated] はサイズ上限で先頭だけ読んだ(末尾を切った)ことを示す。 */
 data class TextLoad(val text: String, val truncated: Boolean)
 
 /** テキストファイルのメタ情報(上部バー表示・本文の再デコードに使う)。 */
 data class TextMeta(
-    /** 表示用のエンコード名(UTF-8 / Shift_JIS / EUC-JP / ASCII / 不明 等)。 */
+    /**
+     * 表示用のエンコード名(UTF-8 / Shift_JIS / EUC-JP / ASCII 等)。いずれも普遍的な名称で翻訳不要。
+     * 判定不能のときは空文字。UI は [charsetName] が null のとき「不明/Unknown」を stringResource で出す。
+     */
     val encodingLabel: String,
     /** 本文デコードに使う Charset 名。null なら UTF-8 でフォールバック。 */
     val charsetName: String?,
@@ -95,8 +100,8 @@ object FileClassifier {
             val label = if (detected.equals("US-ASCII", true)) "ASCII" else detected
             return Triple(label, detected, false)
         }
-        // 判定不能。純 ASCII なら ASCII、そうでなければ不明(本文は UTF-8 で読む)。
-        return if (h.all { it >= 0 }) Triple("ASCII", "US-ASCII", false) else Triple("不明", null, false)
+        // 判定不能。純 ASCII なら ASCII、そうでなければ不明(charset=null で UI が「不明」を出す。本文は UTF-8 で読む)。
+        return if (h.all { it >= 0 }) Triple("ASCII", "US-ASCII", false) else Triple("", null, false)
     }
 
     /** 先頭バイトを走査して改行コードを判定する。複数種が混在すれば MIXED。 */
@@ -152,43 +157,43 @@ object FileClassifier {
     }
 
 
-    /** magic / 拡張子から file(1) 風の種別ラベルを返す。判別不能は「バイナリ」。 */
+    /** magic / 拡張子から種別トークン(ロケール非依存)を返す。判別不能は `binary`。UI が翻訳する。 */
     private fun magicLabel(name: String, h: ByteArray): String = when {
         h.startsWith(0x50, 0x4B, 0x03, 0x04) ||
             h.startsWith(0x50, 0x4B, 0x05, 0x06) ||
             h.startsWith(0x50, 0x4B, 0x07, 0x08) -> zipLabel(name)
-        h.startsWith(0x1F, 0x8B) -> "gzip 圧縮"
-        h.startsWith(0x42, 0x5A, 0x68) -> "bzip2 圧縮" // BZh
-        h.startsWith(0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00) -> "xz 圧縮"
-        h.startsWith(0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C) -> "7z アーカイブ"
-        h.startsWith(0x52, 0x61, 0x72, 0x21) -> "RAR アーカイブ" // Rar!
-        h.startsWith(0x7F, 0x45, 0x4C, 0x46) -> "ELF 実行ファイル"
-        h.startsWith(0xCA, 0xFE, 0xBA, 0xBE) -> "Java クラスファイル"
+        h.startsWith(0x1F, 0x8B) -> "gzip"
+        h.startsWith(0x42, 0x5A, 0x68) -> "bzip2" // BZh
+        h.startsWith(0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00) -> "xz"
+        h.startsWith(0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C) -> "7z"
+        h.startsWith(0x52, 0x61, 0x72, 0x21) -> "rar" // Rar!
+        h.startsWith(0x7F, 0x45, 0x4C, 0x46) -> "elf"
+        h.startsWith(0xCA, 0xFE, 0xBA, 0xBE) -> "javaclass"
         h.startsWith(0xFE, 0xED, 0xFA, 0xCE) ||
             h.startsWith(0xFE, 0xED, 0xFA, 0xCF) ||
-            h.startsWith(0xCF, 0xFA, 0xED, 0xFE) -> "Mach-O バイナリ"
-        h.startsWith(0x4D, 0x5A) -> "Windows 実行ファイル" // MZ
-        h.startsWith(0x00, 0x61, 0x73, 0x6D) -> "WebAssembly"
-        startsWithAscii(h, "SQLite format 3") -> "SQLite データベース"
-        startsWithAscii(h, "ID3") -> "MP3 音声"
-        startsWithAscii(h, "OggS") -> "Ogg メディア"
-        startsWithAscii(h, "fLaC") -> "FLAC 音声"
-        isRiff(h, "WAVE") -> "WAV 音声"
-        isRiff(h, "AVI ") -> "AVI 動画"
-        hasAsciiAt(h, 4, "ftyp") -> "MP4/動画"
+            h.startsWith(0xCF, 0xFA, 0xED, 0xFE) -> "macho"
+        h.startsWith(0x4D, 0x5A) -> "winpe" // MZ
+        h.startsWith(0x00, 0x61, 0x73, 0x6D) -> "wasm"
+        startsWithAscii(h, "SQLite format 3") -> "sqlite"
+        startsWithAscii(h, "ID3") -> "mp3"
+        startsWithAscii(h, "OggS") -> "ogg"
+        startsWithAscii(h, "fLaC") -> "flac"
+        isRiff(h, "WAVE") -> "wav"
+        isRiff(h, "AVI ") -> "avi"
+        hasAsciiAt(h, 4, "ftyp") -> "mp4"
         startsWithAscii(h, "OTTO") || startsWithAscii(h, "wOFF") ||
-            startsWithAscii(h, "wOF2") || h.startsWith(0x00, 0x01, 0x00, 0x00) -> "フォント"
-        else -> "バイナリ"
+            startsWithAscii(h, "wOF2") || h.startsWith(0x00, 0x01, 0x00, 0x00) -> "font"
+        else -> "binary"
     }
 
     private fun zipLabel(name: String): String = when (ext(name)) {
-        "jar" -> "JAR アーカイブ"
-        "apk" -> "APK パッケージ"
-        "aar" -> "AAR ライブラリ"
-        "docx", "xlsx", "pptx" -> "Office 文書"
-        "odt", "ods", "odp" -> "OpenDocument 文書"
-        "epub" -> "EPUB 書籍"
-        else -> "ZIP アーカイブ"
+        "jar" -> "jar"
+        "apk" -> "apk"
+        "aar" -> "aar"
+        "docx", "xlsx", "pptx" -> "office"
+        "odt", "ods", "odp" -> "opendocument"
+        "epub" -> "epub"
+        else -> "zip"
     }
 
     private fun ext(name: String): String =

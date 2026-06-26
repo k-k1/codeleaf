@@ -15,7 +15,7 @@ class FileClassifierTest {
 
     @Test fun textWithNul_isBinary() {
         val k = FileClassifier.classify("a.dat", bytes('h'.code, 0x00, 'i'.code))
-        assertEquals(FileKind.Binary("バイナリ"), k)
+        assertEquals(FileKind.Binary("binary"), k)
     }
 
     @Test fun pngMagic_isImage() {
@@ -39,22 +39,22 @@ class FileClassifierTest {
 
     @Test fun zipJarExtension_labelsJar() {
         val head = bytes(0x50, 0x4B, 0x03, 0x04, 0x00)
-        assertEquals(FileKind.Binary("JAR アーカイブ"), FileClassifier.classify("lib.jar", head))
+        assertEquals(FileKind.Binary("jar"), FileClassifier.classify("lib.jar", head))
     }
 
     @Test fun zipPlain_labelsZip() {
         val head = bytes(0x50, 0x4B, 0x03, 0x04, 0x00)
-        assertEquals(FileKind.Binary("ZIP アーカイブ"), FileClassifier.classify("a.zip", head))
+        assertEquals(FileKind.Binary("zip"), FileClassifier.classify("a.zip", head))
     }
 
     @Test fun elf_isLabeled() {
         val head = bytes(0x7F, 0x45, 0x4C, 0x46, 0x00)
-        assertEquals(FileKind.Binary("ELF 実行ファイル"), FileClassifier.classify("a.out", head))
+        assertEquals(FileKind.Binary("elf"), FileClassifier.classify("a.out", head))
     }
 
     @Test fun gzip_isLabeled() {
         val head = bytes(0x1F, 0x8B, 0x08, 0x00)
-        assertEquals(FileKind.Binary("gzip 圧縮"), FileClassifier.classify("a.gz", head))
+        assertEquals(FileKind.Binary("gzip"), FileClassifier.classify("a.gz", head))
     }
 
     // --- textMeta: 改行コード ---

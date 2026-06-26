@@ -132,4 +132,38 @@
     <string name="memo_untitled">(untitled)</string>
     <string name="memo_new_notebook_plus">＋ New notebook</string>
     <string name="memo_new_notebook_title">New notebook title</string>
+
+    <!-- ファイルメタ: エンコード/改行(ビューア上部バー) -->
+    <string name="encoding_unknown">Unknown</string>
+    <string name="encoding_no_bom">No BOM</string>
+    <string name="eol_mixed">Mixed</string>
+    <string name="eol_none">No newline</string>
+
+    <!-- バイナリ種別ラベル(FileKind.Binary のトークンを解決) -->
+    <string name="bin_zip">ZIP archive</string>
+    <string name="bin_jar">JAR archive</string>
+    <string name="bin_apk">APK package</string>
+    <string name="bin_aar">AAR library</string>
+    <string name="bin_office">Office document</string>
+    <string name="bin_opendocument">OpenDocument</string>
+    <string name="bin_epub">EPUB book</string>
+    <string name="bin_gzip">gzip compressed</string>
+    <string name="bin_bzip2">bzip2 compressed</string>
+    <string name="bin_xz">xz compressed</string>
+    <string name="bin_7z">7z archive</string>
+    <string name="bin_rar">RAR archive</string>
+    <string name="bin_elf">ELF executable</string>
+    <string name="bin_javaclass">Java class file</string>
+    <string name="bin_macho">Mach-O binary</string>
+    <string name="bin_winpe">Windows executable</string>
+    <string name="bin_wasm">WebAssembly</string>
+    <string name="bin_sqlite">SQLite database</string>
+    <string name="bin_mp3">MP3 audio</string>
+    <string name="bin_ogg">Ogg media</string>
+    <string name="bin_flac">FLAC audio</string>
+    <string name="bin_wav">WAV audio</string>
+    <string name="bin_avi">AVI video</string>
+    <string name="bin_mp4">MP4/video</string>
+    <string name="bin_font">Font</string>
+    <string name="bin_unknown">Binary</string>
 </resources>
