@@ -1,5 +1,6 @@
 package jp.lazmix.codeleaf.ui
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,10 +18,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.SubmoduleChange
 import jp.lazmix.codeleaf.git.SubmoduleChangeDirection
 import jp.lazmix.codeleaf.git.SubmoduleCommit
@@ -33,6 +36,7 @@ import jp.lazmix.codeleaf.git.SubmoduleCommit
 @Composable
 fun SubmoduleChangeContent(change: SubmoduleChange, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
+    val context = LocalContext.current
     Column(modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxWidth()
@@ -50,14 +54,14 @@ fun SubmoduleChangeContent(change: SubmoduleChange, modifier: Modifier = Modifie
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    chipLabel(change),
+                    chipLabel(change, context),
                     style = MaterialTheme.typography.labelMedium,
                     color = cs.onSecondaryContainer,
                 )
             }
             Spacer(Modifier.height(2.dp))
             Text(
-                rangeLabel(change),
+                rangeLabel(change, context),
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
                 color = cs.onSecondaryContainer,
@@ -67,7 +71,7 @@ fun SubmoduleChangeContent(change: SubmoduleChange, modifier: Modifier = Modifie
             if (change.commits.isEmpty()) {
                 item {
                     Text(
-                        "差分となる submodule コミットはありません",
+                        stringResource(R.string.submodule_no_diff_commits),
                         style = MaterialTheme.typography.bodySmall,
                         color = cs.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
@@ -81,7 +85,7 @@ fun SubmoduleChangeContent(change: SubmoduleChange, modifier: Modifier = Modifie
             if (change.truncated) {
                 item {
                     Text(
-                        "ほか省略（上限まで表示）",
+                        stringResource(R.string.submodule_more_omitted),
                         style = MaterialTheme.typography.bodySmall,
                         color = cs.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -99,24 +103,24 @@ fun SubmoduleChangeContent(change: SubmoduleChange, modifier: Modifier = Modifie
 }
 
 /** チップ風ラベル: 方向＋件数。 */
-private fun chipLabel(change: SubmoduleChange): String {
+private fun chipLabel(change: SubmoduleChange, context: Context): String {
     val n = change.commits.size
     return when (change.direction) {
-        SubmoduleChangeDirection.FORWARD -> "$n 件 ↑"
-        SubmoduleChangeDirection.BACKWARD -> "戻し $n 件 ↓"
-        SubmoduleChangeDirection.DIVERGED -> "分岐 $n 件"
-        SubmoduleChangeDirection.ADD -> "追加"
-        SubmoduleChangeDirection.REMOVE -> "削除"
+        SubmoduleChangeDirection.FORWARD -> context.getString(R.string.submodule_n_forward, n)
+        SubmoduleChangeDirection.BACKWARD -> context.getString(R.string.submodule_n_backward, n)
+        SubmoduleChangeDirection.DIVERGED -> context.getString(R.string.submodule_n_diverged, n)
+        SubmoduleChangeDirection.ADD -> context.getString(R.string.submodule_add)
+        SubmoduleChangeDirection.REMOVE -> context.getString(R.string.submodule_remove)
         SubmoduleChangeDirection.UNRESOLVED -> ""
     }
 }
 
-private fun rangeLabel(change: SubmoduleChange): String {
+private fun rangeLabel(change: SubmoduleChange, context: Context): String {
     val old = change.oldSha?.let { shortSha(it) }
     val new = change.newSha?.let { shortSha(it) }
     return when (change.direction) {
-        SubmoduleChangeDirection.ADD -> "新規追加 → ${new ?: "—"}"
-        SubmoduleChangeDirection.REMOVE -> "${old ?: "—"} → 削除"
+        SubmoduleChangeDirection.ADD -> context.getString(R.string.submodule_new_added, new ?: "—")
+        SubmoduleChangeDirection.REMOVE -> context.getString(R.string.submodule_removed_arrow, old ?: "—")
         else -> "${old ?: "—"} → ${new ?: "—"}"
     }
 }
@@ -129,7 +133,7 @@ private fun SubCommitRow(c: SubmoduleCommit, boundary: Boolean) {
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Text(
-            if (boundary) "基点 · ${c.shortMessage}" else c.shortMessage,
+            if (boundary) stringResource(R.string.submodule_boundary, c.shortMessage) else c.shortMessage,
             style = MaterialTheme.typography.bodyMedium,
             color = titleColor,
             maxLines = 2,
