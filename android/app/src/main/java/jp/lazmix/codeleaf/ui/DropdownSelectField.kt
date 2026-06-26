@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
@@ -39,6 +40,8 @@ fun DropdownSelectField(
             onValueChange = {},
             readOnly = true,
             singleLine = true,
+            // 既定の入力文字は 16sp(bodyLarge)で周囲のセグメントボタン(14sp)より大きく見えるため揃える。
+            textStyle = MaterialTheme.typography.labelLarge,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier
