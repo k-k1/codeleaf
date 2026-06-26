@@ -35,10 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.MemoFormat
 import jp.lazmix.codeleaf.data.db.Memo
 import jp.lazmix.codeleaf.data.db.MemoEntry
@@ -81,7 +83,7 @@ fun MemosScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("メモ", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.memos_title), style = MaterialTheme.typography.titleMedium)
                         Text(
                             repoName,
                             style = MaterialTheme.typography.labelSmall,
@@ -94,7 +96,7 @@ fun MemosScreen(
                 navigationIcon = { BackButton(onBack) },
                 actions = {
                     IconButton(onClick = { showCreate = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "新しいメモ帳")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.memo_new_notebook))
                     }
                 },
             )
@@ -103,7 +105,7 @@ fun MemosScreen(
         if (memos.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    "メモ帳がありません。右上の＋で作成、またはファイル表示中に行を長押しして追加します。",
+                    stringResource(R.string.memos_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(32.dp),
                 )
@@ -126,18 +128,18 @@ fun MemosScreen(
 
     if (showCreate) {
         MemoTitleDialog(
-            heading = "新しいメモ帳",
+            heading = stringResource(R.string.memo_new_notebook),
             initial = "",
-            confirmLabel = "作成",
+            confirmLabel = stringResource(R.string.action_create),
             onConfirm = { showCreate = false; onCreateMemo(it) },
             onDismiss = { showCreate = false },
         )
     }
     renameTarget?.let { memo ->
         MemoTitleDialog(
-            heading = "メモ帳の名前を変更",
+            heading = stringResource(R.string.memos_rename_heading),
             initial = memo.title,
-            confirmLabel = "変更",
+            confirmLabel = stringResource(R.string.action_change),
             onConfirm = { renameTarget = null; onRenameMemo(memo.id, it) },
             onDismiss = { renameTarget = null },
         )
@@ -145,12 +147,12 @@ fun MemosScreen(
     deleteTarget?.let { memo ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("メモ帳を削除") },
-            text = { Text("「${memo.title}」とその全エントリを削除します。元に戻せません。") },
+            title = { Text(stringResource(R.string.memos_delete_title)) },
+            text = { Text(stringResource(R.string.memos_delete_confirm, memo.title)) },
             confirmButton = {
-                TextButton(onClick = { deleteTarget = null; onDeleteMemo(memo.id) }) { Text("削除") }
+                TextButton(onClick = { deleteTarget = null; onDeleteMemo(memo.id) }) { Text(stringResource(R.string.action_delete)) }
             },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("キャンセル") } },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -171,27 +173,27 @@ private fun MemoRow(
         Row(Modifier.fillMaxWidth().padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
                 Text(
-                    mwc.memo.title.ifBlank { "(無題)" },
+                    mwc.memo.title.ifBlank { stringResource(R.string.memo_untitled) },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    "${mwc.entryCount} 件",
+                    stringResource(R.string.memo_entry_count, mwc.entryCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Box {
                 IconButton(onClick = { menu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("まとめて共有") }, onClick = { menu = false; onShare() })
-                    DropdownMenuItem(text = { Text("まとめてコピー") }, onClick = { menu = false; onCopy() })
-                    DropdownMenuItem(text = { Text("名前を変更") }, onClick = { menu = false; onRename() })
-                    DropdownMenuItem(text = { Text("削除") }, onClick = { menu = false; onDelete() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.memos_share_all)) }, onClick = { menu = false; onShare() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.memos_copy_all)) }, onClick = { menu = false; onCopy() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.memos_rename)) }, onClick = { menu = false; onRename() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menu = false; onDelete() })
                 }
             }
         }
@@ -216,13 +218,13 @@ fun MemoTitleDialog(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                label = { Text("タイトル") },
+                label = { Text(stringResource(R.string.memo_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         },
         confirmButton = {
             TextButton(enabled = text.isNotBlank(), onClick = { onConfirm(text.trim()) }) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("キャンセル") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

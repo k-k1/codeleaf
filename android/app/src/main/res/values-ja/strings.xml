@@ -256,4 +256,26 @@
     <string name="focus_collapse">集中モード(全幅)</string>
     <string name="pane_expand">一覧を表示</string>
     <string name="pane_collapse">一覧を隠す</string>
+
+    <!-- 共通アクション(追加) -->
+    <string name="action_create">作成</string>
+    <string name="action_change">変更</string>
+    <string name="action_clear">クリア</string>
+
+    <!-- メモ帳一覧 / 詳細 -->
+    <string name="memos_title">メモ</string>
+    <string name="memos_empty">メモ帳がありません。右上の＋で作成、またはファイル表示中に行を長押しして追加します。</string>
+    <string name="memo_entry_count">%1$d 件</string>
+    <string name="memo_title_label">タイトル</string>
+    <string name="memos_share_all">まとめて共有</string>
+    <string name="memos_copy_all">まとめてコピー</string>
+    <string name="memos_rename">名前を変更</string>
+    <string name="memos_rename_heading">メモ帳の名前を変更</string>
+    <string name="memos_delete_title">メモ帳を削除</string>
+    <string name="memos_delete_confirm">「%1$s」とその全エントリを削除します。元に戻せません。</string>
+    <string name="memodetail_empty">エントリがありません。ファイル表示中に行を長押しして追加します。</string>
+    <string name="memodetail_clear_title">中身を全てクリア</string>
+    <string name="memodetail_clear_confirm">「%1$s」のエントリ%2$d件をすべて削除します(メモ帳は残ります)。元に戻せません。</string>
+    <string name="entry_delete_title">エントリを削除</string>
+    <string name="entry_delete_confirm">このエントリを削除します。</string>
 </resources>

@@ -36,11 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.MemoFormat
 import jp.lazmix.codeleaf.data.db.MemoEntry
 
@@ -78,7 +80,7 @@ fun MemoDetailScreen(
                 title = {
                     Column {
                         Text(
-                            memoTitle.ifBlank { "(無題)" },
+                            memoTitle.ifBlank { stringResource(R.string.memo_untitled) },
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -96,30 +98,30 @@ fun MemoDetailScreen(
                 actions = {
                     Box {
                         IconButton(onClick = { topMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                         }
                         DropdownMenu(expanded = topMenu, onDismissRequest = { topMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text("まとめて共有") },
+                                text = { Text(stringResource(R.string.memos_share_all)) },
                                 onClick = { topMenu = false; shareText(context, memoText()) },
                             )
                             DropdownMenuItem(
-                                text = { Text("まとめてコピー") },
+                                text = { Text(stringResource(R.string.memos_copy_all)) },
                                 onClick = { topMenu = false; clipboard.setText(AnnotatedString(memoText())) },
                             )
                             DropdownMenuItem(
-                                text = { Text("名前を変更") },
+                                text = { Text(stringResource(R.string.memos_rename)) },
                                 onClick = { topMenu = false; showRename = true },
                             )
                             // メモ帳は残しエントリだけ全消し(エントリがあるときだけ提示)。
                             if (entries.isNotEmpty()) {
                                 DropdownMenuItem(
-                                    text = { Text("中身を全てクリア") },
+                                    text = { Text(stringResource(R.string.memodetail_clear_title)) },
                                     onClick = { topMenu = false; showClearEntries = true },
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("メモ帳を削除") },
+                                text = { Text(stringResource(R.string.memos_delete_title)) },
                                 onClick = { topMenu = false; showDeleteMemo = true },
                             )
                         }
@@ -131,7 +133,7 @@ fun MemoDetailScreen(
         if (entries.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    "エントリがありません。ファイル表示中に行を長押しして追加します。",
+                    stringResource(R.string.memodetail_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(32.dp),
                 )
@@ -153,9 +155,9 @@ fun MemoDetailScreen(
 
     if (showRename) {
         MemoTitleDialog(
-            heading = "メモ帳の名前を変更",
+            heading = stringResource(R.string.memos_rename_heading),
             initial = memoTitle,
-            confirmLabel = "変更",
+            confirmLabel = stringResource(R.string.action_change),
             onConfirm = { showRename = false; onRenameMemo(it) },
             onDismiss = { showRename = false },
         )
@@ -163,23 +165,23 @@ fun MemoDetailScreen(
     if (showClearEntries) {
         AlertDialog(
             onDismissRequest = { showClearEntries = false },
-            title = { Text("中身を全てクリア") },
-            text = { Text("「${memoTitle}」のエントリ${entries.size}件をすべて削除します(メモ帳は残ります)。元に戻せません。") },
+            title = { Text(stringResource(R.string.memodetail_clear_title)) },
+            text = { Text(stringResource(R.string.memodetail_clear_confirm, memoTitle, entries.size)) },
             confirmButton = {
-                TextButton(onClick = { showClearEntries = false; onClearEntries() }) { Text("クリア") }
+                TextButton(onClick = { showClearEntries = false; onClearEntries() }) { Text(stringResource(R.string.action_clear)) }
             },
-            dismissButton = { TextButton(onClick = { showClearEntries = false }) { Text("キャンセル") } },
+            dismissButton = { TextButton(onClick = { showClearEntries = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
     if (showDeleteMemo) {
         AlertDialog(
             onDismissRequest = { showDeleteMemo = false },
-            title = { Text("メモ帳を削除") },
-            text = { Text("「${memoTitle}」とその全エントリを削除します。元に戻せません。") },
+            title = { Text(stringResource(R.string.memos_delete_title)) },
+            text = { Text(stringResource(R.string.memos_delete_confirm, memoTitle)) },
             confirmButton = {
-                TextButton(onClick = { showDeleteMemo = false; onDeleteMemo() }) { Text("削除") }
+                TextButton(onClick = { showDeleteMemo = false; onDeleteMemo() }) { Text(stringResource(R.string.action_delete)) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteMemo = false }) { Text("キャンセル") } },
+            dismissButton = { TextButton(onClick = { showDeleteMemo = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -209,12 +211,12 @@ private fun EntryCard(
                 )
                 Box {
                     IconButton(onClick = { menu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(text = { Text("共有") }, onClick = { menu = false; onShare() })
-                        DropdownMenuItem(text = { Text("コピー") }, onClick = { menu = false; onCopy() })
-                        DropdownMenuItem(text = { Text("削除") }, onClick = { menu = false; confirmDelete = true })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_share)) }, onClick = { menu = false; onShare() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_copy)) }, onClick = { menu = false; onCopy() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menu = false; confirmDelete = true })
                     }
                 }
             }
@@ -245,12 +247,12 @@ private fun EntryCard(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("エントリを削除") },
-            text = { Text("このエントリを削除します。") },
+            title = { Text(stringResource(R.string.entry_delete_title)) },
+            text = { Text(stringResource(R.string.entry_delete_confirm)) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("削除") }
+                TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.action_delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("キャンセル") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

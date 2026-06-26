@@ -256,4 +256,26 @@
     <string name="focus_collapse">Focus mode (full width)</string>
     <string name="pane_expand">Show list</string>
     <string name="pane_collapse">Hide list</string>
+
+    <!-- 共通アクション(追加) -->
+    <string name="action_create">Create</string>
+    <string name="action_change">Change</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- メモ帳一覧 / 詳細 -->
+    <string name="memos_title">Memos</string>
+    <string name="memos_empty">No notebooks yet. Create one with + at the top right, or long-press a line while viewing a file.</string>
+    <string name="memo_entry_count">%1$d entries</string>
+    <string name="memo_title_label">Title</string>
+    <string name="memos_share_all">Share all</string>
+    <string name="memos_copy_all">Copy all</string>
+    <string name="memos_rename">Rename</string>
+    <string name="memos_rename_heading">Rename notebook</string>
+    <string name="memos_delete_title">Delete notebook</string>
+    <string name="memos_delete_confirm">Delete \"%1$s\" and all its entries. This cannot be undone.</string>
+    <string name="memodetail_empty">No entries yet. Long-press a line while viewing a file to add one.</string>
+    <string name="memodetail_clear_title">Clear all entries</string>
+    <string name="memodetail_clear_confirm">Delete all %2$d entries in \"%1$s\" (the notebook is kept). This cannot be undone.</string>
+    <string name="entry_delete_title">Delete entry</string>
+    <string name="entry_delete_confirm">Delete this entry.</string>
 </resources>
