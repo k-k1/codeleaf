@@ -28,8 +28,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.CommitInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +59,7 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("履歴: ${filePath.substringAfterLast('/')}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = { Text(stringResource(R.string.history_title, filePath.substringAfterLast('/')), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     BackButton(onBack)
                 },
@@ -69,7 +71,7 @@ fun HistoryScreen(
             if (isSubmodule) {
                 // submodule は親リポに中身履歴が無く、gitlink(指すコミット)の移動だけが残る。
                 Text(
-                    "サブモジュールのポインタ移動の履歴です（中身の履歴ではありません）",
+                    stringResource(R.string.history_submodule_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier
@@ -87,9 +89,9 @@ fun HistoryScreen(
             ) {
                 val list = commits
                 when {
-                    error != null -> Text("履歴取得失敗: $error", Modifier.padding(16.dp))
+                    error != null -> Text(stringResource(R.string.history_load_failed, error.orEmpty()), Modifier.padding(16.dp))
                     list == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                    list.isEmpty() -> Text("履歴がありません", Modifier.padding(16.dp))
+                    list.isEmpty() -> Text(stringResource(R.string.history_empty), Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.fillMaxSize()) {
                         items(list, key = { it.sha }) { c ->
                             val selected = c.sha == selectedSha
@@ -169,9 +171,9 @@ fun FileDiffPane(
         val d = diff
         when {
             sc != null -> SubmoduleChangeContent(sc, Modifier.weight(1f).fillMaxWidth())
-            error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
+            error != null -> Text(stringResource(R.string.diff_load_failed, error.orEmpty()), Modifier.padding(16.dp))
             d == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-            d.isBlank() -> Text("差分なし", Modifier.padding(16.dp))
+            d.isBlank() -> Text(stringResource(R.string.diff_none), Modifier.padding(16.dp))
             else -> DiffView(d, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
