@@ -27,8 +27,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.GraphCommit
 
 /**
@@ -61,7 +63,7 @@ fun CommitDetailContent(
             // タイトル(コミットの件名)= 1行目を少し大きく。
             val subject = commit.shortMessage.trim()
             Text(
-                subject.ifBlank { "(メッセージなし)" },
+                subject.ifBlank { stringResource(R.string.commit_no_message) },
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
@@ -93,7 +95,7 @@ fun CommitDetailContent(
                 )
                 if (expanded || overflow) {
                     Text(
-                        if (expanded) "閉じる" else "続きを表示",
+                        if (expanded) stringResource(R.string.commit_collapse) else stringResource(R.string.commit_expand),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
@@ -106,9 +108,9 @@ fun CommitDetailContent(
         HorizontalDivider()
         val fs = files
         when {
-            error != null -> Text("diff取得失敗: $error", Modifier.padding(16.dp))
+            error != null -> Text(stringResource(R.string.diff_load_failed, error.orEmpty()), Modifier.padding(16.dp))
             fs == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-            fs.isEmpty() -> Text("差分なし", Modifier.padding(16.dp))
+            fs.isEmpty() -> Text(stringResource(R.string.diff_none), Modifier.padding(16.dp))
             else -> CommitDiffView(fs, loadFileDiff, Modifier.weight(1f).fillMaxWidth(), onOpenFile)
         }
     }
