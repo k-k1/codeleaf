@@ -28,8 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.SearchHit
 import jp.lazmix.codeleaf.data.SearchFile
 import jp.lazmix.codeleaf.data.searchCorpus
@@ -79,7 +81,7 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("検索: $repoName", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = { Text(stringResource(R.string.search_title, repoName), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     BackButton(onBack)
                 },
@@ -94,7 +96,7 @@ fun SearchScreen(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text(if (regex) "正規表現で検索 (空白でAND)" else "ファイル内を全文検索 (空白でAND)") },
+                    label = { Text(if (regex) stringResource(R.string.search_regex_hint) else stringResource(R.string.search_fulltext_hint)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     modifier = Modifier.weight(1f),
@@ -109,7 +111,7 @@ fun SearchScreen(
             OutlinedTextField(
                 value = pathFilter,
                 onValueChange = { pathFilter = it },
-                label = { Text("パス/拡張子で絞り込み (任意, 例: .md / docs/)") },
+                label = { Text(stringResource(R.string.search_filter_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             )
@@ -124,11 +126,11 @@ fun SearchScreen(
                     Text(error!!, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
                 query.isBlank() -> Unit
                 corpus != null && !searching && results.isEmpty() ->
-                    Text("一致なし", Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.search_no_match), Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
                 else -> {
                     val byFile = remember(results) { results.groupBy { it.relPath } }
                     Text(
-                        "${results.size} 件 / ${byFile.size} ファイル",
+                        stringResource(R.string.search_result_count, results.size, byFile.size),
                         Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
                     )
