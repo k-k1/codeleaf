@@ -135,6 +135,7 @@ fun FileBrowserScreen(
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current // コルーチン内で snackbar 文言をロケール解決するため事前に捕捉。
     // ブランチ切替(busy)や同期(refreshing)中は、同一作業ツリーへの並行操作を防ぐためロックする。
     val locked = busy || refreshing
     // パンくず上の横線に使うリポ色。色なし(NONE)はリスト同様に中立グレー(outline)にする
@@ -296,7 +297,7 @@ fun FileBrowserScreen(
                         // 同期後はツリーが変わりうるので再読込
                         entries = runCatching { loadDir(path) }.getOrElse { error = it.message; emptyList() }
                         refreshing = false
-                        snackbar.showSnackbar(syncResultMessage(result.exceptionOrNull()))
+                        snackbar.showSnackbar(syncResultUiText(result.exceptionOrNull()).resolve(context))
                     }
                 },
                 modifier = Modifier.fillMaxSize(),

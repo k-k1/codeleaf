@@ -53,60 +53,65 @@ class RepoInputValidationTest {
         assertNotNull(repoUrlError("file://relative/repo"))
     }
 
-    // --- cloneErrorMessage ---
+    // --- gitErrorKind 分類 ---
 
     @Test fun auth_maps() {
-        val m = cloneErrorMessage(RuntimeException("not authorized"))
-        assertTrue(m.contains("認証"))
+        assertEquals(GitErrorKind.AUTH, gitErrorKind(RuntimeException("not authorized")))
     }
 
     @Test fun unknownHost_maps() {
-        val m = cloneErrorMessage(RuntimeException("https://x/y: unable to resolve host \"x\""))
-        assertTrue(m.contains("ホスト"))
+        assertEquals(GitErrorKind.HOST, gitErrorKind(RuntimeException("https://x/y: unable to resolve host \"x\"")))
     }
 
     @Test fun notFound_maps() {
-        val m = cloneErrorMessage(RuntimeException("Repository not found"))
-        assertTrue(m.contains("見つかりません"))
+        assertEquals(GitErrorKind.NOT_FOUND, gitErrorKind(RuntimeException("Repository not found")))
     }
 
     @Test fun timeout_maps() {
-        val m = cloneErrorMessage(RuntimeException("connect timed out"))
-        assertTrue(m.contains("タイムアウト"))
+        assertEquals(GitErrorKind.TIMEOUT, gitErrorKind(RuntimeException("connect timed out")))
     }
 
     @Test fun causeChain_isInspected() {
         val root = java.net.UnknownHostException("Unable to resolve host \"github.com\"")
         val wrapped = RuntimeException("transport error", root)
-        assertTrue(cloneErrorMessage(wrapped).contains("ホスト"))
-    }
-
-    @Test fun unknown_fallsBackToMessage() {
-        val m = cloneErrorMessage(RuntimeException("weird gremlin"))
-        assertTrue(m.contains("weird gremlin"))
+        assertEquals(GitErrorKind.HOST, gitErrorKind(wrapped))
     }
 
     @Test fun uploadPack_mapsToCommunication() {
         // JGit TransportHttp が HTTPS fetch 失敗時に出す文言。通信エラー扱いにする。
-        val m = cloneErrorMessage(RuntimeException("https://github.com/o/r.git: cannot open git-upload-pack"))
-        assertTrue(m.contains("通信"))
+        assertEquals(
+            GitErrorKind.NETWORK,
+            gitErrorKind(RuntimeException("https://github.com/o/r.git: cannot open git-upload-pack")),
+        )
     }
 
     @Test fun connectionReset_underWrapper_mapsToCommunication() {
         val root = java.net.SocketException("Connection reset")
         val wrapped = RuntimeException("cannot open git-upload-pack", root)
-        assertTrue(cloneErrorMessage(wrapped).contains("通信"))
+        assertEquals(GitErrorKind.NETWORK, gitErrorKind(wrapped))
     }
 
-    // --- syncResultMessage ---
+    @Test fun unknown_isNull() {
+        assertNull(gitErrorKind(RuntimeException("weird gremlin")))
+    }
+
+    // --- cloneErrorUiText / syncResultUiText ---
+
+    @Test fun cloneError_classified_usesRes() {
+        assertTrue(cloneErrorUiText(RuntimeException("not authorized")) is UiText.Res)
+    }
+
+    @Test fun cloneError_unknown_keepsRawMessage() {
+        val ui = cloneErrorUiText(RuntimeException("weird gremlin"))
+        assertTrue(ui is UiText.GitError && ui.kind == null && ui.rawFallback == "weird gremlin")
+    }
 
     @Test fun syncMessage_communicationError_isClassified() {
-        val m = syncResultMessage(RuntimeException("uri: cannot open git-upload-pack"))
-        assertTrue(m.contains("同期失敗"))
-        assertTrue(m.contains("通信"))
+        val ui = syncResultUiText(RuntimeException("uri: cannot open git-upload-pack"))
+        assertTrue(ui is UiText.GitError && ui.kind == GitErrorKind.NETWORK)
     }
 
     @Test fun syncMessage_success_isDone() {
-        assertTrue(syncResultMessage(null).contains("同期完了"))
+        assertTrue(syncResultUiText(null) is UiText.Res)
     }
 }

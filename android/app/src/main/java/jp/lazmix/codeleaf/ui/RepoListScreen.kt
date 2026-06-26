@@ -56,6 +56,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import jp.lazmix.codeleaf.BuildConfig
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.db.CloneState
@@ -94,13 +95,14 @@ fun RepoListScreen(
     compact: Boolean = false,
 ) {
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current // コルーチン内で UiText をロケール解決するため捕捉。
     LaunchedEffect(status.message) {
-        status.message?.let {
+        status.message?.let { msg ->
             // 同期失敗時は「再Clone」アクション付きで出し、タップで作り直しを起動する。
             val target = status.recloneTarget
             val result = snackbar.showSnackbar(
-                message = it,
-                actionLabel = target?.let { "再Clone" },
+                message = msg.resolve(context),
+                actionLabel = target?.let { context.getString(R.string.reclone_action) },
                 duration = if (target != null) SnackbarDuration.Long else SnackbarDuration.Short,
             )
             if (result == SnackbarResult.ActionPerformed && target != null) onReclone(target)

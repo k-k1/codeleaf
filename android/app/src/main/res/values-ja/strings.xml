@@ -198,6 +198,27 @@
     <string name="addrepo_repos_load_failed">リポジトリ一覧の取得に失敗しました</string>
     <string name="addrepo_login_start_failed">ログインの開始に失敗しました</string>
 
+    <!-- 状態/snackbar メッセージ(ViewModel 生成・UiText で表示時解決) -->
+    <string name="error_unknown">不明なエラー</string>
+    <string name="git_err_auth">認証に失敗しました。トークンと権限(GitHub PAT は Contents: Read-only 必須)を確認してください。</string>
+    <string name="git_err_host">ホストに接続できません。URL とネットワーク接続を確認してください。</string>
+    <string name="git_err_not_found">リポジトリが見つかりません。URL を確認してください(private なら認証も必要)。</string>
+    <string name="git_err_timeout">接続がタイムアウトしました。ネットワークを確認して再試行してください。</string>
+    <string name="git_err_network">通信エラーが発生しました。ネットワーク接続を確認して再試行してください。</string>
+    <string name="git_err_not_repo">git リポジトリとして開けませんでした。URL を確認してください。</string>
+    <string name="clone_failed">clone に失敗しました: %1$s</string>
+    <string name="sync_done">同期完了</string>
+    <string name="sync_failed">同期失敗: %1$s</string>
+    <string name="switch_failed">切替失敗: %1$s</string>
+    <string name="repo_added">%1$s を追加しました</string>
+    <string name="repo_recloned">%1$s を再Clone しました</string>
+    <string name="repo_syncing">%1$s を同期中...</string>
+    <string name="branch_switching">%1$s に切替中...</string>
+    <string name="cache_deleting">削除中...</string>
+    <string name="cache_delete_failed">削除失敗: %1$s</string>
+    <string name="cache_deleted">キャッシュを削除しました</string>
+    <string name="reclone_action">再Clone</string>
+
     <!-- URL 検証エラー(repoUrlError) -->
     <string name="repo_url_err_whitespace">URL に空白が含まれています</string>
     <string name="repo_url_err_file_abs">file:// の後ろは絶対パスにしてください（例: file:///path/to/repo）</string>

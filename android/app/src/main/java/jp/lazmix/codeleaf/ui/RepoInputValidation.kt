@@ -1,5 +1,7 @@
 package jp.lazmix.codeleaf.ui
 
+import jp.lazmix.codeleaf.R
+
 /**
  * git URL からリポジトリ名を推定する。末尾スラッシュ・.git・クエリ/フラグメントを除去し、
  * 最後のパスセグメントを返す。GitHub/Bitbucket の https URL を想定。
@@ -47,11 +49,21 @@ internal fun repoUrlError(url: String): RepoUrlError? {
     return RepoUrlError.BAD_FORMAT
 }
 
+/** git 操作失敗の分類(表示文は UI 層で resId に解決)。clone/sync/切替で共有。 */
+enum class GitErrorKind(val resId: Int) {
+    AUTH(R.string.git_err_auth),
+    HOST(R.string.git_err_host),
+    NOT_FOUND(R.string.git_err_not_found),
+    TIMEOUT(R.string.git_err_timeout),
+    NETWORK(R.string.git_err_network),
+    NOT_GIT_REPO(R.string.git_err_not_repo),
+}
+
 /**
- * git 操作失敗の例外を、原因チェーンの文言から利用者向けメッセージに分類する純粋関数。
- * 分類できなければ null を返し、呼び出し側で素の message にフォールバックする。clone/sync 共有。
+ * git 操作失敗の例外を、原因チェーンの文言から [GitErrorKind] に分類する純粋関数(テスト可能)。
+ * 分類できなければ null(呼び出し側で素の message にフォールバック)。
  */
-internal fun gitErrorMessage(t: Throwable): String? {
+internal fun gitErrorKind(t: Throwable): GitErrorKind? {
     val text = generateSequence(t) { it.cause }
         .mapNotNull { it.message }
         .joinToString(" / ")
@@ -59,27 +71,33 @@ internal fun gitErrorMessage(t: Throwable): String? {
     fun has(vararg keys: String) = keys.any { it in text }
     return when {
         has("not authorized", "authentication", "auth fail", "401", "403", "not permitted", "permission denied") ->
-            "認証に失敗しました。トークンと権限(GitHub PAT は Contents: Read-only 必須)を確認してください。"
+            GitErrorKind.AUTH
         has("unknownhost", "unable to resolve host", "name or service not known", "no address associated") ->
-            "ホストに接続できません。URL とネットワーク接続を確認してください。"
+            GitErrorKind.HOST
         has("repository not found", "not found", "404", "noremoterepository", "service not found") ->
-            "リポジトリが見つかりません。URL を確認してください(private なら認証も必要)。"
+            GitErrorKind.NOT_FOUND
         has("timed out", "timeout") ->
-            "接続がタイムアウトしました。ネットワークを確認して再試行してください。"
+            GitErrorKind.TIMEOUT
         // JGit の TransportHttp が HTTPS 通信中の IOException を包む文言("cannot open git-upload-pack")と、
         // SSL/接続断など低レベルな通信失敗をまとめて通信エラーとして扱う。
         has("cannot open git-upload-pack", "connection reset", "connection refused",
             "unexpected end of stream", "broken pipe", "sslhandshake", "ssl handshake",
             "software caused connection abort", "unable to connect", "failed to connect") ->
-            "通信エラーが発生しました。ネットワーク接続を確認して再試行してください。"
+            GitErrorKind.NETWORK
         has("not a git repository", "invalid remote", "not designed to transport") ->
-            "git リポジトリとして開けませんでした。URL を確認してください。"
+            GitErrorKind.NOT_GIT_REPO
         else -> null
     }
 }
 
-/**
- * clone 失敗の例外を利用者向けメッセージに変換する。分類できなければ素の message を添える。
- */
-internal fun cloneErrorMessage(t: Throwable): String =
-    gitErrorMessage(t) ?: "clone に失敗しました: ${t.message ?: t.javaClass.simpleName}"
+/** clone 失敗を表示用 UiText に変換する。分類できれば分類文、できなければ "clone に失敗しました: <message>"。 */
+internal fun cloneErrorUiText(t: Throwable): UiText {
+    val kind = gitErrorKind(t)
+    return if (kind != null) UiText.Res(kind.resId)
+    else UiText.GitError(R.string.clone_failed, null, t.message ?: t.javaClass.simpleName)
+}
+
+/** 同期結果の表示用 UiText。失敗は "同期失敗: <分類 or message>"、成功は「同期完了」。各画面・VM 共通。 */
+internal fun syncResultUiText(error: Throwable?): UiText =
+    if (error == null) UiText.Res(R.string.sync_done)
+    else UiText.GitError(R.string.sync_failed, gitErrorKind(error), error.message)

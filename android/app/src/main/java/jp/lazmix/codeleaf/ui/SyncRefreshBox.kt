@@ -12,11 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
-
-/** 同期結果のスナックバー文言。失敗は分類済みメッセージ付き、成功は「同期完了」。各画面・VM で共通。 */
-fun syncResultMessage(error: Throwable?): String =
-    error?.let { "同期失敗: ${gitErrorMessage(it) ?: it.message}" } ?: "同期完了"
 
 /**
  * pull-to-refresh で [onSync] を実行し、[onReload] で表示を再読込して結果スナックバーを出す共通ボックス。
@@ -33,6 +30,7 @@ fun SyncRefreshBox(
 ) {
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current // コルーチン内で snackbar 文言をロケール解決するため事前に捕捉。
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = {
@@ -42,7 +40,7 @@ fun SyncRefreshBox(
                 val result = runCatching { onSync() }
                 runCatching { onReload() } // 再読込の失敗は各画面が error 表示で扱う
                 refreshing = false
-                snackbar.showSnackbar(syncResultMessage(result.exceptionOrNull()))
+                snackbar.showSnackbar(syncResultUiText(result.exceptionOrNull()).resolve(context))
             }
         },
         modifier = modifier,

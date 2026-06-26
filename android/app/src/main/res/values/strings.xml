@@ -198,6 +198,27 @@
     <string name="addrepo_repos_load_failed">Failed to load repository list</string>
     <string name="addrepo_login_start_failed">Failed to start login</string>
 
+    <!-- 状態/snackbar メッセージ(ViewModel 生成・UiText で表示時解決) -->
+    <string name="error_unknown">Unknown error</string>
+    <string name="git_err_auth">Authentication failed. Check the token and its permissions (a GitHub PAT needs Contents: Read-only).</string>
+    <string name="git_err_host">Cannot reach the host. Check the URL and your network connection.</string>
+    <string name="git_err_not_found">Repository not found. Check the URL (private repos also need authentication).</string>
+    <string name="git_err_timeout">The connection timed out. Check your network and try again.</string>
+    <string name="git_err_network">A network error occurred. Check your connection and try again.</string>
+    <string name="git_err_not_repo">Could not open it as a git repository. Check the URL.</string>
+    <string name="clone_failed">Clone failed: %1$s</string>
+    <string name="sync_done">Sync complete</string>
+    <string name="sync_failed">Sync failed: %1$s</string>
+    <string name="switch_failed">Switch failed: %1$s</string>
+    <string name="repo_added">Added %1$s</string>
+    <string name="repo_recloned">Re-cloned %1$s</string>
+    <string name="repo_syncing">Syncing %1$s…</string>
+    <string name="branch_switching">Switching to %1$s…</string>
+    <string name="cache_deleting">Deleting…</string>
+    <string name="cache_delete_failed">Delete failed: %1$s</string>
+    <string name="cache_deleted">Cache deleted</string>
+    <string name="reclone_action">Re-clone</string>
+
     <!-- URL 検証エラー(repoUrlError) -->
     <string name="repo_url_err_whitespace">The URL contains whitespace</string>
     <string name="repo_url_err_file_abs">After file:// use an absolute path (e.g. file:///path/to/repo)</string>

@@ -331,16 +331,15 @@ fun AddRepoScreen(
                 }
             }
 
-            // clone 失敗メッセージ(直近の submit 後のみ)。
-            if (attempted && !status.busy) {
-                status.message?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+            // clone 失敗メッセージ(直近の submit 後のみ)。UiText を composable スコープで解決する。
+            val statusMessage = status.message
+            if (attempted && !status.busy && statusMessage != null) {
+                Text(
+                    statusMessage.asString(),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             Button(

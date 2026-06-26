@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import jp.lazmix.codeleaf.CodeLeafApplication
+import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.AppSettings
 import jp.lazmix.codeleaf.data.FavoriteRepository
 import jp.lazmix.codeleaf.data.FileEntry
@@ -41,10 +42,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** 進行中の非同期操作・エラーを画面に伝えるための状態。 */
+/** 進行中の非同期操作・エラーを画面に伝えるための状態。文言は表示時に解決する [UiText]。 */
 data class UiStatus(
     val busy: Boolean = false,
-    val message: String? = null,
+    val message: UiText? = null,
     /** 同期失敗時にスナックバーへ「再Clone」アクションを出す対象。null ならアクション無し。 */
     val recloneTarget: Repo? = null,
 )
@@ -130,7 +131,7 @@ class MainViewModel(
     fun addRepo(input: NewRepo) {
         viewModelScope.launch {
             val repo = runCatching { repository.register(input) }.getOrElse {
-                _status.value = UiStatus(message = cloneErrorMessage(it))
+                _status.value = UiStatus(message = cloneErrorUiText(it))
                 return@launch
             }
             runClone(repo)
@@ -144,24 +145,27 @@ class MainViewModel(
 
     /** ローカル clone が壊れたときに作り直す（削除→再 clone）。実体は [retryClone] と同じ。 */
     fun reclone(repo: Repo) {
-        viewModelScope.launch { runClone(repo, "${repo.name} を再Clone しました") }
+        viewModelScope.launch { runClone(repo, UiText.Res(R.string.repo_recloned, listOf(repo.name))) }
     }
 
-    private suspend fun runClone(repo: Repo, successMessage: String = "${repo.name} を追加しました") {
+    private suspend fun runClone(
+        repo: Repo,
+        successMessage: UiText = UiText.Res(R.string.repo_added, listOf(repo.name)),
+    ) {
         val ok = runCatching { repository.cloneRegistered(repo) }
         ok.exceptionOrNull()?.let { android.util.Log.w("CodeLeaf", "clone failed", it) }
         _status.value = UiStatus(
-            message = ok.exceptionOrNull()?.let { cloneErrorMessage(it) } ?: successMessage,
+            message = ok.exceptionOrNull()?.let { cloneErrorUiText(it) } ?: successMessage,
         )
     }
 
     fun sync(repo: Repo) {
         viewModelScope.launch {
-            _status.value = UiStatus(busy = true, message = "${repo.name} を同期中...")
+            _status.value = UiStatus(busy = true, message = UiText.Res(R.string.repo_syncing, listOf(repo.name)))
             val ok = runCatching { repository.sync(repo) }
             _status.value = UiStatus(
                 busy = false,
-                message = syncResultMessage(ok.exceptionOrNull()),
+                message = syncResultUiText(ok.exceptionOrNull()),
                 // 失敗時は作り直しの導線を出す(破損・取得不能からの復帰手段)。
                 recloneTarget = repo.takeIf { ok.isFailure },
             )
@@ -224,11 +228,11 @@ class MainViewModel(
     /** ブランチを切り替え（= 指定ブランチで同期）。成功時に更新後 Repo を返す。 */
     fun switchBranch(repo: Repo, branch: String, onDone: (Repo) -> Unit) {
         viewModelScope.launch {
-            _status.value = UiStatus(busy = true, message = "$branch に切替中...")
+            _status.value = UiStatus(busy = true, message = UiText.Res(R.string.branch_switching, listOf(branch)))
             val r = runCatching { repository.sync(repo, branch) }
             _status.value = UiStatus(
                 busy = false,
-                message = r.exceptionOrNull()?.let { "切替失敗: ${gitErrorMessage(it) ?: it.message}" },
+                message = r.exceptionOrNull()?.let { UiText.GitError(R.string.switch_failed, gitErrorKind(it), it.message) },
                 recloneTarget = repo.takeIf { r.isFailure },
             )
             r.getOrNull()?.let {
@@ -350,11 +354,13 @@ class MainViewModel(
     /** キャッシュ全削除（登録リポジトリ・トークン・作業ツリーを一括削除）。 */
     fun clearCache(onDone: () -> Unit = {}) {
         viewModelScope.launch {
-            _status.value = UiStatus(busy = true, message = "削除中...")
+            _status.value = UiStatus(busy = true, message = UiText.Res(R.string.cache_deleting))
             val ok = runCatching { repository.deleteAll() }
             _status.value = UiStatus(
                 busy = false,
-                message = ok.exceptionOrNull()?.let { "削除失敗: ${it.message}" } ?: "キャッシュを削除しました",
+                message = ok.exceptionOrNull()
+                    ?.let { UiText.Res(R.string.cache_delete_failed, listOf(it.message ?: it.javaClass.simpleName)) }
+                    ?: UiText.Res(R.string.cache_deleted),
             )
             onDone()
         }
