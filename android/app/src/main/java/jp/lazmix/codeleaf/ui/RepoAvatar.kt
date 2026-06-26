@@ -53,10 +53,18 @@ private fun hashIndex(s: String, n: Int): Int {
     return ((h % n) + n) % n
 }
 
+/** 彩度を落として塗りを落ち着かせる(IconRail のアバターが派手すぎないように)。色相・明度は保つ。 */
+private fun Color.muted(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.RGBToHSV((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt(), hsv)
+    hsv[1] *= 0.6f
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
 /** 色丸＋2文字ラベルのリポアバター。selected でリングを付ける。 */
 @Composable
 fun RepoAvatar(repo: Repo, selected: Boolean, size: Dp = 40.dp, onClick: (() -> Unit)? = null) {
-    val bg = repoAvatarColor(repo)
+    val bg = repoAvatarColor(repo).muted()
     val fg = if (bg.luminance() < 0.5f) Color.White else Color(0xFF1B1B1B)
     Box(
         Modifier

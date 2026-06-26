@@ -379,6 +379,9 @@ fun CodeLeafApp() {
         val orphans = repos.map { it.groupName }.filter { it.isNotBlank() && it !in settings.groups }.distinct().sorted()
         settings.groups + orphans
     }
+    // 選択中グループ(消えていたら「すべて」に退避)と絞り込み後リポ。展開レール/IconRail で共有する。
+    val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in allGroups } ?: ""
+    val shownRepos = if (selectedGroup.isEmpty()) repos else repos.filter { it.groupName == selectedGroup }
 
     // onItemSelected はドロワー再利用時に「遷移したら閉じる」ために各導線の手前で呼ぶ(既定 no-op)。
     @Composable
@@ -388,9 +391,6 @@ fun CodeLeafApp() {
         onItemSelected: () -> Unit = {},
         compact: Boolean = false,
     ) {
-        // 選択中グループが消えていたら「すべて」に退避。
-        val selectedGroup = settings.selectedGroup.takeIf { it.isNotEmpty() && it in allGroups } ?: ""
-        val shownRepos = if (selectedGroup.isEmpty()) repos else repos.filter { it.groupName == selectedGroup }
         RepoListScreen(
             repos = shownRepos,
             status = status,
@@ -434,7 +434,7 @@ fun CodeLeafApp() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        repos.forEach { r ->
+                        shownRepos.forEach { r ->
                             RepoAvatar(
                                 repo = r,
                                 selected = r.id == selectedRepoId,
