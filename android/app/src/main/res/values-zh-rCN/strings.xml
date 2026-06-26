@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 简体中文。dev 术语（commit/diff/branch/clone/fetch/submodule 等）保留英文。 -->
+<resources>
+    <!-- 通用操作 -->
+    <string name="action_delete">删除</string>
+    <string name="action_cancel">取消</string>
+
+    <!-- 设置：通用 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_section_display">显示与主题</string>
+    <string name="settings_section_filelist">文件列表</string>
+    <string name="settings_section_repo">仓库</string>
+    <string name="settings_section_viewer">查看器</string>
+    <string name="settings_section_links">链接</string>
+    <string name="settings_section_data">数据</string>
+    <string name="settings_section_about">关于</string>
+
+    <!-- 设置：语言 -->
+    <string name="settings_language_title">语言</string>
+    <string name="settings_language_desc">设置应用界面的语言。\"系统\"跟随设备语言；不支持的语言回退到英文。</string>
+    <string name="language_system">系统</string>
+
+    <!-- 设置：主题 -->
+    <string name="settings_theme_title">默认主题</string>
+    <string name="settings_theme_desc">用于列表和设置界面的颜色，以及添加仓库时的初始主题。</string>
+    <string name="theme_system">系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
+    <!-- 设置：字体大小 -->
+    <string name="settings_font_title">字体大小</string>
+    <string name="settings_font_desc">应用于渲染后的 Markdown 和代码视图的正文字号。</string>
+    <string name="font_small">小</string>
+    <string name="font_medium">中</string>
+    <string name="font_large">大</string>
+
+    <!-- 设置：文件图标 -->
+    <string name="settings_iconset_title">文件图标</string>
+    <string name="settings_iconset_desc">列表中按扩展名显示的图标外观。Material/VS Code 为全彩，Seti 为单色字形。</string>
+
+    <!-- 设置：文件名显示 -->
+    <string name="settings_filename_title">文件名显示</string>
+    <string name="settings_filename_desc">长名称的处理方式。换行 = 多行显示全文。中间省略 = 保留首尾。末尾省略 = 用…截断末尾。</string>
+    <string name="filename_wrap">换行</string>
+    <string name="filename_middle">中间省略</string>
+    <string name="filename_end">末尾省略</string>
+
+    <!-- 设置：文件列表开关 -->
+    <string name="settings_collapse_title">折叠单一文件夹</string>
+    <string name="settings_collapse_desc">将只有一个子文件夹的链合并为一个条目，如 src/main/java，减少点按。</string>
+    <string name="settings_commitinfo_title">显示 commit 信息</string>
+    <string name="settings_commitinfo_desc">在列表中每个文件/文件夹名称下方显示其最后更新（作者与时间）。会遍历历史，因此在大型仓库中可能稍慢。</string>
+
+    <!-- 设置：仓库 -->
+    <string name="settings_restore_title">恢复上次位置</string>
+    <string name="settings_restore_desc">打开仓库时，恢复你之前所在的文件夹和打开的文件。关闭时始终从顶层打开且不打开任何文件。</string>
+
+    <!-- 设置：查看器 -->
+    <string name="settings_wrap_title">代码换行（默认）</string>
+    <string name="settings_wrap_desc">打开代码/raw 视图时的初始状态。关闭时横向滚动。</string>
+    <string name="settings_diffwrap_title">diff 换行（默认）</string>
+    <string name="settings_diffwrap_desc">打开变更、commit 和历史的 diff 视图时的初始状态。关闭时横向滚动。</string>
+    <string name="settings_linenum_title">显示行号</string>
+    <string name="settings_linenum_desc">在代码/文本/raw 视图的每一行添加行号。</string>
+    <string name="settings_selecttext_title">默认启用文本选择</string>
+    <string name="settings_selecttext_desc">以正文可选中以便复制的方式打开查看器。也可在 ⋮ 中按查看器切换。启用时，长按添加备注将被禁用。</string>
+    <string name="settings_sticky_title">将标题固定到顶部</string>
+    <string name="settings_sticky_desc">在渲染后的 Markdown 中，将当前标题路径（h1 &gt; h2 &gt; h3 …）固定到顶部。</string>
+
+    <!-- 设置：Markdown 表格 -->
+    <string name="settings_table_title">Markdown 表格显示</string>
+    <string name="settings_table_desc">内联 = 换行并嵌入正文（默认）。可滚动 = 表头固定 + 横向滚动的表格。</string>
+    <string name="table_inline">内联</string>
+    <string name="table_scrollable">可滚动</string>
+
+    <!-- 设置：链接 -->
+    <string name="settings_link_title">外部链接的打开方式</string>
+    <string name="settings_link_desc">http/https 链接在应用内浏览器（Custom Tabs）还是外部浏览器打开。相对链接始终在应用内导航。</string>
+    <string name="link_inapp">应用内</string>
+    <string name="link_browser">外部浏览器</string>
+
+    <!-- 设置：数据 -->
+    <string name="settings_cache_title">缓存</string>
+    <string name="settings_cache_desc">已注册仓库：%1$d 个（包含 clone 数据和已保存的 token）</string>
+    <string name="settings_clearcache">清除所有缓存</string>
+    <string name="settings_clearcache_confirm">这将永久删除已注册的 %1$d 个仓库（clone 数据和已保存的 token）。无法撤销。</string>
+
+    <!-- 设置：关于 -->
+    <string name="settings_version_title">版本</string>
+    <string name="settings_build_line">构建：%1$s · %2$s · %3$s</string>
+    <string name="settings_licenses">开源许可</string>
+
+    <!-- 通用操作/图标说明 -->
+    <string name="action_copy">复制</string>
+    <string name="action_share">分享</string>
+    <string name="action_save">保存</string>
+    <string name="cd_menu">菜单</string>
+
+    <!-- 文件查看器 -->
+    <string name="viewer_back_to_browser">返回浏览器</string>
+    <string name="viewer_menu_rendered">显示渲染</string>
+    <string name="viewer_menu_raw">显示 raw</string>
+    <string name="viewer_menu_history">历史</string>
+    <string name="viewer_menu_memo">备注</string>
+    <string name="viewer_menu_select_start">选择文本</string>
+    <string name="viewer_menu_select_end">退出选择</string>
+    <string name="viewer_toc">☰ 目录</string>
+    <string name="viewer_wrap_on">换行：开</string>
+    <string name="viewer_wrap_off">换行：关</string>
+    <string name="cd_prev_file">上一个文件</string>
+    <string name="cd_next_file">下一个文件</string>
+    <string name="viewer_truncated">仅显示开头部分（共 %1$s）</string>
+    <string name="viewer_load_failed">加载失败：%1$s</string>
+    <string name="viewer_toc_title">目录</string>
+    <string name="viewer_binary_cannot_display">%1$s · 无法以文本显示</string>
+    <string name="viewer_binary_head">开头字节</string>
+    <string name="viewer_large_title">大文件</string>
+    <string name="viewer_large_desc">%1$s · 显示可能较慢</string>
+    <string name="viewer_large_show">显示</string>
+
+    <!-- 备注添加面板 -->
+    <string name="memo_add_title">添加备注</string>
+    <string name="memo_line_range">第 %1$d–%2$d 行，共 %3$d 行</string>
+    <string name="memo_line_start">起始</string>
+    <string name="memo_line_end">结束</string>
+    <string name="memo_comment">评论</string>
+    <string name="memo_save_to">保存到</string>
+    <string name="memo_new_notebook">新建备注本</string>
+    <string name="memo_notebook">备注本</string>
+    <string name="cd_pick_save_to">选择目标</string>
+    <string name="memo_untitled">（无标题）</string>
+    <string name="memo_new_notebook_plus">＋ 新建备注本</string>
+    <string name="memo_new_notebook_title">新备注本标题</string>
+
+    <!-- 文件元信息 -->
+    <string name="encoding_unknown">未知</string>
+    <string name="encoding_no_bom">无 BOM</string>
+    <string name="eol_mixed">混合</string>
+    <string name="eol_none">无换行</string>
+
+    <!-- 二进制类型标签 -->
+    <string name="bin_zip">ZIP 归档</string>
+    <string name="bin_jar">JAR 归档</string>
+    <string name="bin_apk">APK 安装包</string>
+    <string name="bin_aar">AAR 库</string>
+    <string name="bin_office">Office 文档</string>
+    <string name="bin_opendocument">OpenDocument</string>
+    <string name="bin_epub">EPUB 电子书</string>
+    <string name="bin_gzip">gzip 压缩</string>
+    <string name="bin_bzip2">bzip2 压缩</string>
+    <string name="bin_xz">xz 压缩</string>
+    <string name="bin_7z">7z 归档</string>
+    <string name="bin_rar">RAR 归档</string>
+    <string name="bin_elf">ELF 可执行文件</string>
+    <string name="bin_javaclass">Java class 文件</string>
+    <string name="bin_macho">Mach-O 二进制</string>
+    <string name="bin_winpe">Windows 可执行文件</string>
+    <string name="bin_wasm">WebAssembly</string>
+    <string name="bin_sqlite">SQLite 数据库</string>
+    <string name="bin_mp3">MP3 音频</string>
+    <string name="bin_ogg">Ogg 媒体</string>
+    <string name="bin_flac">FLAC 音频</string>
+    <string name="bin_wav">WAV 音频</string>
+    <string name="bin_avi">AVI 视频</string>
+    <string name="bin_mp4">MP4/视频</string>
+    <string name="bin_font">字体</string>
+    <string name="bin_unknown">二进制</string>
+
+    <!-- 添加仓库界面 -->
+    <string name="addrepo_title">添加仓库</string>
+    <string name="addrepo_host">主机</string>
+    <string name="addrepo_auth_method">认证</string>
+    <string name="addrepo_oauth_title">使用 %1$s 登录（OAuth）</string>
+    <string name="addrepo_login_bitbucket">使用 Bitbucket 登录</string>
+    <string name="addrepo_logged_in">✓ 已登录</string>
+    <string name="addrepo_other_account">其他账号</string>
+    <string name="addrepo_oauth_unconfigured">未配置 OAuth 登录（请在 local.properties 中设置 client_id/secret 以启用）。</string>
+    <string name="addrepo_display_name">显示名称（可选，自动填充）</string>
+    <string name="addrepo_theme">主题</string>
+    <string name="addrepo_cloning">正在 clone…</string>
+    <string name="addrepo_save_clone">保存并 clone</string>
+    <string name="addrepo_token_method">输入 token</string>
+    <string name="addrepo_repos_loading">正在加载仓库…</string>
+    <string name="addrepo_no_repos">没有可 clone 的仓库（已全部注册，或均无法访问）。</string>
+    <string name="addrepo_select_repo">选择仓库</string>
+    <string name="addrepo_gh_enter_code">在浏览器中输入下面的代码以批准登录。</string>
+    <string name="addrepo_gh_copy_hint">点按复制 / 在此输入：%1$s</string>
+    <string name="addrepo_open_browser">打开浏览器</string>
+    <string name="addrepo_gh_waiting">等待批准…</string>
+    <string name="addrepo_gh_getting_code">正在获取代码…</string>
+    <string name="addrepo_login_github">使用 GitHub 登录</string>
+    <string name="addrepo_url_label">URL（https://...）</string>
+    <string name="addrepo_username_required">用户名（Bitbucket：Atlassian 邮箱，必填）</string>
+    <string name="addrepo_username_optional">用户名（可选）</string>
+    <string name="addrepo_token_label">Token（PAT / API token）</string>
+    <string name="addrepo_login_failed">登录失败</string>
+    <string name="addrepo_repos_load_failed">加载仓库列表失败</string>
+    <string name="addrepo_login_start_failed">启动登录失败</string>
+
+    <!-- 状态/snackbar 消息 -->
+    <string name="error_unknown">未知错误</string>
+    <string name="git_err_auth">认证失败。请检查 token 及其权限（GitHub PAT 需要 Contents: Read-only）。</string>
+    <string name="git_err_host">无法连接到主机。请检查 URL 和网络连接。</string>
+    <string name="git_err_not_found">未找到仓库。请检查 URL（私有仓库还需要认证）。</string>
+    <string name="git_err_timeout">连接超时。请检查网络后重试。</string>
+    <string name="git_err_network">发生网络错误。请检查连接后重试。</string>
+    <string name="git_err_not_repo">无法作为 git 仓库打开。请检查 URL。</string>
+    <string name="clone_failed">clone 失败：%1$s</string>
+    <string name="sync_done">同步完成</string>
+    <string name="sync_failed">同步失败：%1$s</string>
+    <string name="switch_failed">切换失败：%1$s</string>
+    <string name="repo_added">已添加 %1$s</string>
+    <string name="repo_recloned">已重新 clone %1$s</string>
+    <string name="repo_syncing">正在同步 %1$s…</string>
+    <string name="branch_switching">正在切换到 %1$s…</string>
+    <string name="cache_deleting">正在删除…</string>
+    <string name="cache_delete_failed">删除失败：%1$s</string>
+    <string name="cache_deleted">缓存已删除</string>
+    <string name="reclone_action">重新 clone</string>
+
+    <!-- URL 校验错误 -->
+    <string name="repo_url_err_whitespace">URL 含有空格</string>
+    <string name="repo_url_err_file_abs">file:// 之后请使用绝对路径（例如 file:///path/to/repo）</string>
+    <string name="repo_url_err_owner_repo">URL 缺少 owner/repo（例如 https://github.com/owner/repo.git）</string>
+    <string name="repo_url_err_format">URL 格式无效（例如 https://github.com/owner/repo.git）</string>
+
+    <!-- 共享图标说明 -->
+    <string name="cd_back">返回</string>
+    <string name="cd_settings">设置</string>
+    <string name="cd_add_repo">添加仓库</string>
+    <string name="cd_edit_repo">编辑仓库</string>
+    <string name="cd_collapse_repos">折叠仓库列表</string>
+    <string name="cd_show_repos">显示仓库列表</string>
+    <string name="cd_retry">重试</string>
+    <string name="cd_favorites">收藏</string>
+    <string name="cd_commit_graph">commit 图</string>
+    <string name="cd_sync">同步</string>
+
+    <!-- 仓库列表 -->
+    <string name="group_all">全部</string>
+    <string name="repolist_empty_title">还没有仓库</string>
+    <string name="repolist_empty_desc">从右上角的 + 添加 GitHub / Bitbucket 仓库。</string>
+    <string name="repo_state_cloning">正在 clone…</string>
+    <string name="repo_state_failed">clone 失败 — 请重试</string>
+    <string name="repo_synced_at">已同步：%1$s</string>
+    <string name="repo_never_synced">从未同步</string>
+
+    <!-- 多窗格/查看器导航辅助 -->
+    <string name="placeholder_select_repo">选择仓库</string>
+    <string name="placeholder_select_file">选择文件</string>
+    <string name="placeholder_select_commit">选择 commit</string>
+    <string name="file_not_found_at_revision">此版本中没有该文件</string>
+    <string name="revision_at">在 commit %1$s</string>
+    <string name="focus_expand">显示列表和侧栏</string>
+    <string name="focus_collapse">专注模式（全宽）</string>
+    <string name="pane_expand">显示列表</string>
+    <string name="pane_collapse">隐藏列表</string>
+
+    <!-- 通用操作（追加） -->
+    <string name="action_create">创建</string>
+    <string name="action_change">更改</string>
+    <string name="action_clear">清空</string>
+
+    <!-- 备注本列表 / 详情 -->
+    <string name="memos_title">备注</string>
+    <string name="memos_empty">还没有备注本。用右上角的 + 新建，或在查看文件时长按某一行。</string>
+    <string name="memo_entry_count">%1$d 个条目</string>
+    <string name="memo_title_label">标题</string>
+    <string name="memos_share_all">全部分享</string>
+    <string name="memos_copy_all">全部复制</string>
+    <string name="memos_rename">重命名</string>
+    <string name="memos_rename_heading">重命名备注本</string>
+    <string name="memos_delete_title">删除备注本</string>
+    <string name="memos_delete_confirm">删除\"%1$s\"及其所有条目。无法撤销。</string>
+    <string name="memodetail_empty">还没有条目。在查看文件时长按某一行以添加。</string>
+    <string name="memodetail_clear_title">清空所有条目</string>
+    <string name="memodetail_clear_confirm">删除\"%1$s\"中的全部 %2$d 个条目（保留备注本）。无法撤销。</string>
+    <string name="entry_delete_title">删除条目</string>
+    <string name="entry_delete_confirm">删除此条目。</string>
+    <string name="entry_edit_comment">编辑评论</string>
+    <string name="entry_edit_comment_heading">编辑评论</string>
+
+    <!-- 文件浏览器 -->
+    <string name="cd_repo_list">仓库</string>
+    <string name="cd_search">搜索</string>
+    <string name="cd_up">上一级</string>
+    <string name="browser_switch_branch">切换 branch（%1$s）</string>
+    <string name="browser_root">根</string>
+    <string name="browser_empty_dir">（空文件夹）</string>
+    <string name="browser_lfs">这是 Git LFS 文件（未获取其内容，无法显示）。</string>
+    <string name="browser_unfetched">未获取</string>
+    <string name="browser_favorite">添加到收藏</string>
+    <string name="browser_unfavorite">从收藏移除</string>
+    <string name="browser_copy_filename">复制文件名</string>
+    <string name="browser_copy_filepath">复制文件路径</string>
+
+    <!-- 仓库编辑界面 -->
+    <string name="repoedit_add_group">添加分组</string>
+    <string name="repoedit_delete_title">删除仓库</string>
+    <string name="repoedit_delete_confirm">删除\"%1$s\"。其 clone 数据和已保存的 token 也会被移除。无法撤销。</string>
+    <string name="repoedit_reclone_confirm">删除\"%1$s\"的本地 clone 并重新获取。设置和 token 会保留。</string>
+    <string name="repoedit_new_group">新分组</string>
+    <string name="repoedit_rename_group">重命名分组</string>
+    <string name="repoedit_ungrouped">未分组（仅在\"全部\"下显示）</string>
+    <string name="repoedit_delete_group_cd">删除分组</string>
+    <string name="repoedit_dropzone">拖到此处以添加</string>
+    <string name="repoedit_reorder_cd">重新排序 / 在分组间移动</string>
+    <string name="repoedit_group_name_label">分组名称</string>
+    <string name="repoedit_color_cd">颜色：%1$s</string>
+
+    <!-- 相对时间 -->
+    <string name="time_just_now">刚刚</string>
+    <string name="time_min_ago">%1$d 分钟前</string>
+    <string name="time_hour_ago">%1$d 小时前</string>
+    <string name="time_day_ago">%1$d 天前</string>
+    <string name="time_month_ago">%1$d 个月前</string>
+    <string name="time_year_ago">%1$d 年前</string>
+
+    <!-- diff/历史 通用 -->
+    <string name="diff_none">无变更</string>
+    <string name="diff_load_failed">加载 diff 失败：%1$s</string>
+    <string name="fetch_failed">获取失败：%1$s</string>
+
+    <!-- 历史界面 -->
+    <string name="history_title">历史：%1$s</string>
+    <string name="history_submodule_note">这是 submodule 指针移动的历史（不是内容历史）。</string>
+    <string name="history_load_failed">加载历史失败：%1$s</string>
+    <string name="history_empty">无历史</string>
+
+    <!-- submodule 变更视图 -->
+    <string name="submodule_no_diff_commits">没有可比较的 submodule commit</string>
+    <string name="submodule_more_omitted">其余已省略（显示到上限）</string>
+    <string name="submodule_n_forward">%1$d 个 commit ↑</string>
+    <string name="submodule_n_backward">回退 %1$d 个 ↓</string>
+    <string name="submodule_n_diverged">分叉 %1$d 个</string>
+    <string name="submodule_add">已添加</string>
+    <string name="submodule_remove">已移除</string>
+    <string name="submodule_new_added">新增 → %1$s</string>
+    <string name="submodule_removed_arrow">%1$s → 已移除</string>
+    <string name="submodule_boundary">基点 · %1$s</string>
+
+    <!-- 收藏界面 -->
+    <string name="favorites_empty">还没有收藏。在文件列表中长按某一项以添加。</string>
+    <string name="favorites_root">（根目录正下方）</string>
+    <string name="favorites_deleted">（已删除）</string>
+    <string name="favorites_remove_cd">从收藏移除</string>
+    <string name="favorites_reorder_cd">重新排序</string>
+
+    <!-- 搜索界面 -->
+    <string name="search_title">搜索：%1$s</string>
+    <string name="search_regex_hint">用正则搜索（空格 = AND）</string>
+    <string name="search_fulltext_hint">在文件内全文搜索（空格 = AND）</string>
+    <string name="search_filter_hint">按路径/扩展名筛选（可选，例如 .md / docs/）</string>
+    <string name="search_no_match">无匹配</string>
+    <string name="search_result_count">%1$d 处 / %2$d 个文件</string>
+
+    <!-- diff 界面 -->
+    <string name="diff_expand_all">全部展开</string>
+    <string name="diff_collapse_all">全部折叠</string>
+    <string name="diff_expand_cd">展开</string>
+    <string name="diff_collapse_cd">折叠</string>
+    <string name="diff_open_file_cd">打开文件</string>
+
+    <!-- commit 图 -->
+    <string name="graph_empty">无 commit</string>
+    <string name="graph_switch_branch">切换 branch</string>
+    <string name="graph_current_branch">%1$s（当前 branch）</string>
+
+    <!-- commit 详情 -->
+    <string name="commit_no_message">（无消息）</string>
+    <string name="commit_expand">显示更多</string>
+    <string name="commit_collapse">折叠</string>
+
+    <!-- branch 选择面板 / 遮罩 / PDF -->
+    <string name="branchsheet_select">选择 branch</string>
+    <string name="branchsheet_filter">筛选</string>
+    <string name="bottombar_switching">正在切换 branch…</string>
+    <string name="pdf_cannot_open">无法打开 PDF</string>
+</resources>

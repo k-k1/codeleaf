@@ -89,6 +89,7 @@ private enum class UiLanguage(val tag: String?, val endonym: String?) {
     ENGLISH("en", "English"),
     SPANISH("es", "Español"),
     KOREAN("ko", "한국어"),
+    CHINESE_SIMPLIFIED("zh-CN", "简体中文"),
 }
 
 /** 現在の適用ロケールから選択中の UiLanguage を判定する。zh は地域/字種で簡体/繁体を分ける。 */
@@ -100,6 +101,7 @@ private fun currentUiLanguage(): UiLanguage {
         tag.startsWith("ja") -> UiLanguage.JAPANESE
         tag.startsWith("es") -> UiLanguage.SPANISH
         tag.startsWith("ko") -> UiLanguage.KOREAN
+        tag.startsWith("zh") -> UiLanguage.CHINESE_SIMPLIFIED
         tag.startsWith("en") -> UiLanguage.ENGLISH
         else -> UiLanguage.SYSTEM
     }
