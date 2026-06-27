@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,18 +26,30 @@ private val AUTO_AVATAR_COLORS = listOf(
     Color(0xFF7E57C2), Color(0xFF26A69A),
 )
 
+/** CJK/全角(日本語・中国語・韓国語・全角記号)を含むか。全角は円に収まる文字数が少ない。 */
+private fun Char.isWide(): Boolean {
+    val c = code
+    return c in 0x3000..0x30FF ||   // CJK記号・ひらがな・カタカナ
+        c in 0x3400..0x9FFF ||      // CJK拡張A＋統合漢字
+        c in 0xAC00..0xD7A3 ||      // ハングル音節
+        c in 0xF900..0xFAFF ||      // CJK互換漢字
+        c in 0xFF00..0xFF60 || c in 0xFFE0..0xFFE6 // 全角英数・記号
+}
+
 /**
- * リポ名から2文字のアバター用ラベルを作る。区切り(- _ / . 空白)で分割し、
- * 複数セグメントなら「先頭セグメント頭文字＋末尾セグメント先頭2文字」、単一なら先頭3文字。
- * 例: g3-ibss→"GIB" / g3-docs→"GDO" / git-reader→"GRE" / api→"API"。
+ * リポ名からアバター用ラベルを作る。区切り(- _ / . 空白)で分割し、
+ * 半角(ラテン)は3文字、全角(CJK)は円に収まるよう2文字にする。
+ * 複数セグメントなら「先頭セグメント頭文字＋末尾セグメントの残り」、単一なら先頭から。
+ * 例: g3-ibss→"GIB" / git-reader→"GRE" / api→"API" / メモ帳ツール→"メモ" / 日本語→"日本"。
  * 接頭辞が共通でも末尾で区別できるようにする狙い。
  */
 internal fun repoAvatarLabel(name: String): String {
     val segs = name.split('-', '_', '/', '.', ' ').filter { it.isNotBlank() }
+    val n = if (name.any { it.isWide() }) 2 else 3
     val raw = when {
-        segs.isEmpty() -> name.take(3)
-        segs.size == 1 -> segs[0].take(3)
-        else -> segs.first().take(1) + segs.last().take(2)
+        segs.isEmpty() -> name.take(n)
+        segs.size == 1 -> segs[0].take(n)
+        else -> segs.first().take(1) + segs.last().take(n - 1)
     }
     return raw.uppercase()
 }
@@ -57,14 +68,24 @@ private fun hashIndex(s: String, n: Int): Int {
 private fun Color.muted(): Color {
     val hsv = FloatArray(3)
     android.graphics.Color.RGBToHSV((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt(), hsv)
-    hsv[1] *= 0.6f
+    hsv[1] *= 0.45f
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
+/** 同じ色相で濃い(彩度上げ・明度下げ)版。選択中リポの縁取りに使う。 */
+private fun Color.deep(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.RGBToHSV((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt(), hsv)
+    hsv[1] = (hsv[1] * 1.3f).coerceAtMost(1f)
+    hsv[2] *= 0.55f
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
 /** 色丸＋2文字ラベルのリポアバター。selected でリングを付ける。 */
 @Composable
 fun RepoAvatar(repo: Repo, selected: Boolean, size: Dp = 40.dp, onClick: (() -> Unit)? = null) {
-    val bg = repoAvatarColor(repo).muted()
+    val base = repoAvatarColor(repo)
+    val bg = base.muted()
     val fg = if (bg.luminance() < 0.5f) Color.White else Color(0xFF1B1B1B)
     val label = repoAvatarLabel(repo.name)
     Box(
@@ -73,8 +94,9 @@ fun RepoAvatar(repo: Repo, selected: Boolean, size: Dp = 40.dp, onClick: (() -> 
             .clip(CircleShape)
             .background(bg)
             .then(
+                // 選択中はそのリポ色の濃い版で縁取り(リポと結び付けつつ目立たせる)。
                 if (selected) {
-                    Modifier.border(2.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    Modifier.border(3.dp, base.deep(), CircleShape)
                 } else {
                     Modifier
                 },

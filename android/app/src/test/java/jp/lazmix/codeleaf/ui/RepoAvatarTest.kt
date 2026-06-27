@@ -20,4 +20,13 @@ class RepoAvatarTest {
         assertEquals("A", repoAvatarLabel("a"))          // 1文字
         assertEquals("WAP", repoAvatarLabel("web_app"))  // _ 区切り(先頭頭文字+末尾2文字)
     }
+
+    @Test
+    fun cjkNamesUseTwoChars() {
+        // 全角(CJK)は円に収まるよう2文字。
+        assertEquals("メモ", repoAvatarLabel("メモ帳ツール"))
+        assertEquals("日本", repoAvatarLabel("日本語"))
+        assertEquals("テリ", repoAvatarLabel("テスト-リポ")) // 複数セグメント: 先頭頭文字+末尾1文字
+        assertEquals("メ", repoAvatarLabel("メ"))            // 1文字はそのまま
+    }
 }
