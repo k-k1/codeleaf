@@ -8,16 +8,16 @@ class RepoAvatarTest {
     @Test
     fun sharedPrefixReposStayDistinct() {
         // 接頭辞 g3- が共通でも末尾で区別できる。
-        assertEquals("GI", repoAvatarLabel("g3-ibss"))
-        assertEquals("GD", repoAvatarLabel("g3-docs"))
-        assertEquals("GM", repoAvatarLabel("g3-manage"))
+        assertEquals("GIB", repoAvatarLabel("g3-ibss"))
+        assertEquals("GDO", repoAvatarLabel("g3-docs"))
+        assertEquals("GMA", repoAvatarLabel("g3-manage"))
     }
 
     @Test
     fun variousNames() {
-        assertEquals("GR", repoAvatarLabel("git-reader"))
-        assertEquals("AP", repoAvatarLabel("api"))      // 単一セグメントは先頭2文字
-        assertEquals("A", repoAvatarLabel("a"))         // 1文字
-        assertEquals("WA", repoAvatarLabel("web_app"))  // _ 区切り
+        assertEquals("GRE", repoAvatarLabel("git-reader"))
+        assertEquals("API", repoAvatarLabel("api"))      // 単一セグメントは先頭3文字
+        assertEquals("A", repoAvatarLabel("a"))          // 1文字
+        assertEquals("WAP", repoAvatarLabel("web_app"))  // _ 区切り(先頭頭文字+末尾2文字)
     }
 }

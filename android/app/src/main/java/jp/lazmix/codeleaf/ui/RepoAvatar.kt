@@ -29,16 +29,16 @@ private val AUTO_AVATAR_COLORS = listOf(
 
 /**
  * リポ名から2文字のアバター用ラベルを作る。区切り(- _ / . 空白)で分割し、
- * 複数セグメントなら「先頭セグメント頭文字＋末尾セグメント頭文字」、単一なら先頭2文字。
- * 例: g3-ibss→"GI" / g3-docs→"GD" / git-reader→"GR" / api→"AP"。
+ * 複数セグメントなら「先頭セグメント頭文字＋末尾セグメント先頭2文字」、単一なら先頭3文字。
+ * 例: g3-ibss→"GIB" / g3-docs→"GDO" / git-reader→"GRE" / api→"API"。
  * 接頭辞が共通でも末尾で区別できるようにする狙い。
  */
 internal fun repoAvatarLabel(name: String): String {
     val segs = name.split('-', '_', '/', '.', ' ').filter { it.isNotBlank() }
     val raw = when {
-        segs.isEmpty() -> name.take(2)
-        segs.size == 1 -> segs[0].take(2)
-        else -> segs.first().take(1) + segs.last().take(1)
+        segs.isEmpty() -> name.take(3)
+        segs.size == 1 -> segs[0].take(3)
+        else -> segs.first().take(1) + segs.last().take(2)
     }
     return raw.uppercase()
 }
@@ -66,6 +66,7 @@ private fun Color.muted(): Color {
 fun RepoAvatar(repo: Repo, selected: Boolean, size: Dp = 40.dp, onClick: (() -> Unit)? = null) {
     val bg = repoAvatarColor(repo).muted()
     val fg = if (bg.luminance() < 0.5f) Color.White else Color(0xFF1B1B1B)
+    val label = repoAvatarLabel(repo.name)
     Box(
         Modifier
             .size(size)
@@ -82,10 +83,11 @@ fun RepoAvatar(repo: Repo, selected: Boolean, size: Dp = 40.dp, onClick: (() -> 
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            repoAvatarLabel(repo.name),
+            label,
             color = fg,
             fontWeight = FontWeight.Bold,
-            fontSize = (size.value * 0.34f).sp,
+            // 3文字は円に収まるよう少し小さめにする。
+            fontSize = (size.value * if (label.length >= 3) 0.30f else 0.34f).sp,
             maxLines = 1,
         )
     }
