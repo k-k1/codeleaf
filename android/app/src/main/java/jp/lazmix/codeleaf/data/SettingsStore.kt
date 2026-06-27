@@ -47,6 +47,8 @@ data class AppSettings(
     val restoreLastPosition: Boolean = true,
     /** ファイル一覧に各エントリの最終コミット(著者・相対時刻)を出すか。ON で履歴走査が走る。 */
     val showCommitInfo: Boolean = false,
+    /** 画面幅に関わらず3ペインを強制する(デバッグ版のレイアウト確認用。リリースUIには出さない)。 */
+    val forceThreePane: Boolean = false,
     /** リポ一覧で選択中のグループ。空=すべて表示。 */
     val selectedGroup: String = "",
     /** 定義済みグループ名(表示順)。空グループも保持できるよう各リポの groupName とは別に持つ。 */
@@ -79,6 +81,7 @@ class SettingsStore(context: Context) {
         selectByDefault = prefs.getBoolean(KEY_SELECT, false),
         restoreLastPosition = prefs.getBoolean(KEY_RESTOREPOS, true),
         showCommitInfo = prefs.getBoolean(KEY_COMMITINFO, false),
+        forceThreePane = prefs.getBoolean(KEY_FORCE3PANE, false),
         selectedGroup = prefs.getString(KEY_GROUP, "") ?: "",
         groups = prefs.getString(KEY_GROUPS, null)
             ?.split("\n")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList(),
@@ -154,6 +157,11 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(showCommitInfo = on)
     }
 
+    fun setForceThreePane(on: Boolean) {
+        prefs.edit().putBoolean(KEY_FORCE3PANE, on).apply()
+        _settings.value = _settings.value.copy(forceThreePane = on)
+    }
+
     fun setSelectedGroup(group: String) {
         prefs.edit().putString(KEY_GROUP, group).apply()
         _settings.value = _settings.value.copy(selectedGroup = group)
@@ -180,6 +188,7 @@ class SettingsStore(context: Context) {
         const val KEY_SELECT = "select_by_default"
         const val KEY_RESTOREPOS = "restore_last_position"
         const val KEY_COMMITINFO = "show_commit_info"
+        const val KEY_FORCE3PANE = "force_three_pane"
         const val KEY_GROUP = "selected_group"
         const val KEY_GROUPS = "groups"
 

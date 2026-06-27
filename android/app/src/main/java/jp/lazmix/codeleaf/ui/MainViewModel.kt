@@ -343,6 +343,8 @@ class MainViewModel(
 
     fun setShowCommitInfo(on: Boolean) = settingsStore.setShowCommitInfo(on)
 
+    fun setForceThreePane(on: Boolean) = settingsStore.setForceThreePane(on)
+
     fun setFileNameDisplay(mode: jp.lazmix.codeleaf.data.FileNameDisplay) =
         settingsStore.setFileNameDisplay(mode)
 

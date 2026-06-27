@@ -164,6 +164,7 @@ fun SettingsScreen(
     onSetRestoreLastPosition: (Boolean) -> Unit,
     onSetSelectByDefault: (Boolean) -> Unit,
     onClearCache: () -> Unit,
+    onSetForceThreePane: (Boolean) -> Unit,
     onReleaseNotes: () -> Unit,
     onLicenses: () -> Unit,
     onBack: () -> Unit,
@@ -438,6 +439,15 @@ fun SettingsScreen(
                 }
                 OutlinedButton(onClick = onLicenses, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.settings_licenses))
+                }
+                // デバッグ版限定: 画面幅に依存せず3ペインを確認するための開発トグル(i18n対象外)。
+                if (BuildConfig.DEBUG) {
+                    SwitchSetting(
+                        title = "3ペインを強制 (デバッグ)",
+                        description = "画面幅に関わらず3ペイン表示にする。レイアウト確認用。",
+                        checked = settings.forceThreePane,
+                        onCheckedChange = onSetForceThreePane,
+                    )
                 }
             }
         }

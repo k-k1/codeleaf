@@ -515,7 +515,7 @@ fun CodeLeafApp() {
 
     when (val current = backStack.last()) {
         Screen.List -> BoxWithConstraints {
-            if (maxWidth >= THREE_PANE_MIN_WIDTH) {
+            if (settings.forceThreePane || maxWidth >= THREE_PANE_MIN_WIDTH) {
                 Row(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(0.25f)) { RailPane(selectedRepoId = null, compact = true) }
                     VerticalDivider()
@@ -579,6 +579,7 @@ fun CodeLeafApp() {
             onSetRestoreLastPosition = vm::setRestoreLastPosition,
             onSetSelectByDefault = vm::setSelectByDefault,
             onClearCache = { vm.clearCache() },
+            onSetForceThreePane = vm::setForceThreePane,
             onReleaseNotes = { navigate(Screen.ReleaseNotes) },
             onLicenses = { navigate(Screen.Licenses) },
             onBack = { pop() },
@@ -765,8 +766,8 @@ fun CodeLeafApp() {
             }
 
             BoxWithConstraints {
-                val three = maxWidth >= THREE_PANE_MIN_WIDTH
-                val two = maxWidth >= TWO_PANE_MIN_WIDTH
+                val three = settings.forceThreePane || maxWidth >= THREE_PANE_MIN_WIDTH
+                val two = settings.forceThreePane || maxWidth >= TWO_PANE_MIN_WIDTH
                 val file = detailStack.lastOrNull()
                 // 集中モード(全幅)は多ペインでのみ意味を持つ。1ペインは常に全幅なので無効化する。
                 val focused = focusMode && file != null && two
@@ -874,8 +875,8 @@ fun CodeLeafApp() {
             }
 
             BoxWithConstraints {
-                val three = maxWidth >= THREE_PANE_MIN_WIDTH
-                val two = maxWidth >= TWO_PANE_MIN_WIDTH
+                val three = settings.forceThreePane || maxWidth >= THREE_PANE_MIN_WIDTH
+                val two = settings.forceThreePane || maxWidth >= TWO_PANE_MIN_WIDTH
 
                 @Composable
                 fun ContentPanes() {
@@ -943,8 +944,8 @@ fun CodeLeafApp() {
             }
 
             BoxWithConstraints {
-                val three = maxWidth >= THREE_PANE_MIN_WIDTH
-                val two = maxWidth >= TWO_PANE_MIN_WIDTH
+                val three = settings.forceThreePane || maxWidth >= THREE_PANE_MIN_WIDTH
+                val two = settings.forceThreePane || maxWidth >= TWO_PANE_MIN_WIDTH
 
                 @Composable
                 fun ContentPanes() {
