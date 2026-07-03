@@ -125,6 +125,7 @@ import jp.lazmix.codeleaf.data.db.MemoWithCount
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.render.CodeHighlight
 import jp.lazmix.codeleaf.render.CodeView
+import jp.lazmix.codeleaf.render.HtmlWebView
 import jp.lazmix.codeleaf.render.FrontmatterEntry
 import jp.lazmix.codeleaf.render.Heading
 import jp.lazmix.codeleaf.render.MarkdownRenderer
@@ -250,6 +251,8 @@ fun FileViewerScreen(
     val nextFile = siblings.getOrNull(siblingIndex + 1)
 
     val isMarkdown = filePath.endsWith(".md", true) || filePath.endsWith(".markdown", true)
+    // HTML も Markdown 同様「整形プレビュー ↔ Raw」を切り替えられる(既定は整形プレビュー)。
+    val isHtml = filePath.endsWith(".html", true) || filePath.endsWith(".htm", true)
     val fileName = filePath.substringAfterLast('/')
     val parent = filePath.substringBeforeLast('/', "")
     val baseDir = if (parent.isEmpty()) workDir else File(workDir, parent)
@@ -339,7 +342,7 @@ fun FileViewerScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        if (isMarkdown && isTextFile) {
+                        if ((isMarkdown || isHtml) && isTextFile) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(if (raw) R.string.viewer_menu_rendered else R.string.viewer_menu_raw)) },
                                 onClick = { menuExpanded = false; raw = !raw },
@@ -377,7 +380,8 @@ fun FileViewerScreen(
                         modifier = Modifier.padding(start = 4.dp),
                     ) { Text(stringResource(R.string.viewer_toc)) }
                 }
-                if (isTextFile && text != null && (!isMarkdown || raw)) {
+                // 折り返しトグルはコード/Raw 表示のときだけ。整形プレビュー(Markdown/HTML)では出さない。
+                if (isTextFile && text != null && (raw || (!isMarkdown && !isHtml))) {
                     TextButton(
                         onClick = { wrap = !wrap; onToggleWrap(wrap) },
                         modifier = Modifier.padding(start = 4.dp),
@@ -555,6 +559,13 @@ fun FileViewerScreen(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
+                // HTML の整形プレビュー(Raw は下の else で markup ハイライト表示)。
+                isHtml && !raw -> HtmlWebView(
+                    html = body,
+                    baseDir = baseDir,
+                    dark = dark,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 // 非 Markdown ファイルはコードとして拡張子からハイライト(行ジャンプ対応)
                 else -> {
                     val language = remember(filePath) { CodeHighlight.languageForFile(fileName) }
