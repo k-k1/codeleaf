@@ -46,6 +46,13 @@
     <string name="filename_middle">中央省略</string>
     <string name="filename_end">末尾省略</string>
 
+    <!-- 設定 / ブラウザ: 並び順 -->
+    <string name="settings_sort_title">並び順</string>
+    <string name="settings_sort_desc">名前=名前昇順。更新日=最終コミットが新しい順。どちらもフォルダを先頭に置く。更新日は履歴を走査する。</string>
+    <string name="browser_sort_title">並び順</string>
+    <string name="sort_name">名前</string>
+    <string name="sort_modified">更新日</string>
+
     <!-- 設定: ファイル一覧スイッチ -->
     <string name="settings_collapse_title">単一フォルダを畳む</string>
     <string name="settings_collapse_desc">中身が1つの子フォルダだけの階層を src/main/java のようにまとめ、辿る手間を省く。</string>

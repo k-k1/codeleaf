@@ -575,6 +575,7 @@ fun CodeLeafApp() {
             onSetCollapseFolders = vm::setCollapseFolders,
             onSetShowCommitInfo = vm::setShowCommitInfo,
             onSetFileNameDisplay = vm::setFileNameDisplay,
+            onSetFileSortOrder = vm::setFileSortOrder,
             onSetIconSet = vm::setIconSet,
             onSetRestoreLastPosition = vm::setRestoreLastPosition,
             onSetSelectByDefault = vm::setSelectByDefault,
@@ -633,8 +634,13 @@ fun CodeLeafApp() {
                     onOpenHistory = { p, isSub -> historySelected = null; navigate(Screen.History(repo, p, isSub)) },
                     iconSet = settings.iconSet,
                     fileNameDisplay = settings.fileNameDisplay,
-                    // 設定 ON のときだけ最終コミット取得関数を渡す(OFF は null=走査ゼロ)。
-                    loadCommitMeta = if (settings.showCommitInfo) {
+                    sortOrder = settings.fileSortOrder,
+                    onSetSortOrder = { vm.setFileSortOrder(it) },
+                    showCommitInfo = settings.showCommitInfo,
+                    // 副行表示 or 更新日ソートのどちらかが要るときだけ最終コミット取得関数を渡す
+                    // (どちらも不要なら null=履歴走査ゼロ)。
+                    loadCommitMeta = if (settings.showCommitInfo ||
+                        settings.fileSortOrder == jp.lazmix.codeleaf.data.FileSortOrder.MODIFIED) {
                         { p, es -> vm.dirCommitMeta(repo, p, es) }
                     } else {
                         null

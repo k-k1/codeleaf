@@ -348,6 +348,9 @@ class MainViewModel(
     fun setFileNameDisplay(mode: jp.lazmix.codeleaf.data.FileNameDisplay) =
         settingsStore.setFileNameDisplay(mode)
 
+    fun setFileSortOrder(order: jp.lazmix.codeleaf.data.FileSortOrder) =
+        settingsStore.setFileSortOrder(order)
+
     fun setIconSet(set: jp.lazmix.codeleaf.data.IconSet) = settingsStore.setIconSet(set)
 
     fun setRestoreLastPosition(on: Boolean) = settingsStore.setRestoreLastPosition(on)

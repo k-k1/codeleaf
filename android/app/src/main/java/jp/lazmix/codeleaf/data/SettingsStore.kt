@@ -17,6 +17,9 @@ enum class TableMode { INLINE, SCROLLABLE }
 /** ファイル一覧の名前表示。WRAP=折り返し全表示、MIDDLE_ELLIPSIS=中央省略、END_ELLIPSIS=末尾省略。 */
 enum class FileNameDisplay { WRAP, MIDDLE_ELLIPSIS, END_ELLIPSIS }
 
+/** ファイル一覧の並び順。NAME=名前昇順、MODIFIED=最終コミット日時の新しい順(いずれもフォルダ優先)。 */
+enum class FileSortOrder { NAME, MODIFIED }
+
 /** ファイル一覧のアイコンセット。dir は assets 配下のフォルダ名(<dir>/<種別キー>.svg)。 */
 enum class IconSet(val dir: String) {
     DEVICON("devicon"),
@@ -40,6 +43,8 @@ data class AppSettings(
     val collapseFolders: Boolean = true,
     /** ファイル一覧の名前表示方法。 */
     val fileNameDisplay: FileNameDisplay = FileNameDisplay.WRAP,
+    /** ファイル一覧の並び順。MODIFIED は最終コミット日時の取得(履歴走査)を伴う。 */
+    val fileSortOrder: FileSortOrder = FileSortOrder.NAME,
     val iconSet: IconSet = IconSet.MATERIAL,
     /** ビューアでテキスト選択モードを既定で有効にするか(各ビューアの ⋮ で個別切替も可)。 */
     val selectByDefault: Boolean = false,
@@ -77,6 +82,7 @@ class SettingsStore(context: Context) {
         stickyHeadings = prefs.getBoolean(KEY_STICKY, true),
         collapseFolders = prefs.getBoolean(KEY_COLLAPSE, true),
         fileNameDisplay = enumOrDefault(prefs.getString(KEY_NAMEDISP, null), FileNameDisplay.WRAP),
+        fileSortOrder = enumOrDefault(prefs.getString(KEY_SORTORDER, null), FileSortOrder.NAME),
         iconSet = enumOrDefault(prefs.getString(KEY_ICONSET, null), IconSet.MATERIAL),
         selectByDefault = prefs.getBoolean(KEY_SELECT, false),
         restoreLastPosition = prefs.getBoolean(KEY_RESTOREPOS, true),
@@ -137,6 +143,11 @@ class SettingsStore(context: Context) {
         _settings.value = _settings.value.copy(fileNameDisplay = mode)
     }
 
+    fun setFileSortOrder(order: FileSortOrder) {
+        prefs.edit().putString(KEY_SORTORDER, order.name).apply()
+        _settings.value = _settings.value.copy(fileSortOrder = order)
+    }
+
     fun setIconSet(set: IconSet) {
         prefs.edit().putString(KEY_ICONSET, set.name).apply()
         _settings.value = _settings.value.copy(iconSet = set)
@@ -184,6 +195,7 @@ class SettingsStore(context: Context) {
         const val KEY_STICKY = "sticky_headings"
         const val KEY_COLLAPSE = "collapse_folders"
         const val KEY_NAMEDISP = "file_name_display"
+        const val KEY_SORTORDER = "file_sort_order"
         const val KEY_ICONSET = "icon_set"
         const val KEY_SELECT = "select_by_default"
         const val KEY_RESTOREPOS = "restore_last_position"

@@ -79,10 +79,12 @@ import coil.request.ImageRequest
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.FileEntry
 import jp.lazmix.codeleaf.data.FileNameDisplay
+import jp.lazmix.codeleaf.data.FileSortOrder
 import jp.lazmix.codeleaf.data.IconSet
 import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.data.db.ThemeMode
 import jp.lazmix.codeleaf.git.EntryCommit
+import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,9 +124,17 @@ fun FileBrowserScreen(
     showRepoActions: Boolean = true,
     iconSet: IconSet = IconSet.MATERIAL,
     fileNameDisplay: FileNameDisplay = FileNameDisplay.WRAP,
+    /** ファイル一覧の並び順(名前昇順 / 最終更新日の新しい順)。いずれもフォルダ優先。 */
+    sortOrder: FileSortOrder = FileSortOrder.NAME,
+    /** ⋮ から並び順を切り替える(グローバル設定へ保存)。 */
+    onSetSortOrder: (FileSortOrder) -> Unit = {},
+    /** 各エントリの副行に最終コミット(著者・相対時刻)を表示するか(設定 showCommitInfo)。 */
+    showCommitInfo: Boolean = false,
     /**
-     * 各エントリの最終コミット(著者・日時)を取得する。null なら表示しない(設定 OFF)。
-     * 一覧描画はブロックせず、解決後に行へ流し込む。ディレクトリ離脱で自動キャンセルされる。
+     * 各エントリの最終コミット(著者・日時)を取得する。null なら取得しない。
+     * 一覧描画はブロックせず、解決後に行の副行表示や更新日ソートへ反映する。
+     * ディレクトリ離脱で自動キャンセルされる。副行表示(showCommitInfo)と更新日ソートの
+     * どちらかが要るときに非 null を渡す。
      */
     loadCommitMeta: (suspend (String, List<FileEntry>) -> Map<String, EntryCommit>)? = null,
 ) {
@@ -156,6 +166,21 @@ fun FileBrowserScreen(
     LaunchedEffect(repo.id, path, loaded, loadCommitMeta != null) {
         if (loadCommitMeta != null && loaded != null && loaded.isNotEmpty()) {
             commitMeta = runCatching { loadCommitMeta(path, loaded) }.getOrDefault(emptyMap())
+        }
+    }
+
+    // 並び順が「更新日」のときはコミット日時(新しい順)で並べ替える。フォルダは常に先頭、
+    // 日時未解決(履歴打ち切り/読込前)は末尾へ寄せ、同時刻は名前昇順。meta 到着で再ソートされる。
+    val shownEntries = remember(loaded, commitMeta, sortOrder) {
+        val es = loaded ?: return@remember null
+        if (sortOrder == FileSortOrder.MODIFIED) {
+            es.sortedWith(
+                compareByDescending<FileEntry> { it.isDir }
+                    .thenByDescending { commitMeta[it.relPath]?.at ?: Instant.MIN }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.displayName },
+            )
+        } else {
+            es
         }
     }
 
@@ -236,6 +261,22 @@ fun FileBrowserScreen(
                         }
                         HorizontalDivider()
                         Text(
+                            stringResource(R.string.browser_sort_title),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                        val sortLabels = listOf(
+                            FileSortOrder.NAME to stringResource(R.string.sort_name),
+                            FileSortOrder.MODIFIED to stringResource(R.string.sort_modified),
+                        )
+                        sortLabels.forEach { (order, label) ->
+                            DropdownMenuItem(
+                                text = { Text((if (sortOrder == order) "● " else "○ ") + label) },
+                                onClick = { menuExpanded = false; onSetSortOrder(order) },
+                            )
+                        }
+                        HorizontalDivider()
+                        Text(
                             stringResource(R.string.addrepo_theme),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -308,13 +349,13 @@ fun FileBrowserScreen(
                     error != null -> Text(stringResource(R.string.viewer_load_failed, error ?: ""), Modifier.padding(16.dp))
                     entries!!.isEmpty() -> Text(stringResource(R.string.browser_empty_dir), Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.fillMaxSize().testTag("browserFileList")) {
-                        items(entries!!, key = { it.relPath }) { e ->
+                        items(shownEntries!!, key = { it.relPath }) { e ->
                             EntryRow(
                                 entry = e,
                                 iconSet = iconSet,
                                 nameDisplay = fileNameDisplay,
                                 isFavorite = e.relPath in favoritePaths,
-                                showCommitInfo = loadCommitMeta != null,
+                                showCommitInfo = showCommitInfo,
                                 commit = commitMeta[e.relPath],
                                 onClick = {
                                     // ロック中はファイル/フォルダを開かない(作業ツリー書換中の読込回避)

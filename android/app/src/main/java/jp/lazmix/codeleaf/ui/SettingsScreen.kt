@@ -40,6 +40,7 @@ import jp.lazmix.codeleaf.BuildConfig
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.data.AppSettings
 import jp.lazmix.codeleaf.data.FileNameDisplay
+import jp.lazmix.codeleaf.data.FileSortOrder
 import jp.lazmix.codeleaf.data.FontScale
 import jp.lazmix.codeleaf.data.IconSet
 import jp.lazmix.codeleaf.data.LinkOpenMode
@@ -160,6 +161,7 @@ fun SettingsScreen(
     onSetCollapseFolders: (Boolean) -> Unit,
     onSetShowCommitInfo: (Boolean) -> Unit,
     onSetFileNameDisplay: (FileNameDisplay) -> Unit,
+    onSetFileSortOrder: (FileSortOrder) -> Unit,
     onSetIconSet: (IconSet) -> Unit,
     onSetRestoreLastPosition: (Boolean) -> Unit,
     onSetSelectByDefault: (Boolean) -> Unit,
@@ -279,6 +281,27 @@ fun SettingsScreen(
                             SegmentedButton(
                                 selected = settings.fileNameDisplay == mode,
                                 onClick = { onSetFileNameDisplay(mode) },
+                                shape = SegmentedButtonDefaults.itemShape(i, items.size),
+                            ) { Text(label) }
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.settings_sort_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.settings_sort_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        val items = listOf(
+                            FileSortOrder.NAME to stringResource(R.string.sort_name),
+                            FileSortOrder.MODIFIED to stringResource(R.string.sort_modified),
+                        )
+                        items.forEachIndexed { i, (order, label) ->
+                            SegmentedButton(
+                                selected = settings.fileSortOrder == order,
+                                onClick = { onSetFileSortOrder(order) },
                                 shape = SegmentedButtonDefaults.itemShape(i, items.size),
                             ) { Text(label) }
                         }

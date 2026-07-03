@@ -46,6 +46,13 @@
     <string name="filename_middle">Middle ellipsis</string>
     <string name="filename_end">End ellipsis</string>
 
+    <!-- 設定 / ブラウザ: 並び順 -->
+    <string name="settings_sort_title">Sort order</string>
+    <string name="settings_sort_desc">Name = alphabetical. Modified = newest last commit first. Folders stay on top either way; the modified order walks history.</string>
+    <string name="browser_sort_title">Sort order</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_modified">Modified</string>
+
     <!-- 設定: ファイル一覧スイッチ -->
     <string name="settings_collapse_title">Collapse single folders</string>
     <string name="settings_collapse_desc">Combine chains that have only one child folder into a single entry like src/main/java, saving taps.</string>
