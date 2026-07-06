@@ -2,6 +2,21 @@
 
 Main user-facing changes per version. Internal commits such as `chore` (version bumps), `docs`, and `test` are generally omitted.
 
+## 0.9.0 (2026-07-07)
+### New
+- Localization: in addition to English and Japanese, added Korean, Simplified Chinese, Traditional Chinese, Spanish, and Vietnamese (follows the device language; can also be set explicitly in Settings)
+- Added a rendered HTML preview in the viewer (toggle to Raw, just like Markdown)
+- Sort the file list by "last modified" (last commit date; saved as a global setting)
+- Edit a memo's comment after creating it
+- View the release notes (changelog) from Settings
+- Unified the language / memo destination / repository dropdowns with rounded corners
+- Repo avatars support two full-width characters; short labels are 3 chars, with lower saturation and a darker selection ring
+
+### Fixed
+- In the collapsed 3-pane icon rail, show only the selected group and tone down avatar colors
+- Use a proper message when diff retrieval fails
+- Match dropdown text size to the surrounding buttons (14sp)
+
 ## 0.8.0 (2026-06-26)
 ### New
 - Added Copy / Share actions to the add-memo sheet (also saves)
