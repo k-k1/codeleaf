@@ -27,7 +27,7 @@ fun secretProp(vararg names: String): String =
 
 // バージョンは一箇所で管理し、versionCode は versionName から機械的に算出する(付け忘れ防止)。
 // 例: 0.4.0 -> 0*10000 + 4*100 + 0 = 400。配布のたびに versionName を上げれば code も単調増加する。
-// 0.9.0 はタグ v0.9.0 に凍結済み。これは次の開発版。
+// 0.9.1 リリース版。
 val appVersionName = "0.9.1"
 val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
 
