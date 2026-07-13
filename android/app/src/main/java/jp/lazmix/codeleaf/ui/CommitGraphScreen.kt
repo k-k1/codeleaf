@@ -318,6 +318,12 @@ private fun GraphCell(row: GraphRow, laneWidth: Dp, modifier: Modifier) {
             val passThrough = row.lanesAbove.getOrNull(j) == sha && j != row.nodeLane
             if (passThrough) {
                 drawLine(color, Offset(laneX(j), centerY), Offset(laneX(j), size.height), sw)
+                // 素通りレーンでもこのマージの親なら合流線を描く(親が既存レーン
+                // 在住だとレイアウトは新レーンを割らないため、ここで補わないと
+                // ノード→既存レーンのマージ線が消える)。
+                if (sha in row.commit.parents) {
+                    drawLine(color, Offset(laneX(row.nodeLane), centerY), Offset(laneX(j), size.height), sw)
+                }
             } else {
                 drawLine(color, Offset(laneX(row.nodeLane), centerY), Offset(laneX(j), size.height), sw)
             }
