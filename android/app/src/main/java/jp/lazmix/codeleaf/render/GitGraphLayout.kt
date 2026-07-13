@@ -16,6 +16,18 @@ data class GraphRow(
     val lanesBelow: List<String?>,
 )
 
+/** セル内の縦位置。上半分は上端→中央、下半分は中央→下端。 */
+enum class EdgeHalf { TOP, BOTTOM }
+
+/**
+ * セル内の接続線1本(純粋な幾何のみ・色や座標は持たない)。
+ * - TOP:    (fromLane, セル上端) → (toLane, 中央)
+ * - BOTTOM: (fromLane, 中央)    → (toLane, セル下端)
+ * fromLane==toLane は縦の通過線。描画色は GraphCell 側で TOP=fromLane / BOTTOM=toLane の
+ * レーン色に対応させる(この規約は現行 GraphCell の描画と一致)。
+ */
+data class GraphEdge(val fromLane: Int, val toLane: Int, val half: EdgeHalf)
+
 /**
  * コミット列(新しい順・親 sha を含む)からレーン割当を計算する純粋ロジック。
  * トポロジ的に正しい分岐/合流を表現しつつ、接続線の交差を減らすよう追加親をノード近くへ寄せる。
@@ -104,39 +116,53 @@ object GitGraphLayout {
         rows.maxOfOrNull { maxOf(it.nodeLane + 1, it.lanesAbove.size, it.lanesBelow.size) } ?: 1
 
     /**
-     * 接続線の交差数を数える純粋関数(描画 `GraphCell` の幾何に忠実)。
-     *
-     * 各行のセルは上半分(入力レーン→ノード)と下半分(ノード→出力レーン)に分かれる:
-     * - 上半分: `lanesAbove[j]==sha` の流入斜め線(j→nodeLane)。間にある通過縦レーンと交差し得る。
-     * - 下半分: ノードから `lanesBelow[k]`(k!=nodeLane かつ非通過)へ出る分岐斜め線(nodeLane→k)。
-     * 上半分と下半分は別の領域なので互いに交差しない。通過縦レーンが斜め線の両端の「間」にあれば1交差。
+     * 1行のセルに描く接続線を導出する純粋関数(描画 `GraphCell` と描画側テストの単一の真実)。
+     * セルは上半分(入力レーン→ノード)と下半分(ノード→出力レーン)に分かれる:
+     * - 上半分: `lanesAbove[j]==sha` は流入斜め線(j→nodeLane)、それ以外は縦の通過線。
+     * - 下半分: 通過レーン(`lanesAbove[j]==lanesBelow[j]`, j!=nodeLane)は縦の通過線。
+     *   ただし**そのレーンの sha がこのコミットの親でもあれば**、ノード→そのレーンへの合流線を重ねる
+     *   (親が既存レーン在住だとレイアウトは新レーンを割らないため。通過線は残しつつ合流を描く)。
+     *   通過でないレーンはノードからの分岐/合流斜め線。
+     */
+    fun edgesFor(row: GraphRow): List<GraphEdge> {
+        val n = row.nodeLane
+        val sha = row.commit.sha
+        val parents = row.commit.parents
+        val edges = ArrayList<GraphEdge>()
+        row.lanesAbove.forEachIndexed { j, s ->
+            if (s == null) return@forEachIndexed
+            edges.add(if (s == sha) GraphEdge(j, n, EdgeHalf.TOP) else GraphEdge(j, j, EdgeHalf.TOP))
+        }
+        row.lanesBelow.forEachIndexed { j, s ->
+            if (s == null) return@forEachIndexed
+            val passThrough = row.lanesAbove.getOrNull(j) == s && j != n
+            if (passThrough) {
+                edges.add(GraphEdge(j, j, EdgeHalf.BOTTOM))
+                if (s in parents) edges.add(GraphEdge(n, j, EdgeHalf.BOTTOM))
+            } else {
+                edges.add(GraphEdge(n, j, EdgeHalf.BOTTOM))
+            }
+        }
+        return edges
+    }
+
+    /**
+     * 接続線の交差数を数える純粋関数。`edgesFor` の幾何(描画そのもの)に忠実。
+     * 各半分で、斜め線(fromLane!=toLane)の両端の「間」に縦の通過線があれば1交差。
+     * 上半分と下半分は別領域なので互いに交差しない。斜め線どうしはノード/親端点を共有し扇形に開くだけで交差しないため対象外。
+     * ノードから通過レーンへの合流線(本来の通過縦線と共存)も斜め線として同様にカウントされる。
      */
     fun countCrossings(rows: List<GraphRow>): Int {
         var total = 0
         for (row in rows) {
-            val n = row.nodeLane
-            val a = row.lanesAbove
-            val b = row.lanesBelow
-            val s = row.commit.sha
-
-            // 上半分: 流入斜め線(j -> n) × 上半分の通過縦レーン(A[m]!=null && A[m]!=s)
-            val topVerticals = a.indices.filter { a[it] != null && a[it] != s }
-            for (j in a.indices) {
-                if (a[j] == s && j != n) {
-                    val lo = minOf(j, n)
-                    val hi = maxOf(j, n)
-                    total += topVerticals.count { it in (lo + 1) until hi }
-                }
-            }
-
-            // 下半分: 流出斜め線(n -> k) × 下半分の通過縦レーン(passThrough: B[m]==A[m]!=null, m!=n)
-            fun passThrough(m: Int) = m != n && b[m] != null && a.getOrNull(m) == b[m]
-            val botVerticals = b.indices.filter { passThrough(it) }
-            for (k in b.indices) {
-                if (b[k] != null && k != n && !passThrough(k)) {
-                    val lo = minOf(n, k)
-                    val hi = maxOf(n, k)
-                    total += botVerticals.count { it in (lo + 1) until hi }
+            val edges = edgesFor(row)
+            for (half in EdgeHalf.entries) {
+                val verticals = edges.filter { it.half == half && it.fromLane == it.toLane }.map { it.fromLane }
+                for (e in edges) {
+                    if (e.half != half || e.fromLane == e.toLane) continue
+                    val lo = minOf(e.fromLane, e.toLane)
+                    val hi = maxOf(e.fromLane, e.toLane)
+                    total += verticals.count { it in (lo + 1) until hi }
                 }
             }
         }

@@ -57,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.lazmix.codeleaf.R
 import jp.lazmix.codeleaf.git.GraphCommit
+import jp.lazmix.codeleaf.render.EdgeHalf
 import jp.lazmix.codeleaf.render.GitGraphLayout
 import jp.lazmix.codeleaf.render.GraphRow
 
@@ -301,31 +302,15 @@ private fun GraphCell(row: GraphRow, laneWidth: Dp, modifier: Modifier) {
         val centerY = size.height / 2f
         fun laneX(i: Int) = laneW / 2f + i * laneW
 
-        // 上半分: 入力レーン → ノード/通過
-        row.lanesAbove.forEachIndexed { j, sha ->
-            if (sha == null) return@forEachIndexed
-            val color = laneColor(j)
-            if (sha == row.commit.sha) {
-                drawLine(color, Offset(laneX(j), 0f), Offset(laneX(row.nodeLane), centerY), sw)
-            } else {
-                drawLine(color, Offset(laneX(j), 0f), Offset(laneX(j), centerY), sw)
-            }
-        }
-        // 下半分: ノード/通過 → 出力レーン
-        row.lanesBelow.forEachIndexed { j, sha ->
-            if (sha == null) return@forEachIndexed
-            val color = laneColor(j)
-            val passThrough = row.lanesAbove.getOrNull(j) == sha && j != row.nodeLane
-            if (passThrough) {
-                drawLine(color, Offset(laneX(j), centerY), Offset(laneX(j), size.height), sw)
-                // 素通りレーンでもこのマージの親なら合流線を描く(親が既存レーン
-                // 在住だとレイアウトは新レーンを割らないため、ここで補わないと
-                // ノード→既存レーンのマージ線が消える)。
-                if (sha in row.commit.parents) {
-                    drawLine(color, Offset(laneX(row.nodeLane), centerY), Offset(laneX(j), size.height), sw)
-                }
-            } else {
-                drawLine(color, Offset(laneX(row.nodeLane), centerY), Offset(laneX(j), size.height), sw)
+        // 接続線は GitGraphLayout.edgesFor(純粋)へ一元化。
+        // TOP は上端→中央で色は fromLane、BOTTOM は中央→下端で色は toLane。
+        // 通過レーン(from==to)＋ノードからの合流線(from=node,to=通過レーン)は edgesFor 側で導出済み。
+        GitGraphLayout.edgesFor(row).forEach { e ->
+            when (e.half) {
+                EdgeHalf.TOP ->
+                    drawLine(laneColor(e.fromLane), Offset(laneX(e.fromLane), 0f), Offset(laneX(e.toLane), centerY), sw)
+                EdgeHalf.BOTTOM ->
+                    drawLine(laneColor(e.toLane), Offset(laneX(e.fromLane), centerY), Offset(laneX(e.toLane), size.height), sw)
             }
         }
         // ノード: 反映済みは塗りつぶし、現ブランチ非到達は中空リングで区別する。
