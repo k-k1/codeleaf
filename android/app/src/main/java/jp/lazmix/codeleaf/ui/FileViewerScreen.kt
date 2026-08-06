@@ -287,11 +287,15 @@ fun FileViewerScreen(
     var stickyHeadingsHeightPx by remember(filePath) { mutableIntStateOf(0) }
 
     // フロントマター抽出 + 見出しセクション分割(整形 Markdown のときのみ)。
-    val mdModel = remember(text, isMarkdown) {
+    // 全角｜で書かれた表は、桁は揃って見えるが GFM では表にならず段落へ落ちる。
+    // 本文を補正し、補正した表の直上に注意書き(他ビューアでは崩れる旨)を差し込む。
+    val fullwidthTableNotice = stringResource(R.string.table_fullwidth_repaired_notice)
+    val mdModel = remember(text, isMarkdown, fullwidthTableNotice) {
         val b = text
         if (b != null && isMarkdown) {
             val (fm, content) = MarkdownRenderer.extractFrontmatter(b)
-            fm to MarkdownRenderer.splitIntoSections(content)
+            val repaired = MarkdownRenderer.repairFullwidthTables(content, fullwidthTableNotice)
+            fm to MarkdownRenderer.splitIntoSections(repaired)
         } else {
             null
         }

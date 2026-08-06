@@ -345,6 +345,150 @@ object MarkdownRenderer {
         if (dest.startsWith("data:")) return false
         return !Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(dest)
     }
+
+    // ---- 全角｜で書かれたテーブルの補正 ----
+    //
+    // 日本語本文と一緒に表を打つと IME が縦棒を全角 ｜(U+FF5C) で確定し、桁は揃って見える
+    // のに GFM の表として解釈されず1段落にベタ流しされる。読み取り専用リーダーなので
+    // ファイルは直せず、パーサに渡す直前の文字列を補正するのが唯一の手段。
+    // 参照実装は agent-fleet console の repairFullwidthTables()。
+    //
+    // ｜/￨ どちらの全角縦棒も無ければ即座に何もしない(ほぼ全てのファイルがここで抜ける)。
+    private val fullwidthPipe = Regex("[｜￨]")
+    // 先頭区切りを除いてセル分割するときは半角も全角もまとめて区切る。
+    private val anyPipe = Regex("[|｜￨]")
+    // GFM の区切りセル。ハイフンは1個以上。全角ハイフン類も一緒に混ざるので許す。
+    private val delimiterCell = Regex("""^\s*:?[-－ー―‐]+:?\s*$""")
+    // 全角ダッシュ類→半角ハイフン。**区切り行にだけ**適用する。内容行の ー(長音記号)は
+    // コード/ノート/データ等の日本語で頻出するので、置換すると語が壊れる(参照実装のバグ)。
+    private val fullwidthDash = Regex("[－ー―‐]")
+    private val fenceMarker = Regex("""^ {0,3}(`{3,}|~{3,})""")
+    // 先頭が0〜3スペース+非空白(4スペース以上=コードブロックなので表と見なさない)。
+    private val notIndentedCode = Regex("""^ {0,3}\S""")
+    // 区切り行が無いとき、列数の一致だけが表である根拠。偶然の一致を避けるためこの行数を要求。
+    private const val MIN_ROWS_WITHOUT_DELIMITER = 3
+
+    private fun isPipe(c: Char) = c == '|' || c == '｜' || c == '￨'
+
+    /**
+     * 縦棒で囲まれた表の行ならセル列を、そうでなければ null を返す。
+     * 先頭4スペース以上のインデント行(コードブロック)は表と見なさない。
+     */
+    private fun tableRow(line: String?): List<String>? {
+        if (line == null) return null
+        if (!notIndentedCode.containsMatchIn(line)) return null // 4スペース以上=コード
+        val text = line.trim()
+        if (text.length < 3 || !isPipe(text[0]) || !isPipe(text[text.length - 1])) return null
+        return text.substring(1, text.length - 1).split(anyPipe)
+    }
+
+    private fun isDelimiterRow(cells: List<String>) = cells.all { delimiterCell.matches(it) }
+    // 打ち間違えた行の印: 全角縦棒を含み、半角 | は1つも無い。
+    private fun isFullwidthRow(line: String) = fullwidthPipe.containsMatchIn(line) && !line.contains('|')
+    // 半角と全角が同じ行に混在: 半角が区切り、全角はセル内容として意図的に置かれている
+    // (セルを割らずに縦棒を入れる唯一の手段)。この行があるブロックは触らない。
+    private fun mixesPipeWidths(line: String) = fullwidthPipe.containsMatchIn(line) && line.contains('|')
+
+    /**
+     * 補正結果。[body] は補正後の本文、[repaired] は補正した表の全表中での文書順 index、
+     * [total] は見つけた表ブロックの総数、[repairedLineStarts] は [body] における各補正表の先頭行 index。
+     * 何も補正しなかった(圧倒的多数の)場合は null。
+     */
+    data class TableRepair(
+        val body: String,
+        val repaired: List<Int>,
+        val total: Int,
+        val repairedLineStarts: List<Int>,
+    )
+
+    /**
+     * 全角縦棒で書かれた表を補正し、区切り行が欠けていれば補える場合に補う。純粋関数。
+     * ブロック単位で判定し、どの行も半角/全角を混在させておらず、少なくとも1行が全角のみ
+     * のときだけ「全角のみの行」を全角→半角に置換する。1行でも混在があればブロック全体を諦める。
+     */
+    fun repairFullwidthTablesCore(source: String): TableRepair? {
+        if (!fullwidthPipe.containsMatchIn(source)) return null
+        val lines = source.split("\n").toMutableList()
+        val repaired = ArrayList<Int>()
+        val repairedLineStarts = ArrayList<Int>()
+        var total = 0
+        var fence = ' ' // ' ' = フェンス外
+        var i = 0
+        while (i < lines.size) {
+            val marker = fenceMarker.find(lines[i])
+            if (marker != null) {
+                val ch = marker.groupValues[1][0]
+                if (fence == ' ') fence = ch else if (ch == fence) fence = ' '
+                i++
+                continue
+            }
+            if (fence != ' ') { i++; continue }
+
+            val header = tableRow(lines[i])
+            if (header == null) { i++; continue }
+            val next = tableRow(lines.getOrNull(i + 1))
+            val hasDelimiter = next != null && isDelimiterRow(next) && next.size == header.size
+
+            var end = if (hasDelimiter) i + 2 else i + 1
+            while (end < lines.size) {
+                val row = tableRow(lines[end])
+                // 区切り行が無いと列数だけが表の根拠。区切り形の行はそこで別ブロックが始まる。
+                if (row == null || (!hasDelimiter && (row.size != header.size || isDelimiterRow(row)))) break
+                end++
+            }
+            // 区切り行が無く、補うほどの行数も無いブロックは、縦棒がどう打たれていても本文のまま。
+            val synthesize = !hasDelimiter && (end - i - 1) >= MIN_ROWS_WITHOUT_DELIMITER
+            if (!hasDelimiter && !synthesize) { i = end; continue }
+            total++
+
+            // 「壊れているか」の判定から区切り行は除外する。本文を持たないので半角である
+            // ことは意図の証拠にならない(これを除外しないと区切り行だけ半角のパターンが漏れる)。
+            val content = lines.subList(i, end).filterIndexed { off, _ -> !(hasDelimiter && off == 1) }
+            val mixes = (i until end).any { mixesPipeWidths(lines[it]) }
+            if (content.any { isFullwidthRow(it) } && !mixes) {
+                for (k in i until end) {
+                    if (isFullwidthRow(lines[k])) {
+                        var fixed = lines[k].replace(fullwidthPipe, "|")
+                        // 区切り行のときだけ全角ダッシュ類を半角へ。内容行の ー は保持する。
+                        val cells = tableRow(lines[k])
+                        if (cells != null && isDelimiterRow(cells)) fixed = fixed.replace(fullwidthDash, "-")
+                        lines[k] = fixed
+                    }
+                }
+                if (synthesize) {
+                    lines.add(i + 1, "|" + List(header.size) { "---" }.joinToString("|") + "|")
+                    end++
+                }
+                repaired.add(total - 1)
+                repairedLineStarts.add(i)
+            }
+            i = end
+        }
+        return if (repaired.isEmpty()) null else TableRepair(lines.joinToString("\n"), repaired, total, repairedLineStarts)
+    }
+
+    /**
+     * [repairFullwidthTablesCore] を呼び、補正した各表の直上に控えめな注意書き(引用ブロック)を
+     * 差し込んで返す。何も補正しなければ元の文字列をそのまま返す。
+     *
+     * 注意書きは補正表の**ソース行の直上**に差し込むので、文書順での突き合わせは構造的に保証され、
+     * 「何番目のレンダリング済み表か」を数え合わせる必要が無い(参照実装の DOM 突き合わせ・
+     * 不一致フォールバックは、ソースへ直接差し込む本実装では不要)。引用ブロック内の表など
+     * 走査対象外の表があっても、注意書きが誤った表を指すことはない。
+     */
+    fun repairFullwidthTables(source: String, notice: String? = null): String {
+        val r = repairFullwidthTablesCore(source) ?: return source
+        if (notice.isNullOrBlank()) return r.body
+        val lines = r.body.split("\n").toMutableList()
+        // 後ろの表から差し込み、前の表の行位置がズレないようにする。
+        // 前後に空行を置き、引用ブロックが前段落の遅延継続にならず、表も引用へ吸われないようにする。
+        for (start in r.repairedLineStarts.sortedDescending()) {
+            lines.add(start, "")
+            lines.add(start, "> $notice")
+            lines.add(start, "")
+        }
+        return lines.joinToString("\n")
+    }
 }
 
 /** 相対リンクの解決先(リポ ルート相対パス・区切りは '/')。 */

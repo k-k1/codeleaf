@@ -117,6 +117,7 @@
     <string name="viewer_toc">☰ 目次</string>
     <string name="viewer_wrap_on">折り返しON</string>
     <string name="viewer_wrap_off">折り返しOFF</string>
+    <string name="table_fullwidth_repaired_notice">このテーブルは半角 | ではなく全角 ｜ で書かれているため、補正して表示しています。他の Markdown ビューアでは崩れたまま表示されます。</string>
     <string name="cd_prev_file">前のファイル</string>
     <string name="cd_next_file">次のファイル</string>
     <string name="viewer_truncated">先頭のみ表示中(全体 %1$s)</string>

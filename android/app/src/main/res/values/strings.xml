@@ -117,6 +117,7 @@
     <string name="viewer_toc">☰ Contents</string>
     <string name="viewer_wrap_on">Wrap: on</string>
     <string name="viewer_wrap_off">Wrap: off</string>
+    <string name="table_fullwidth_repaired_notice">This table is written with the fullwidth ｜ instead of |, so it is shown repaired here. Other Markdown viewers will still render it as plain text.</string>
     <string name="cd_prev_file">Previous file</string>
     <string name="cd_next_file">Next file</string>
     <string name="viewer_truncated">Showing the beginning only (total %1$s)</string>
