@@ -2,6 +2,13 @@
 
 Main user-facing changes per version. Internal commits such as `chore` (version bumps), `docs`, and `test` are generally omitted.
 
+## 0.9.3 (2026-10-15)
+### New features
+- Viewer: the Raw view state is now carried over when moving to the previous/next file (if you are viewing Raw, the next file also opens in Raw)
+
+### Fixed
+- Commit graph: fixed extra diagonal lines piling up into a ">"-shaped tangle at branch points (one parent with multiple children)
+
 ## 0.9.2 (2026-08-06)
 ### Fixed
 - Markdown: tables written with the fullwidth vertical bar ｜ are now repaired to display as proper tables (when a Japanese IME commits the bar as fullwidth, the columns look aligned but the table falls back to a plain paragraph). A note above the repaired table explains that other Markdown viewers will still render it broken
