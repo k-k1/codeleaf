@@ -156,4 +156,34 @@ class GitGraphLayoutTest {
         assertEquals("Q", m.lanesBelow[3])
         assertEquals("R", m.lanesBelow[2])
     }
+
+    /**
+     * 回帰: 分岐点(1つの親 P に複数の子)で、子の行が兄弟レーンへ余計な斜め線を引かないこと。
+     *
+     * A, B, C が全て P を親に持つと、P の行に着くまで lane0..2 が同時に P を待つ。
+     * 旧実装はレーン単位で「素通りレーンの sha が自分の親なら合流線」としていたため、
+     * B の行で lane0(兄弟 A のレーン)へ斜め線が出て、次行で引き戻される「>」状の混線になっていた。
+     * 正しくは各子は自レーンを素直に下り、P の行の上半分で1度だけ集まる。
+     */
+    @Test
+    fun branchPoint_siblingsDoNotDrawExtraEdges() {
+        val rows = GitGraphLayout.layout(listOf(c("A", "P"), c("B", "P"), c("C", "P"), c("P")))
+        val b = rows.first { it.commit.sha == "B" }
+        assertEquals(1, b.nodeLane)
+        assertEquals(listOf("P", "P"), b.lanesBelow)
+        assertEquals(
+            setOf(GraphEdge(0, 0, EdgeHalf.TOP), GraphEdge(0, 0, EdgeHalf.BOTTOM), GraphEdge(1, 1, EdgeHalf.BOTTOM)),
+            GitGraphLayout.edgesFor(b).toSet(),
+        )
+        val cRow = rows.first { it.commit.sha == "C" }
+        val bottom = GitGraphLayout.edgesFor(cRow).filter { it.half == EdgeHalf.BOTTOM && it.fromLane != it.toLane }
+        assertEquals(emptyList<GraphEdge>(), bottom)
+        // P の行で 3 本が1度だけ集まる。
+        val p = rows.first { it.commit.sha == "P" }
+        assertEquals(
+            setOf(GraphEdge(0, 0, EdgeHalf.TOP), GraphEdge(1, 0, EdgeHalf.TOP), GraphEdge(2, 0, EdgeHalf.TOP)),
+            GitGraphLayout.edgesFor(p).toSet(),
+        )
+        assertEquals(0, GitGraphLayout.countCrossings(rows))
+    }
 }

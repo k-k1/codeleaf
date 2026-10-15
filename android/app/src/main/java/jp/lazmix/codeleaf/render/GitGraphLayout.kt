@@ -119,10 +119,11 @@ object GitGraphLayout {
      * 1行のセルに描く接続線を導出する純粋関数(描画 `GraphCell` と描画側テストの単一の真実)。
      * セルは上半分(入力レーン→ノード)と下半分(ノード→出力レーン)に分かれる:
      * - 上半分: `lanesAbove[j]==sha` は流入斜め線(j→nodeLane)、それ以外は縦の通過線。
-     * - 下半分: 通過レーン(`lanesAbove[j]==lanesBelow[j]`, j!=nodeLane)は縦の通過線。
-     *   ただし**そのレーンの sha がこのコミットの親でもあれば**、ノード→そのレーンへの合流線を重ねる
-     *   (親が既存レーン在住だとレイアウトは新レーンを割らないため。通過線は残しつつ合流を描く)。
-     *   通過でないレーンはノードからの分岐/合流斜め線。
+     * - 下半分: 通過レーン(`lanesAbove[j]==lanesBelow[j]`, j!=nodeLane)は縦の通過線(他コミットの線なので常に描く)。
+     *   ノードからの線は**親1つにつき1本**: その親を下へ運ぶレーン(自レーン優先)へ引く。
+     *   マージの第2親が既存レーン在住なら、通過線に重ねてノード→そのレーンの合流線になる。
+     *   ※レーン単位で「通過レーンの sha が親なら合流線」とすると、分岐点(1親に複数の子)で兄弟レーンが全て
+     *   同じ親を待つため子の行ごとに余計な斜め線が増殖し、次行で引き戻される「>」状の混線になる。
      */
     fun edgesFor(row: GraphRow): List<GraphEdge> {
         val n = row.nodeLane
@@ -134,14 +135,14 @@ object GitGraphLayout {
             edges.add(if (s == sha) GraphEdge(j, n, EdgeHalf.TOP) else GraphEdge(j, j, EdgeHalf.TOP))
         }
         row.lanesBelow.forEachIndexed { j, s ->
-            if (s == null) return@forEachIndexed
-            val passThrough = row.lanesAbove.getOrNull(j) == s && j != n
-            if (passThrough) {
-                edges.add(GraphEdge(j, j, EdgeHalf.BOTTOM))
-                if (s in parents) edges.add(GraphEdge(n, j, EdgeHalf.BOTTOM))
-            } else {
-                edges.add(GraphEdge(n, j, EdgeHalf.BOTTOM))
-            }
+            if (s == null || j == n || row.lanesAbove.getOrNull(j) != s) return@forEachIndexed
+            edges.add(GraphEdge(j, j, EdgeHalf.BOTTOM))
+        }
+        val drawn = HashSet<Int>()
+        for (p in parents) {
+            val lane = if (row.lanesBelow.getOrNull(n) == p) n else row.lanesBelow.indexOf(p)
+            if (lane < 0 || !drawn.add(lane)) continue
+            edges.add(GraphEdge(n, lane, EdgeHalf.BOTTOM))
         }
         return edges
     }
