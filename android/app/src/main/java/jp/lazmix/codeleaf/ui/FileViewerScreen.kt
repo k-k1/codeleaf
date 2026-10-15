@@ -172,6 +172,8 @@ fun FileViewerScreen(
     tableMode: TableMode = TableMode.INLINE,
     stickyHeadings: Boolean = true,
     targetLine: Int? = null,
+    /** Raw 表示で開始するか(前/次ファイル送りで直前の Raw 表示を引き継ぐ)。 */
+    initialRaw: Boolean = false,
     onHistory: () -> Unit,
     onMemos: () -> Unit,
     onNavigateToFile: (String) -> Unit,
@@ -187,8 +189,8 @@ fun FileViewerScreen(
     onTitleClick: (() -> Unit)? = null,
     /** 同一フォルダ内のファイル(repo ルート相対パス, 表示順)。前/次ファイル送りに使う。 */
     loadSiblings: suspend () -> List<String> = { emptyList() },
-    /** 前/次ファイルを開く(現在のビューアを置き換える)。 */
-    onOpenSibling: (String) -> Unit = {},
+    /** 前/次ファイルを開く(現在のビューアを置き換える)。raw は現在の Raw 表示状態(引き継ぎ用)。 */
+    onOpenSibling: (path: String, raw: Boolean) -> Unit = { _, _ -> },
     /** メモ追加先の候補(このリポのメモ帳)。 */
     memos: List<MemoWithCount> = emptyList(),
     /** 既存メモ帳にエントリ追加(行は1始まり・lineEnd 含む)。 */
@@ -205,7 +207,7 @@ fun FileViewerScreen(
     var awaitingLargeConfirm by remember(filePath) { mutableStateOf(false) }
     var truncated by remember(filePath) { mutableStateOf(false) }
     // 検索の行ジャンプで開いた場合は、行が分かる Raw 表示で開始する。
-    var raw by remember(filePath) { mutableStateOf(targetLine != null) }
+    var raw by remember(filePath) { mutableStateOf(targetLine != null || initialRaw) }
     var wrap by remember(filePath) { mutableStateOf(defaultWrap) }
     // テキスト選択モード。設定の既定値で初期化し、⋮ で個別切替(変更時に設定へ保存)。
     var selectionMode by remember(filePath) { mutableStateOf(defaultSelectable) }
@@ -394,10 +396,10 @@ fun FileViewerScreen(
                 Spacer(Modifier.weight(1f))
                 // 右: 同一フォルダ内の前/次ファイルを開く(端では無効化)。
                 if (siblings.size > 1 && siblingIndex >= 0) {
-                    IconButton(onClick = { prevFile?.let(onOpenSibling) }, enabled = prevFile != null) {
+                    IconButton(onClick = { prevFile?.let { onOpenSibling(it, raw) } }, enabled = prevFile != null) {
                         Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.cd_prev_file))
                     }
-                    IconButton(onClick = { nextFile?.let(onOpenSibling) }, enabled = nextFile != null) {
+                    IconButton(onClick = { nextFile?.let { onOpenSibling(it, raw) } }, enabled = nextFile != null) {
                         Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.cd_next_file))
                     }
                 }

@@ -109,6 +109,8 @@ private sealed interface Screen : Parcelable {
         val filePath: String,
         val line: Int? = null,
         val sha: String? = null,
+        /** Raw 表示で開くか(前/次ファイル送りで Raw 表示を引き継ぐ)。 */
+        val raw: Boolean = false,
     ) : WithRepo {
         override fun withRepo(updated: Repo) = copy(repo = updated)
     }
@@ -699,6 +701,7 @@ fun CodeLeafApp() {
                         tableMode = settings.tableMode,
                         stickyHeadings = settings.stickyHeadings,
                         targetLine = file.line,
+                        initialRaw = file.raw,
                         onHistory = { historySelected = null; navigate(Screen.History(file.repo, file.filePath)) },
                         onMemos = { navigate(Screen.Memos(file.repo)) },
                         onNavigateToFile = { path -> pushDetail(Screen.View(file.repo, path)) },
@@ -722,9 +725,9 @@ fun CodeLeafApp() {
                                     .map { it.relPath }
                             }
                         },
-                        onOpenSibling = { path ->
+                        onOpenSibling = { path, raw ->
                             if (detailStack.isNotEmpty()) {
-                                detailStack[detailStack.lastIndex] = Screen.View(file.repo, path)
+                                detailStack[detailStack.lastIndex] = Screen.View(file.repo, path, raw = raw)
                             }
                         },
                         memos = if (historical) emptyList() else repoMemos,
