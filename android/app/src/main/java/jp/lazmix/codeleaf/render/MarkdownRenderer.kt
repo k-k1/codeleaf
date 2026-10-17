@@ -710,7 +710,7 @@ private class SelectableLinkMovementMethod : ArrowKeyMovementMethod() {
 }
 
 /** Markdown / コード本文の基準フォントサイズ(sp)。fontScale を掛けて適用する。 */
-private const val MARKDOWN_BASE_SP = 16f
+internal const val MARKDOWN_BASE_SP = 16f
 private const val CODE_BASE_SP = 14f
 
 /** Prism4j の Spanned(ForegroundColorSpan)を Compose の AnnotatedString に変換する。 */
@@ -739,6 +739,8 @@ fun CodeView(
     highlightLine: Int? = null,
     wrap: Boolean = true,
     showLineNumbers: Boolean = false,
+    /** 基準フォントサイズ(sp)。Markdown の Raw では整形表示と揃えるため MARKDOWN_BASE_SP を渡す。 */
+    baseSp: Float = CODE_BASE_SP,
     /** 行(0始まり)を長押ししたとき呼ぶ。メモ追加の行選択に使う。 */
     onLineLongPress: ((Int) -> Unit)? = null,
     /** 選択中の行範囲(0始まり)。背景強調する。 */
@@ -760,9 +762,9 @@ fun CodeView(
     val baseColor = Color(theme.textColor())
     val gutterColor = baseColor.copy(alpha = 0.5f)
     val highlightBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
-    val fontSize = (CODE_BASE_SP * fontScale).sp
+    val fontSize = (baseSp * fontScale).sp
     // 行番号ガター幅は最大桁数から算出。
-    val gutterWidth = ((lines.size.toString().length) * 9 + 12).dp
+    val gutterWidth = ((lines.size.toString().length) * 9 * (baseSp / CODE_BASE_SP) + 12).dp
     val hScroll = rememberScrollState()
     val listModifier = modifier
         .background(Color(theme.background()))

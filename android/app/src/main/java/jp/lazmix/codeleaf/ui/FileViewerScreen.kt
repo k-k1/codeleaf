@@ -126,6 +126,7 @@ import jp.lazmix.codeleaf.data.db.Repo
 import jp.lazmix.codeleaf.render.CodeHighlight
 import jp.lazmix.codeleaf.render.CodeView
 import jp.lazmix.codeleaf.render.HtmlWebView
+import jp.lazmix.codeleaf.render.MARKDOWN_BASE_SP
 import jp.lazmix.codeleaf.render.FrontmatterEntry
 import jp.lazmix.codeleaf.render.Heading
 import jp.lazmix.codeleaf.render.MarkdownRenderer
@@ -559,6 +560,7 @@ fun FileViewerScreen(
                         highlightLine = targetLine?.let { it - 1 },
                         wrap = wrap,
                         showLineNumbers = showLineNumbers,
+                        baseSp = MARKDOWN_BASE_SP,
                         // 選択モード中は行長押しメモを無効化(選択が長押しを使うため)。
                         onLineLongPress = if (selectionMode) null else lineMemo,
                         selectedLines = addRange,
