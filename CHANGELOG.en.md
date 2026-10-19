@@ -2,6 +2,10 @@
 
 Main user-facing changes per version. Internal commits such as `chore` (version bumps), `docs`, and `test` are generally omitted.
 
+## 0.9.4 (2026-10-19)
+### New features
+- Viewer: the Markdown Raw view now uses the same text size (16sp) as the formatted view, so the text size no longer changes when switching
+
 ## 0.9.3 (2026-10-15)
 ### New features
 - Viewer: the Raw view state is now carried over when moving to the previous/next file (if you are viewing Raw, the next file also opens in Raw)
